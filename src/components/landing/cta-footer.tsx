@@ -17,14 +17,14 @@ export function CtaFooter() {
           </p>
           <div className="relative mt-7 flex flex-wrap items-center justify-center gap-3">
             <Link
-              href="/signup"
+              href="/signup?from=landing"
               className="entry-btn group inline-flex min-h-[48px] cursor-pointer items-center gap-2 rounded-xl px-6 text-sm font-semibold text-black shadow-entry"
             >
               Create account
               <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden />
             </Link>
             <Link
-              href="/login"
+              href="/login?from=landing"
               className="inline-flex min-h-[48px] cursor-pointer items-center rounded-xl border border-white/10 px-6 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.04]"
             >
               Log in

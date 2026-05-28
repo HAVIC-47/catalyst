@@ -1,20 +1,37 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, type FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Sparkles, Loader2, Mail, Lock } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [allowed, setAllowed] = useState(false);
 
   const isSignup = mode === "signup";
+
+  // Access policy: this page is only reachable via a button on the landing page
+  // (which adds ?from=landing). A direct hit or a refresh has no such param and
+  // is redirected to the landing page. We strip the param on first paint so the
+  // URL stays clean; refreshing afterward sends them back to landing.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const from = searchParams.get("from");
+    if (from === "landing") {
+      window.history.replaceState(null, "", isSignup ? "/signup" : "/login");
+      setAllowed(true);
+    } else {
+      router.replace("/");
+    }
+  }, [searchParams, isSignup, router]);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -46,12 +63,21 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     }
   };
 
+  if (!allowed) {
+    // While redirecting (no ?from=landing), don't flash the form.
+    return null;
+  }
+
   return (
     <div className="glass w-full max-w-sm rounded-2xl p-7">
-      <div className="mb-6 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.3em] text-neon-purple/80">
+      <Link
+        href="/"
+        aria-label="Back to Catalyst home"
+        className="mb-6 inline-flex cursor-pointer items-center gap-2 text-xs font-medium uppercase tracking-[0.3em] text-neon-purple/80 transition-colors hover:text-amber"
+      >
         <Sparkles className="h-3.5 w-3.5" aria-hidden />
         Catalyst
-      </div>
+      </Link>
       <h1 className="font-display text-3xl font-bold tracking-tight text-white">
         {isSignup ? "Create account" : "Welcome back"}
       </h1>
@@ -118,7 +144,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           {isSignup ? "Already have an account?" : "No account yet?"}
         </p>
         <Link
-          href={isSignup ? "/login" : "/signup"}
+          href={isSignup ? "/login?from=landing" : "/signup?from=landing"}
           className="flex min-h-[44px] cursor-pointer items-center justify-center rounded-xl border border-white/15 px-4 text-sm font-semibold text-white/90 transition-colors duration-200 hover:border-amber/40 hover:bg-white/[0.04] hover:text-amber"
         >
           {isSignup ? "Log in instead" : "Create account"}

@@ -10,13 +10,13 @@ export function LandingNav() {
         </Link>
         <nav className="flex items-center gap-2">
           <Link
-            href="/login"
+            href="/login?from=landing"
             className="hidden min-h-[40px] cursor-pointer items-center rounded-xl px-4 text-sm font-medium text-white/70 transition-colors hover:text-white sm:inline-flex"
           >
             Log in
           </Link>
           <Link
-            href="/signup"
+            href="/signup?from=landing"
             className="entry-btn inline-flex min-h-[40px] cursor-pointer items-center gap-1.5 rounded-xl px-4 text-sm font-semibold text-black shadow-entry"
           >
             Sign up
