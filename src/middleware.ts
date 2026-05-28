@@ -42,10 +42,10 @@ export async function middleware(request: NextRequest) {
   const isAuthPage = AUTH_PATHS.some((p) => path.startsWith(p));
   const isAppPage = path === "/app" || path.startsWith("/app/");
 
-  // Unauthenticated user hitting the app -> login.
+  // Unauthenticated user hitting the app -> landing page (they can sign up from there).
   if (!user && isAppPage) {
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/login";
+    redirectUrl.pathname = "/";
     return NextResponse.redirect(redirectUrl);
   }
   // Authenticated user on auth pages -> straight to the app.
