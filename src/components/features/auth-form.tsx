@@ -1,37 +1,30 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Sparkles, Loader2, Mail, Lock } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [allowed, setAllowed] = useState(false);
 
   const isSignup = mode === "signup";
 
-  // Access policy: this page is only reachable via a button on the landing page
-  // (which adds ?from=landing). A direct hit or a refresh has no such param and
-  // is redirected to the landing page. We strip the param on first paint so the
-  // URL stays clean; refreshing afterward sends them back to landing.
+  // Middleware has already enforced "must come from landing". Once we land here,
+  // strip the ?from=landing query so a manual refresh has no param and middleware
+  // sends them back to the landing page.
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const from = searchParams.get("from");
-    if (from === "landing") {
+    if (window.location.search.includes("from=landing")) {
       window.history.replaceState(null, "", isSignup ? "/signup" : "/login");
-      setAllowed(true);
-    } else {
-      router.replace("/");
     }
-  }, [searchParams, isSignup, router]);
+  }, [isSignup]);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -62,11 +55,6 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       setLoading(false);
     }
   };
-
-  if (!allowed) {
-    // While redirecting (no ?from=landing), don't flash the form.
-    return null;
-  }
 
   return (
     <div className="glass w-full max-w-sm rounded-2xl p-7">

@@ -41,6 +41,7 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const isAuthPage = AUTH_PATHS.some((p) => path.startsWith(p));
   const isAppPage = path === "/app" || path.startsWith("/app/");
+  const fromLanding = request.nextUrl.searchParams.get("from") === "landing";
 
   // Unauthenticated user hitting the app -> landing page (they can sign up from there).
   if (!user && isAppPage) {
@@ -52,6 +53,16 @@ export async function middleware(request: NextRequest) {
   if (user && isAuthPage) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/app";
+    redirectUrl.search = "";
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  // Auth pages are only reachable via the landing CTAs (?from=landing). A direct
+  // URL hit or a reload — which lose the query — bounces back to the landing.
+  if (!user && isAuthPage && !fromLanding) {
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = "/";
+    redirectUrl.search = "";
     return NextResponse.redirect(redirectUrl);
   }
 
