@@ -103,7 +103,7 @@ export default function BudgetsPage() {
           const spent = spentByCat.get(b.categoryName) ?? 0;
           const pct = b.amount > 0 ? Math.min(100, (spent / b.amount) * 100) : 0;
           const over = spent > b.amount;
-          const color = over ? "#B23A2C" : cat?.color ?? "#34618A";
+          const color = over ? "#CB453B" : cat?.color ?? "#3D80BC";
           return (
             <div key={b.id} className="card p-5">
               <div className="mb-3 flex items-center justify-between">

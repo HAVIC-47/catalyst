@@ -73,7 +73,7 @@ export const MOOD_PRESETS: MoodPreset[] = [
   { value: 2, label: "Low", emoji: "😕", color: "#C06A33" }, // burnt orange
   { value: 3, label: "Okay", emoji: "😐", color: "#B59A3C" }, // ochre
   { value: 4, label: "Good", emoji: "🙂", color: "#6E8C46" }, // olive
-  { value: 5, label: "Great", emoji: "🤩", color: "#2F6B4E" }, // forest
+  { value: 5, label: "Great", emoji: "🤩", color: "#2E8159" }, // forest
 ];
 
 export function moodPreset(value: number): MoodPreset {
@@ -139,12 +139,12 @@ export interface ActivityLog {
 /** Default categories seeded for new users (editable in Settings). */
 export const DEFAULT_EXPENSE_CATEGORIES: { name: string; color: string }[] = [
   { name: "Food", color: "#C06A33" },
-  { name: "Groceries", color: "#2F6B4E" },
-  { name: "Transport", color: "#34618A" },
+  { name: "Groceries", color: "#2E8159" },
+  { name: "Transport", color: "#3D80BC" },
   { name: "Rent", color: "#7A4E86" },
   { name: "Utilities", color: "#B59A3C" },
-  { name: "Internet", color: "#34618A" },
-  { name: "Health", color: "#B23A2C" },
+  { name: "Internet", color: "#3D80BC" },
+  { name: "Health", color: "#CB453B" },
   { name: "Education", color: "#4C5B82" },
   { name: "Shopping", color: "#8E5B6E" },
   { name: "Entertainment", color: "#A6694A" },
@@ -154,13 +154,13 @@ export const DEFAULT_EXPENSE_CATEGORIES: { name: string; color: string }[] = [
   { name: "Fitness", color: "#6E8C46" },
   { name: "Personal Care", color: "#7A4E86" },
   { name: "Pets", color: "#B59A3C" },
-  { name: BREAK_SAVING, color: "#34618A" }, // pulls from savings pool when used
+  { name: BREAK_SAVING, color: "#3D80BC" }, // pulls from savings pool when used
   { name: "Other", color: "#7A746A" },
 ];
 
 export const DEFAULT_INCOME_CATEGORIES: { name: string; color: string }[] = [
-  { name: "Salary", color: "#2F6B4E" },
-  { name: "Freelance", color: "#34618A" },
+  { name: "Salary", color: "#2E8159" },
+  { name: "Freelance", color: "#3D80BC" },
   { name: "Gift", color: "#7A4E86" },
   { name: "Other", color: "#7A746A" },
 ];

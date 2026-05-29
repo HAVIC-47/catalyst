@@ -9,8 +9,8 @@ import { rangeWindow, type Range } from "@/lib/range";
 import { RangeControls } from "@/components/charts/range-controls";
 
 const TAG_COLORS = [
-  "#34618A", "#7A4E86", "#C06A33", "#2F6B4E", "#B23A2C",
-  "#34618A", "#A6694A", "#7A4E86", "#6E8C46", "#8E5B6E",
+  "#3D80BC", "#7A4E86", "#C06A33", "#2E8159", "#CB453B",
+  "#3D80BC", "#A6694A", "#7A4E86", "#6E8C46", "#8E5B6E",
   "#B59A3C", "#2F6F6B",
 ];
 

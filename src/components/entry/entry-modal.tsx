@@ -522,7 +522,7 @@ function SavingForm({ dateKey }: { dateKey: string }) {
       {/* Total savings tile */}
       <div className="rounded-2xl border border-line bg-ink/[0.02] p-5 text-center">
         <div className="label">Total savings</div>
-        <div className="mt-1 font-mono text-3xl font-semibold tabular text-[#34618A]">
+        <div className="mt-1 font-mono text-3xl font-semibold tabular text-[#3D80BC]">
           {TAKA}
           {new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 }).format(total)}
         </div>
@@ -536,7 +536,7 @@ function SavingForm({ dateKey }: { dateKey: string }) {
       {/* Amount */}
       <div>
         <div className="label mb-2">Add to savings</div>
-        <div className="flex items-center gap-3 rounded-xl border border-line bg-ink/[0.02] px-4 py-3 focus-within:border-[#34618A]/50">
+        <div className="flex items-center gap-3 rounded-xl border border-line bg-ink/[0.02] px-4 py-3 focus-within:border-[#3D80BC]/50">
           <span className="font-mono text-2xl text-ink/40">{TAKA}</span>
           <input
             autoFocus
@@ -559,12 +559,12 @@ function SavingForm({ dateKey }: { dateKey: string }) {
           onChange={(e) => setNote(e.target.value)}
           placeholder="What is this saving for?"
           aria-label="Saving note"
-          className="min-h-[44px] w-full rounded-xl border border-line bg-ink/[0.02] px-3 text-sm text-ink outline-none focus:border-[#34618A]/50"
+          className="min-h-[44px] w-full rounded-xl border border-line bg-ink/[0.02] px-3 text-sm text-ink outline-none focus:border-[#3D80BC]/50"
         />
       </div>
 
       <p className="rounded-xl border border-line bg-ink/[0.02] px-3 py-2 text-[11px] text-ink/45">
-        Tip: pick the <span className="text-[#34618A]">Break saving</span> category on the Money tab
+        Tip: pick the <span className="text-[#3D80BC]">Break saving</span> category on the Money tab
         to pull from this pool.
       </p>
 
@@ -577,7 +577,7 @@ function SavingForm({ dateKey }: { dateKey: string }) {
       <button
         onClick={submit}
         disabled={!valid || saving}
-        className="min-h-[48px] w-full cursor-pointer rounded-xl border border-[#34618A]/40 bg-[#34618A]/15 text-sm font-semibold text-[#34618A] transition-all duration-200 hover:bg-[#34618A]/25 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"
+        className="min-h-[48px] w-full cursor-pointer rounded-xl border border-[#3D80BC]/40 bg-[#3D80BC]/15 text-sm font-semibold text-[#3D80BC] transition-all duration-200 hover:bg-[#3D80BC]/25 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"
       >
         Save saving
       </button>

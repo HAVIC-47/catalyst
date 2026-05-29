@@ -7,7 +7,7 @@ import { useAppData } from "@/hooks/use-app-data";
 import { MOOD_PRESETS, moodPreset } from "@/types";
 import { cn, toDateKey } from "@/lib/utils";
 
-const ACT_COLORS = ["#34618A", "#2F6B4E", "#7A4E86", "#C06A33", "#B23A2C", "#8E5B6E", "#34618A"];
+const ACT_COLORS = ["#3D80BC", "#2E8159", "#7A4E86", "#C06A33", "#CB453B", "#8E5B6E", "#3D80BC"];
 
 export default function JournalPage() {
   const {

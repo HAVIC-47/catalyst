@@ -79,7 +79,7 @@ export function Hero() {
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="orb-a absolute -left-32 top-10 h-72 w-72 rounded-full bg-[#9B3A2D]/[0.10] blur-[130px] sm:h-96 sm:w-96" />
         <div className="orb-b absolute right-[-10%] top-32 h-80 w-80 rounded-full bg-[#B59A3C]/[0.14] blur-[150px] sm:h-[28rem] sm:w-[28rem]" />
-        <div className="orb-c absolute bottom-[-10%] left-1/3 h-72 w-72 rounded-full bg-[#2F6B4E]/[0.08] blur-[130px]" />
+        <div className="orb-c absolute bottom-[-10%] left-1/3 h-72 w-72 rounded-full bg-[#2E8159]/[0.08] blur-[130px]" />
       </div>
 
       <div className="mx-auto grid max-w-6xl gap-12 px-4 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:items-center lg:gap-8">
@@ -157,7 +157,7 @@ export function Hero() {
                   className="flex-1 rounded-sm"
                   style={{
                     height: `${h * 1.6}px`,
-                    background: i % 2 ? "#2F6B4E" : "#B23A2C",
+                    background: i % 2 ? "#2E8159" : "#CB453B",
                     opacity: 0.9,
                   }}
                 />

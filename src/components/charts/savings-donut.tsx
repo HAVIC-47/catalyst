@@ -9,8 +9,8 @@ import { formatCurrency } from "@/lib/utils";
 import { rangeWindow, type Range } from "@/lib/range";
 import { RangeControls } from "@/components/charts/range-controls";
 
-const ADDED_COLOR = "#34618A"; // blue
-const BROKEN_COLOR = "#B23A2C"; // rose
+const ADDED_COLOR = "#3D80BC"; // blue
+const BROKEN_COLOR = "#CB453B"; // rose
 
 export function SavingsDonut({ transactions }: { transactions: Transaction[] }) {
   const [range, setRange] = useState<Range>("month");

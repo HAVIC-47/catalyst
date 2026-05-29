@@ -208,14 +208,14 @@ export default function CalendarPage() {
       <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[10px] uppercase tracking-widest text-ink/40">
         <div className="flex items-center gap-2">
           <span className="text-ink/55">Mood</span>
-          <div className="h-2.5 w-28 rounded-full bg-gradient-to-r from-[#A8322A] via-[#B59A3C] to-[#2F6B4E]" />
+          <div className="h-2.5 w-28 rounded-full bg-gradient-to-r from-[#A8322A] via-[#B59A3C] to-[#2E8159]" />
         </div>
         <div className="flex items-center gap-2">
           <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: "#7A4E86" }} />
           Heavier spend
         </div>
         <div className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: "#34618A" }} />
+          <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: "#3D80BC" }} />
           Heavier income
         </div>
       </div>

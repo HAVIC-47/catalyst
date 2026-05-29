@@ -182,7 +182,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           const created = await addCategory({
             name: BREAK_SAVING,
             kind: "expense",
-            color: "#34618A",
+            color: "#3D80BC",
             sort: finalCats.filter((c) => c.kind === "expense").length,
           });
           finalCats = [...finalCats, created];

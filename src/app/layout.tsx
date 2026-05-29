@@ -36,7 +36,8 @@ export const viewport = {
 
 // Runs before paint: applies the saved theme (or system preference) so there's
 // no flash of the wrong palette.
-const themeInit = `(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark')}}catch(e){}})();`;
+// Dark is the default; only an explicit 'light' choice opts out.
+const themeInit = `(function(){try{if(localStorage.getItem('theme')!=='light'){document.documentElement.classList.add('dark')}}catch(e){document.documentElement.classList.add('dark')}})();`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

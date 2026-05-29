@@ -7,8 +7,8 @@ import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES, type Kind } from
 import { cn } from "@/lib/utils";
 
 const SWATCHES = [
-  "#C06A33", "#2F6B4E", "#34618A", "#7A4E86", "#B59A3C", "#34618A",
-  "#B23A2C", "#4C5B82", "#8E5B6E", "#A6694A", "#2F6F6B", "#7A4E86", "#7A746A",
+  "#C06A33", "#2E8159", "#3D80BC", "#7A4E86", "#B59A3C", "#3D80BC",
+  "#CB453B", "#4C5B82", "#8E5B6E", "#A6694A", "#2F6F6B", "#7A4E86", "#7A746A",
 ];
 
 export default function SettingsPage() {

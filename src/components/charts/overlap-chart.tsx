@@ -166,14 +166,14 @@ export function OverlapChart({
             <Tooltip content={<OverlapTooltip />} cursor={{ fill: "rgba(255,255,255,0.04)" }} />
             <Bar yAxisId="money" dataKey="net" name="Net" radius={[3, 3, 0, 0]} maxBarSize={byMonth ? 24 : 14}>
               {points.map((p) => (
-                <Cell key={p.key} fill={p.net >= 0 ? "#2F6B4E" : "#B23A2C"} />
+                <Cell key={p.key} fill={p.net >= 0 ? "#2E8159" : "#CB453B"} />
               ))}
             </Bar>
             <Bar
               yAxisId="money"
               dataKey="saving"
               name="Saving"
-              fill="#34618A"
+              fill="#3D80BC"
               radius={[3, 3, 0, 0]}
               maxBarSize={byMonth ? 24 : 14}
             />
@@ -314,7 +314,7 @@ function OverlapTooltip({ active, payload }: any) {
         Net {formatCurrency(p.net, { sign: true })}
       </div>
       {p.saving > 0 && (
-        <div style={{ color: "#34618A" }}>Saving +{formatCurrency(p.saving)}</div>
+        <div style={{ color: "#3D80BC" }}>Saving +{formatCurrency(p.saving)}</div>
       )}
       <div className="text-neon-purple">
         Mood {p.mood ?? "—"}

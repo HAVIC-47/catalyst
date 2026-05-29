@@ -29,13 +29,13 @@ const FEATURES = [
     icon: Wallet,
     title: "Money × Mood, one widget",
     body: "Two tabs, three taps. Log a taka and a feeling in seconds — at any time of day.",
-    accent: "#2F6B4E",
+    accent: "#2E8159",
   },
   {
     icon: LayoutGrid,
     title: "Trend that overlaps",
     body: "Net cash flow against mood index, dual axis, with Day / Week / Month / Year navigation.",
-    accent: "#34618A",
+    accent: "#3D80BC",
   },
   {
     icon: Tag,
@@ -59,7 +59,7 @@ const FEATURES = [
     icon: Target,
     title: "Goals with momentum",
     body: "Track savings targets, log additions, see progress bars climb toward the finish.",
-    accent: "#34618A",
+    accent: "#3D80BC",
   },
   {
     icon: Bell,

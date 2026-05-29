@@ -33,14 +33,14 @@ export default function DashboardPage() {
   }, [moods]);
 
   const tiles = [
-    { label: "Spent", value: formatCurrency(spent), icon: ArrowUpRight, tint: "#B23A2C" },
-    { label: "Earned", value: formatCurrency(earned), icon: ArrowDownLeft, tint: "#2F6B4E" },
+    { label: "Spent", value: formatCurrency(spent), icon: ArrowUpRight, tint: "#CB453B" },
+    { label: "Earned", value: formatCurrency(earned), icon: ArrowDownLeft, tint: "#2E8159" },
     {
       label: "Saved",
       value: formatCurrency(saved),
       sub: `${savedRate}% rate`,
       icon: Wallet,
-      tint: saved >= 0 ? "#34618A" : "#B23A2C",
+      tint: saved >= 0 ? "#3D80BC" : "#CB453B",
     },
     { label: "Avg mood", value: avgMood ? `${avgMood} / 5` : "—", icon: Smile, tint: "#7A4E86" },
   ];

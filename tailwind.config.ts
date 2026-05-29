@@ -21,11 +21,11 @@ const config: Config = {
           soft: "rgb(var(--c-accent) / <alpha-value>)",
         },
         accent: "rgb(var(--c-accent) / <alpha-value>)",
-        // Data tones stay fixed — readable on both bone and charcoal.
-        income: "#2F6B4E", // ledger green (credit)
-        expense: "#B23A2C", // ledger red (debit)
-        saving: "#34618A", // ink blue
-        neon: { cyan: "#34618A", purple: "#7A4E86", rose: "#B23A2C" },
+        // Data tones stay fixed — readable on both bone and pure black.
+        income: "#2E8159", // ledger green (credit)
+        expense: "#CB453B", // ledger red (debit)
+        saving: "#3D80BC", // ink blue
+        neon: { cyan: "#3D80BC", purple: "#9268A0", rose: "#CB453B" },
       },
       fontFamily: {
         display: ["var(--font-display)", "Georgia", "serif"],
