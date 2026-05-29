@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export function LandingNav() {
   return (
@@ -9,6 +10,7 @@ export function LandingNav() {
           <span className="label text-amber/70">৳ BD</span>
         </Link>
         <nav className="flex items-center gap-2">
+          <ThemeToggle />
           <Link
             href="/login?from=landing"
             className="hidden min-h-[40px] cursor-pointer items-center rounded-xl px-4 text-sm font-medium text-ink/70 transition-colors hover:text-ink sm:inline-flex"

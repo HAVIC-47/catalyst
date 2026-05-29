@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { Plus } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
 import { UserMenu } from "@/components/features/user-menu";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export function Topbar() {
   const { openEntry } = useAppData();
@@ -24,6 +25,7 @@ export function Topbar() {
           <Plus className="h-4 w-4" aria-hidden strokeWidth={2.5} />
           Entry
         </button>
+        <ThemeToggle />
         <UserMenu />
       </div>
     </header>

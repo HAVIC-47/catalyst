@@ -34,9 +34,20 @@ export const viewport = {
   themeColor: "#F4F0E8",
 };
 
+// Runs before paint: applies the saved theme (or system preference) so there's
+// no flash of the wrong palette.
+const themeInit = `(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark')}}catch(e){}})();`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${display.variable} ${body.variable} ${mono.variable}`}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${display.variable} ${body.variable} ${mono.variable}`}
+    >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInit }} />
+      </head>
       <body className="font-sans antialiased">
         <div className="relative z-10">{children}</div>
       </body>

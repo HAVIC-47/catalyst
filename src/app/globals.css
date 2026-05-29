@@ -2,10 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Palette as RGB channels so Tailwind alpha modifiers work, flipped on .dark. */
 :root {
-  --paper: #f4f0e8;
-  --ink: #1a1714;
-  --accent: #9b3a2d;
+  --c-paper: 244 240 232; /* bone */
+  --c-panel: 236 228 210;
+  --c-card: 251 247 238;
+  --c-ink: 26 23 20; /* near-black warm */
+  --c-accent: 155 58 45; /* oxblood */
+  --c-line: rgba(26, 23, 20, 0.14);
+  color-scheme: light;
+}
+
+.dark {
+  --c-paper: 24 21 18; /* deep warm charcoal */
+  --c-panel: 31 27 23;
+  --c-card: 34 30 25;
+  --c-ink: 234 227 214; /* warm parchment */
+  --c-accent: 201 113 94; /* lifted clay-oxblood for dark contrast */
+  --c-line: rgba(234, 227, 214, 0.13);
+  color-scheme: dark;
 }
 
 * {
@@ -15,15 +30,15 @@
 
 html,
 body {
-  background-color: var(--paper);
-  color: var(--ink);
+  background-color: rgb(var(--c-paper));
+  color: rgb(var(--c-ink));
 }
 
 body {
   min-height: 100vh;
-  /* Faint paper grain so the bone background reads as printed stock, not a flat fill. */
+  /* Faint grain so the background reads as printed stock, not a flat fill. */
   background-image:
-    radial-gradient(rgba(26, 23, 20, 0.018) 1px, transparent 1px);
+    radial-gradient(rgb(var(--c-ink) / 0.02) 1px, transparent 1px);
   background-size: 3px 3px;
 }
 
@@ -48,11 +63,11 @@ body {
   }
   /* Solid oxblood block button — printed-stamp feel, no gradients. */
   .entry-btn {
-    background-color: var(--accent);
+    background-color: rgb(var(--c-accent));
     color: #f7f2e7 !important;
   }
   .entry-btn:hover {
-    background-color: #84301f;
+    filter: brightness(0.92);
   }
   /* Former glass card — now a plain raised paper card. */
   .glass {
@@ -84,23 +99,17 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(26, 23, 20, 0.18);
+  background: rgb(var(--c-ink) / 0.2);
   border-radius: 8px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(26, 23, 20, 0.3);
+  background: rgb(var(--c-ink) / 0.32);
 }
 
 *:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid rgb(var(--c-accent));
   outline-offset: 2px;
   border-radius: 2px;
-}
-
-/* Native date/time pickers should not invert on the light theme. */
-input[type="date"],
-input[type="time"] {
-  color-scheme: light;
 }
 
 @media (prefers-reduced-motion: reduce) {

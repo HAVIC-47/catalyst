@@ -5,17 +5,23 @@ import type { Config } from "tailwindcss";
 // automatically; values are the only thing that changed.
 const config: Config = {
   content: ["./src/**/*.{ts,tsx}"],
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
-        paper: "#F4F0E8", // page background (bone)
-        panel: "#ECE4D2", // sidebar / raised surface
-        card: "#FBF7EE", // card surface
-        ink: "#1A1714", // primary text (near-black, warm)
-        line: "rgba(26,23,20,0.14)", // hairline borders
-        // `amber` token == primary accent everywhere → oxblood
-        amber: { DEFAULT: "#9B3A2D", soft: "#B5503F" },
-        accent: "#9B3A2D",
+        // Surface + text tokens flip between light/dark via CSS vars (see globals.css).
+        paper: "rgb(var(--c-paper) / <alpha-value>)",
+        panel: "rgb(var(--c-panel) / <alpha-value>)",
+        card: "rgb(var(--c-card) / <alpha-value>)",
+        ink: "rgb(var(--c-ink) / <alpha-value>)",
+        line: "var(--c-line)",
+        // `amber` token == primary accent everywhere → oxblood (lifts in dark mode)
+        amber: {
+          DEFAULT: "rgb(var(--c-accent) / <alpha-value>)",
+          soft: "rgb(var(--c-accent) / <alpha-value>)",
+        },
+        accent: "rgb(var(--c-accent) / <alpha-value>)",
+        // Data tones stay fixed — readable on both bone and charcoal.
         income: "#2F6B4E", // ledger green (credit)
         expense: "#B23A2C", // ledger red (debit)
         saving: "#34618A", // ink blue
