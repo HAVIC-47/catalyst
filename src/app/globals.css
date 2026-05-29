@@ -14,12 +14,12 @@
 }
 
 .dark {
-  --c-paper: 24 21 18; /* deep warm charcoal */
-  --c-panel: 31 27 23;
-  --c-card: 34 30 25;
-  --c-ink: 234 227 214; /* warm parchment */
-  --c-accent: 201 113 94; /* lifted clay-oxblood for dark contrast */
-  --c-line: rgba(234, 227, 214, 0.13);
+  --c-paper: 0 0 0; /* true black */
+  --c-panel: 12 12 12;
+  --c-card: 17 17 17;
+  --c-ink: 237 234 228; /* soft off-white text */
+  --c-accent: 209 120 100; /* lifted clay-oxblood for contrast on black */
+  --c-line: rgba(255, 255, 255, 0.12);
   color-scheme: dark;
 }
 
