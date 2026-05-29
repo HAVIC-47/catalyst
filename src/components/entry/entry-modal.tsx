@@ -123,49 +123,71 @@ export function EntryModal() {
 
 /* ---------------------------------------------------------------- Money tab */
 
+interface MoneyFields {
+  amount: string;
+  categoryId: string | null;
+  place: string;
+  note: string;
+  time: string;
+}
+const emptyFields = (): MoneyFields => ({
+  amount: "",
+  categoryId: null,
+  place: "",
+  note: "",
+  time: nowTime(),
+});
+
+type MoneyKind = "expense" | "income";
+
 function MoneyForm({ dateKey }: { dateKey: string }) {
   const { categories, addMoney, closeEntry } = useAppData();
-  const [kind, setKind] = useState<Kind>("expense");
-  const [amount, setAmount] = useState("");
-  const [categoryId, setCategoryId] = useState<string | null>(null);
-  const [place, setPlace] = useState("");
-  const [note, setNote] = useState("");
-  const [time, setTime] = useState(nowTime);
+  const [kind, setKind] = useState<MoneyKind>("expense");
+  // Expense and income keep their OWN fields, so switching the sub-tab preserves
+  // whatever was typed. Both are saved together on submit if both have an amount.
+  const [forms, setForms] = useState<Record<MoneyKind, MoneyFields>>(() => ({
+    expense: emptyFields(),
+    income: emptyFields(),
+  }));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const list = categories.filter((c) => c.kind === kind);
-  const selected = list.find((c) => c.id === categoryId) ?? list[0];
-  const value = parseFloat(amount);
-  const valid = value > 0 && !!selected;
+  const f = forms[kind];
+  const set = (patch: Partial<MoneyFields>) =>
+    setForms((p) => ({ ...p, [kind]: { ...p[kind], ...patch } }));
 
-  // Switching expense ⇄ income resets the entry fields so the amount doesn't
-  // carry over between the two types.
-  const switchKind = (k: Kind) => {
-    if (k === kind) return;
-    setKind(k);
-    setAmount("");
-    setCategoryId(null);
-    setPlace("");
-    setNote("");
-    setError(null);
+  const list = categories.filter((c) => c.kind === kind);
+  const selected = list.find((c) => c.id === f.categoryId) ?? list[0];
+
+  const buildEntry = (k: MoneyKind) => {
+    const ff = forms[k];
+    const v = parseFloat(ff.amount);
+    if (!(v > 0)) return null;
+    const cats = categories.filter((c) => c.kind === k);
+    const cat = cats.find((c) => c.id === ff.categoryId) ?? cats[0];
+    if (!cat) return null;
+    return {
+      kind: k as Kind,
+      amount: Math.round(v * 100) / 100,
+      categoryId: cat.id,
+      categoryName: cat.name,
+      place: ff.place.trim(),
+      note: ff.note.trim(),
+      occurredOn: dateKey,
+      occurredAt: combineDateTime(dateKey, ff.time),
+    };
   };
+
+  const pending = [buildEntry("expense"), buildEntry("income")].filter(Boolean);
+  const valid = pending.length > 0;
 
   const submit = async () => {
     if (!valid || saving) return;
     setSaving(true);
     setError(null);
     try {
-      await addMoney({
-        kind,
-        amount: Math.round(value * 100) / 100,
-        categoryId: selected!.id,
-        categoryName: selected!.name,
-        place: place.trim(),
-        note: note.trim(),
-        occurredOn: dateKey,
-        occurredAt: combineDateTime(dateKey, time),
-      });
+      // Save expense + income together (whichever have a valid amount).
+      for (const e of pending) await addMoney(e!);
       closeEntry();
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -181,24 +203,36 @@ function MoneyForm({ dateKey }: { dateKey: string }) {
 
   return (
     <div className="space-y-6">
-      {/* expense / income */}
+      {/* expense / income — each keeps its own values */}
       <div className="grid grid-cols-2 gap-2 rounded-xl border border-line bg-ink/[0.02] p-1">
         {([
-          { k: "expense" as Kind, label: "Expense", Icon: ArrowUpRight, color: "text-expense" },
-          { k: "income" as Kind, label: "Income", Icon: ArrowDownLeft, color: "text-income" },
-        ]).map(({ k, label, Icon, color }) => (
-          <button
-            key={k}
-            onClick={() => switchKind(k)}
-            className={cn(
-              "flex min-h-[44px] cursor-pointer items-center justify-center gap-2 rounded-lg text-sm font-medium transition-colors duration-200",
-              kind === k ? cn("bg-ink/[0.06]", color) : "text-ink/45 hover:text-ink/70",
-            )}
-          >
-            <Icon className="h-4 w-4" aria-hidden />
-            {label}
-          </button>
-        ))}
+          { k: "expense" as MoneyKind, label: "Expense", Icon: ArrowUpRight, color: "text-expense" },
+          { k: "income" as MoneyKind, label: "Income", Icon: ArrowDownLeft, color: "text-income" },
+        ]).map(({ k, label, Icon, color }) => {
+          const filled = parseFloat(forms[k].amount) > 0;
+          return (
+            <button
+              key={k}
+              onClick={() => setKind(k)}
+              className={cn(
+                "relative flex min-h-[44px] cursor-pointer items-center justify-center gap-2 rounded-lg text-sm font-medium transition-colors duration-200",
+                kind === k ? cn("bg-ink/[0.06]", color) : "text-ink/45 hover:text-ink/70",
+              )}
+            >
+              <Icon className="h-4 w-4" aria-hidden />
+              {label}
+              {filled && (
+                <span
+                  className={cn(
+                    "absolute right-2 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full",
+                    k === "expense" ? "bg-expense" : "bg-income",
+                  )}
+                  aria-label="has amount"
+                />
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* amount */}
@@ -209,8 +243,8 @@ function MoneyForm({ dateKey }: { dateKey: string }) {
           <input
             autoFocus
             inputMode="decimal"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
+            value={f.amount}
+            onChange={(e) => set({ amount: e.target.value.replace(/[^0-9.]/g, "") })}
             placeholder="0"
             aria-label="Amount"
             className="w-full bg-transparent font-mono text-3xl font-semibold tabular text-ink outline-none"
@@ -235,7 +269,7 @@ function MoneyForm({ dateKey }: { dateKey: string }) {
                 key={c.id}
                 cat={c}
                 active={selected?.id === c.id}
-                onClick={() => setCategoryId(c.id)}
+                onClick={() => set({ categoryId: c.id })}
               />
             ))}
           </div>
@@ -243,7 +277,7 @@ function MoneyForm({ dateKey }: { dateKey: string }) {
       </div>
 
       {/* time */}
-      <TimeField value={time} onChange={setTime} />
+      <TimeField value={f.time} onChange={(v) => set({ time: v })} />
 
       {/* place */}
       <div>
@@ -251,8 +285,8 @@ function MoneyForm({ dateKey }: { dateKey: string }) {
         <div className="relative">
           <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/35" aria-hidden />
           <input
-            value={place}
-            onChange={(e) => setPlace(e.target.value)}
+            value={f.place}
+            onChange={(e) => set({ place: e.target.value })}
             placeholder="Star Kabab, Aarong, Pathao…"
             aria-label="Place"
             className="min-h-[44px] w-full rounded-xl border border-line bg-ink/[0.02] pl-10 pr-3 text-sm text-ink outline-none focus:border-amber/50"
@@ -264,8 +298,8 @@ function MoneyForm({ dateKey }: { dateKey: string }) {
       <div>
         <div className="label mb-2">Note · optional</div>
         <input
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
+          value={f.note}
+          onChange={(e) => set({ note: e.target.value })}
           placeholder="What was it for?"
           aria-label="Note"
           className="min-h-[44px] w-full rounded-xl border border-line bg-ink/[0.02] px-3 text-sm text-ink outline-none focus:border-amber/50"
@@ -283,7 +317,7 @@ function MoneyForm({ dateKey }: { dateKey: string }) {
         disabled={!valid || saving}
         className="entry-btn min-h-[48px] w-full cursor-pointer rounded-xl text-sm font-semibold text-paper shadow-entry transition-transform duration-200 hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
       >
-        Save {kind}
+        {pending.length === 2 ? "Save expense + income" : pending.length === 1 ? "Save entry" : "Save"}
       </button>
     </div>
   );
