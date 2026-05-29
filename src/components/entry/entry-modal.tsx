@@ -139,7 +139,9 @@ function MoneyForm({ dateKey }: { dateKey: string }) {
   const value = parseFloat(amount);
   const valid = value > 0 && !!selected;
 
-  const submit = async () => {
+  const [savedFlash, setSavedFlash] = useState<string | null>(null);
+
+  const submit = async (keepOpen = false) => {
     if (!valid || saving) return;
     setSaving(true);
     setError(null);
@@ -154,7 +156,19 @@ function MoneyForm({ dateKey }: { dateKey: string }) {
         occurredOn: dateKey,
         occurredAt: combineDateTime(dateKey, time),
       });
-      closeEntry();
+      if (keepOpen) {
+        // Reset the money fields but keep the modal open so the next entry
+        // (e.g. an income right after an expense) can be added immediately.
+        setSavedFlash(`Saved ${kind} · ${TAKA}${amount}`);
+        setAmount("");
+        setCategoryId(null);
+        setPlace("");
+        setNote("");
+        setTime(nowTime());
+        setTimeout(() => setSavedFlash(null), 2200);
+      } else {
+        closeEntry();
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(
@@ -268,14 +282,28 @@ function MoneyForm({ dateKey }: { dateKey: string }) {
           {error}
         </p>
       )}
+      {savedFlash && (
+        <p className="rounded-xl border border-income/30 bg-income/10 px-3 py-2 text-xs text-income">
+          {savedFlash} — add another below.
+        </p>
+      )}
 
-      <button
-        onClick={submit}
-        disabled={!valid || saving}
-        className="entry-btn min-h-[48px] w-full cursor-pointer rounded-xl text-sm font-semibold text-paper shadow-entry transition-transform duration-200 hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
-      >
-        Save {kind}
-      </button>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <button
+          onClick={() => submit(true)}
+          disabled={!valid || saving}
+          className="hairline min-h-[48px] flex-1 cursor-pointer rounded-xl text-sm font-semibold text-ink/80 transition-colors duration-200 hover:bg-ink/[0.05] hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Save &amp; add another
+        </button>
+        <button
+          onClick={() => submit(false)}
+          disabled={!valid || saving}
+          className="entry-btn min-h-[48px] flex-1 cursor-pointer rounded-xl text-sm font-semibold text-paper shadow-entry transition-transform duration-200 hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+        >
+          Save {kind} &amp; close
+        </button>
+      </div>
     </div>
   );
 }
