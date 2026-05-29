@@ -9,9 +9,9 @@ import { rangeWindow, type Range } from "@/lib/range";
 import { RangeControls } from "@/components/charts/range-controls";
 
 const TAG_COLORS = [
-  "#22D3EE", "#A855F7", "#F59E0B", "#34D399", "#F43F5E",
-  "#38BDF8", "#FB7185", "#C084FC", "#84CC16", "#EC4899",
-  "#FBBF24", "#2DD4BF",
+  "#34618A", "#7A4E86", "#C06A33", "#2F6B4E", "#B23A2C",
+  "#34618A", "#A6694A", "#7A4E86", "#6E8C46", "#8E5B6E",
+  "#B59A3C", "#2F6F6B",
 ];
 
 export function MoodTagBars({ moods }: { moods: MoodLog[] }) {
@@ -43,7 +43,7 @@ export function MoodTagBars({ moods }: { moods: MoodLog[] }) {
       />
 
       {bars.length === 0 ? (
-        <p className="py-12 text-center text-sm text-white/35">
+        <p className="py-12 text-center text-sm text-ink/35">
           No mood tags logged this period.
         </p>
       ) : (
@@ -72,8 +72,8 @@ export function MoodTagBars({ moods }: { moods: MoodLog[] }) {
                   const p = payload[0].payload;
                   return (
                     <div className="card px-3 py-2 text-xs">
-                      <div className="text-white/80">{p.name}</div>
-                      <div className="font-mono text-white/55">
+                      <div className="text-ink/80">{p.name}</div>
+                      <div className="font-mono text-ink/55">
                         {p.count} {p.count === 1 ? "time" : "times"}
                       </div>
                     </div>

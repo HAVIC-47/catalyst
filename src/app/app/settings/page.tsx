@@ -7,8 +7,8 @@ import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES, type Kind } from
 import { cn } from "@/lib/utils";
 
 const SWATCHES = [
-  "#F59E0B", "#34D399", "#38BDF8", "#A855F7", "#FBBF24", "#22D3EE",
-  "#F43F5E", "#818CF8", "#EC4899", "#FB7185", "#2DD4BF", "#C084FC", "#64748B",
+  "#C06A33", "#2F6B4E", "#34618A", "#7A4E86", "#B59A3C", "#34618A",
+  "#B23A2C", "#4C5B82", "#8E5B6E", "#A6694A", "#2F6F6B", "#7A4E86", "#7A746A",
 ];
 
 export default function SettingsPage() {
@@ -17,10 +17,10 @@ export default function SettingsPage() {
     <div className="px-4 py-6 sm:px-6 lg:px-8">
       <div className="mb-6">
         <div className="label mb-2">Settings</div>
-        <h1 className="font-display text-5xl font-semibold tracking-tight text-white sm:text-6xl">
+        <h1 className="font-display text-5xl font-semibold tracking-tight text-ink sm:text-6xl">
           Your <span className="serif-italic text-amber/90">categories.</span>
         </h1>
-        <p className="mt-2 max-w-lg text-sm text-white/45">
+        <p className="mt-2 max-w-lg text-sm text-ink/45">
           Add, rename, recolor, or remove categories for expenses and income. Deleting one keeps
           past transactions labeled.
         </p>
@@ -32,7 +32,7 @@ export default function SettingsPage() {
       </div>
 
       {categories.length === 0 && (
-        <p className="mt-4 font-mono text-xs text-white/30">Loading categories…</p>
+        <p className="mt-4 font-mono text-xs text-ink/30">Loading categories…</p>
       )}
     </div>
   );
@@ -76,7 +76,7 @@ function CategorySection({ kind }: { kind: Kind }) {
   return (
     <div className="card p-6">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="font-display text-xl font-semibold capitalize text-white">{kind}</h2>
+        <h2 className="font-display text-xl font-semibold capitalize text-ink">{kind}</h2>
         <div className="flex items-center gap-3">
           <button
             onClick={restoreDefaults}
@@ -91,7 +91,7 @@ function CategorySection({ kind }: { kind: Kind }) {
 
       <ul className="mb-4 space-y-2">
         {list.map((c) => (
-          <li key={c.id} className="flex items-center gap-3 rounded-xl border border-line bg-white/[0.02] p-2.5">
+          <li key={c.id} className="flex items-center gap-3 rounded-xl border border-line bg-ink/[0.02] p-2.5">
             <span
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold"
               style={{ backgroundColor: `${c.color}22`, color: c.color }}
@@ -105,7 +105,7 @@ function CategorySection({ kind }: { kind: Kind }) {
                 if (v && v !== c.name) editCategory(c.id, { name: v });
               }}
               aria-label={`Rename ${c.name}`}
-              className="min-w-0 flex-1 bg-transparent text-sm text-white/85 outline-none focus:text-white"
+              className="min-w-0 flex-1 bg-transparent text-sm text-ink/85 outline-none focus:text-ink"
             />
             <div className="flex items-center gap-1">
               {SWATCHES.slice(0, 6).map((s) => (
@@ -121,7 +121,7 @@ function CategorySection({ kind }: { kind: Kind }) {
             <button
               onClick={() => removeCategory(c.id)}
               aria-label={`Delete ${c.name}`}
-              className="cursor-pointer rounded-lg p-1.5 text-white/30 transition-colors hover:bg-white/5 hover:text-expense"
+              className="cursor-pointer rounded-lg p-1.5 text-ink/30 transition-colors hover:bg-ink/5 hover:text-expense"
             >
               <Trash2 className="h-4 w-4" aria-hidden />
             </button>
@@ -138,13 +138,13 @@ function CategorySection({ kind }: { kind: Kind }) {
             onKeyDown={(e) => e.key === "Enter" && add()}
             placeholder={`New ${kind} category`}
             aria-label={`New ${kind} category name`}
-            className="min-h-[40px] flex-1 rounded-lg border border-line bg-white/[0.02] px-3 text-sm text-white outline-none focus:border-amber/50"
+            className="min-h-[40px] flex-1 rounded-lg border border-line bg-ink/[0.02] px-3 text-sm text-ink outline-none focus:border-amber/50"
           />
           <button
             onClick={add}
             disabled={!name.trim() || adding}
             aria-label="Add category"
-            className="entry-btn flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg text-black disabled:opacity-40"
+            className="entry-btn flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg text-paper disabled:opacity-40"
           >
             <Plus className="h-4 w-4" aria-hidden strokeWidth={2.5} />
           </button>
@@ -160,7 +160,7 @@ function CategorySection({ kind }: { kind: Kind }) {
               )}
               style={{ backgroundColor: s }}
             >
-              {color === s && <Check className="h-3.5 w-3.5 text-black" aria-hidden strokeWidth={3} />}
+              {color === s && <Check className="h-3.5 w-3.5 text-paper" aria-hidden strokeWidth={3} />}
             </button>
           ))}
         </div>

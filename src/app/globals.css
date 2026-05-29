@@ -3,7 +3,9 @@
 @tailwind utilities;
 
 :root {
-  --ink: #08080a;
+  --paper: #f4f0e8;
+  --ink: #1a1714;
+  --accent: #9b3a2d;
 }
 
 * {
@@ -13,26 +15,48 @@
 
 html,
 body {
-  background-color: var(--ink);
-  color: #e8e8ea;
+  background-color: var(--paper);
+  color: var(--ink);
 }
 
 body {
   min-height: 100vh;
+  /* Faint paper grain so the bone background reads as printed stock, not a flat fill. */
+  background-image:
+    radial-gradient(rgba(26, 23, 20, 0.018) 1px, transparent 1px);
+  background-size: 3px 3px;
+}
+
+@layer base {
+  /* Editorial defaults: serif display, ledger figures, generous body leading. */
+  h1,
+  h2,
+  h3 {
+    font-feature-settings: "ss01";
+  }
 }
 
 @layer components {
   .card {
-    @apply rounded-2xl border border-line bg-card shadow-card;
+    @apply rounded-lg border border-line bg-card shadow-card;
   }
   .hairline {
     @apply border border-line;
   }
   .label {
-    @apply font-mono text-[11px] uppercase tracking-[0.2em] text-white/40;
+    @apply font-mono text-[11px] uppercase tracking-[0.18em] text-ink/45;
   }
+  /* Solid oxblood block button — printed-stamp feel, no gradients. */
   .entry-btn {
-    background-image: linear-gradient(135deg, #f5b544 0%, #f97362 50%, #c084fc 100%);
+    background-color: var(--accent);
+    color: #f7f2e7 !important;
+  }
+  .entry-btn:hover {
+    background-color: #84301f;
+  }
+  /* Former glass card — now a plain raised paper card. */
+  .glass {
+    @apply border border-line bg-card shadow-card;
   }
 }
 
@@ -40,8 +64,15 @@ body {
   .tabular {
     font-variant-numeric: tabular-nums;
   }
+  /* Display serif looks best italic for the editorial accent phrases. */
   .serif-italic {
+    font-family: var(--font-display), Georgia, serif;
     font-style: italic;
+    font-weight: 500;
+  }
+  /* Hairline rule used as a section divider. */
+  .rule {
+    @apply border-t border-line;
   }
 }
 
@@ -53,17 +84,23 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(26, 23, 20, 0.18);
   border-radius: 8px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(26, 23, 20, 0.3);
 }
 
 *:focus-visible {
-  outline: 2px solid #f5b544;
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: 2px;
+}
+
+/* Native date/time pickers should not invert on the light theme. */
+input[type="date"],
+input[type="time"] {
+  color-scheme: light;
 }
 
 @media (prefers-reduced-motion: reduce) {

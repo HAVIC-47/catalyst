@@ -31,7 +31,7 @@ export function Sidebar() {
   return (
     <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-line bg-panel px-3 py-5 lg:flex">
       <Link href="/app" className="mb-7 flex items-baseline gap-2 px-3">
-        <span className="font-display text-2xl font-semibold tracking-tight text-white">
+        <span className="font-display text-2xl font-semibold tracking-tight text-ink">
           Catalyst
         </span>
         <span className="label text-amber/70">৳ BD</span>
@@ -46,7 +46,7 @@ export function Sidebar() {
               href={href}
               className={cn(
                 "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors duration-200",
-                active ? "bg-white/[0.06] text-white" : "text-white/50 hover:bg-white/[0.03] hover:text-white/80",
+                active ? "bg-ink/[0.06] text-ink" : "text-ink/50 hover:bg-ink/[0.03] hover:text-ink/80",
               )}
             >
               {active && (
@@ -61,7 +61,7 @@ export function Sidebar() {
 
       <div className="mt-4 flex items-center justify-between px-3">
         <span className="label">v0.2</span>
-        <span className="label text-white/30">৳ BDT</span>
+        <span className="label text-ink/30">৳ BDT</span>
       </div>
     </aside>
   );

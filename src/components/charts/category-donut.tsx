@@ -7,7 +7,7 @@ import { formatCurrency } from "@/lib/utils";
 import { rangeWindow, type Range } from "@/lib/range";
 import { RangeControls } from "@/components/charts/range-controls";
 
-const FALLBACK = "#64748B";
+const FALLBACK = "#7A746A";
 
 export function CategoryDonut({
   transactions,
@@ -52,7 +52,7 @@ export function CategoryDonut({
       />
 
       {slices.length === 0 ? (
-        <p className="py-12 text-center text-sm text-white/35">{emptyLabel}</p>
+        <p className="py-12 text-center text-sm text-ink/35">{emptyLabel}</p>
       ) : (
         <div className="mt-4 flex flex-col items-center gap-5">
           <div className="relative h-44 w-44">
@@ -75,7 +75,7 @@ export function CategoryDonut({
             </ResponsiveContainer>
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
               <span className="label">{headerLabel}</span>
-              <span className="font-mono text-lg font-semibold tabular text-white">
+              <span className="font-mono text-lg font-semibold tabular text-ink">
                 {formatCurrency(total)}
               </span>
             </div>
@@ -85,8 +85,8 @@ export function CategoryDonut({
             {slices.slice(0, 6).map((s) => (
               <li key={s.name} className="flex items-center gap-2 text-sm">
                 <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: s.color }} />
-                <span className="text-white/65">{s.name}</span>
-                <span className="ml-auto font-mono tabular text-white/50">
+                <span className="text-ink/65">{s.name}</span>
+                <span className="ml-auto font-mono tabular text-ink/50">
                   {formatCurrency(s.value)}
                 </span>
               </li>

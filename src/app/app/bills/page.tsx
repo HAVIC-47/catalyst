@@ -29,11 +29,11 @@ export default function BillsPage() {
     <div className="px-4 py-6 sm:px-6 lg:px-8">
       <div className="mb-6">
         <div className="label mb-2">Bills · {bills.filter((b) => !b.isPaid).length} unpaid</div>
-        <h1 className="font-display text-5xl font-semibold tracking-tight text-white sm:text-6xl">
+        <h1 className="font-display text-5xl font-semibold tracking-tight text-ink sm:text-6xl">
           Upcoming <span className="serif-italic text-amber/90">dues.</span>
         </h1>
         {upcomingTotal > 0 && (
-          <p className="mt-3 font-mono text-sm text-white/45">{formatCurrency(upcomingTotal)} outstanding</p>
+          <p className="mt-3 font-mono text-sm text-ink/45">{formatCurrency(upcomingTotal)} outstanding</p>
         )}
       </div>
 
@@ -43,17 +43,17 @@ export default function BillsPage() {
           onChange={(e) => setName(e.target.value)}
           placeholder="Bill (e.g. Internet)"
           aria-label="Bill name"
-          className="min-h-[44px] flex-1 rounded-xl border border-line bg-white/[0.02] px-3 text-sm text-white outline-none focus:border-amber/50"
+          className="min-h-[44px] flex-1 rounded-xl border border-line bg-ink/[0.02] px-3 text-sm text-ink outline-none focus:border-amber/50"
         />
-        <div className="flex items-center gap-2 rounded-xl border border-line bg-white/[0.02] px-3 focus-within:border-amber/50">
-          <span className="font-mono text-white/40">{TAKA}</span>
+        <div className="flex items-center gap-2 rounded-xl border border-line bg-ink/[0.02] px-3 focus-within:border-amber/50">
+          <span className="font-mono text-ink/40">{TAKA}</span>
           <input
             inputMode="decimal"
             value={amount}
             onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
             placeholder="Amount"
             aria-label="Amount"
-            className="min-h-[44px] w-24 bg-transparent font-mono text-sm text-white outline-none"
+            className="min-h-[44px] w-24 bg-transparent font-mono text-sm text-ink outline-none"
           />
         </div>
         <input
@@ -61,13 +61,13 @@ export default function BillsPage() {
           value={due}
           onChange={(e) => setDue(e.target.value)}
           aria-label="Due date"
-          className="min-h-[44px] rounded-xl border border-line bg-white/[0.02] px-3 text-sm text-white/70 outline-none focus:border-amber/50 [color-scheme:dark]"
+          className="min-h-[44px] rounded-xl border border-line bg-ink/[0.02] px-3 text-sm text-ink/70 outline-none focus:border-amber/50 [color-scheme:dark]"
         />
         <select
           value={recurrence}
           onChange={(e) => setRecurrence(e.target.value)}
           aria-label="Recurrence"
-          className="min-h-[44px] cursor-pointer rounded-xl border border-line bg-card px-3 text-sm capitalize text-white/80 outline-none focus:border-amber/50"
+          className="min-h-[44px] cursor-pointer rounded-xl border border-line bg-card px-3 text-sm capitalize text-ink/80 outline-none focus:border-amber/50"
         >
           {RECURRENCES.map((r) => (
             <option key={r} value={r} className="bg-card">
@@ -78,14 +78,14 @@ export default function BillsPage() {
         <button
           onClick={add}
           disabled={!name.trim() || !(parseFloat(amount) > 0)}
-          className="entry-btn inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl px-4 text-sm font-semibold text-black disabled:opacity-40"
+          className="entry-btn inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl px-4 text-sm font-semibold text-paper disabled:opacity-40"
         >
           <Plus className="h-4 w-4" strokeWidth={2.5} aria-hidden /> Add
         </button>
       </div>
 
       {!loading && bills.length === 0 && (
-        <div className="card px-6 py-16 text-center text-sm text-white/40">No bills tracked yet.</div>
+        <div className="card px-6 py-16 text-center text-sm text-ink/40">No bills tracked yet.</div>
       )}
 
       <div className="card divide-y divide-line overflow-hidden">
@@ -99,16 +99,16 @@ export default function BillsPage() {
                 aria-label={b.isPaid ? "Mark unpaid" : "Mark paid"}
                 className={cn(
                   "flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md border transition-colors",
-                  b.isPaid ? "border-income bg-income/20 text-income" : "border-line text-transparent hover:border-white/30",
+                  b.isPaid ? "border-income bg-income/20 text-income" : "border-line text-transparent hover:border-ink/30",
                 )}
               >
                 <Check className="h-4 w-4" aria-hidden strokeWidth={3} />
               </button>
               <div className="min-w-0 flex-1">
-                <div className={cn("text-sm", b.isPaid ? "text-white/40 line-through" : "text-white/85")}>
+                <div className={cn("text-sm", b.isPaid ? "text-ink/40 line-through" : "text-ink/85")}>
                   {b.name}
                 </div>
-                <div className="flex items-center gap-1.5 font-mono text-[11px] text-white/40">
+                <div className="flex items-center gap-1.5 font-mono text-[11px] text-ink/40">
                   <span className="capitalize">{b.recurrence}</span>
                   <span>·</span>
                   <span className={soon ? "text-expense" : ""}>
@@ -118,11 +118,11 @@ export default function BillsPage() {
                 </div>
               </div>
               {soon && <Bell className="h-3.5 w-3.5 text-expense" aria-hidden />}
-              <span className="font-mono text-sm tabular text-white/80">{formatCurrency(b.amount)}</span>
+              <span className="font-mono text-sm tabular text-ink/80">{formatCurrency(b.amount)}</span>
               <button
                 onClick={() => removeBill(b.id)}
                 aria-label="Delete bill"
-                className="cursor-pointer text-white/30 transition-colors hover:text-expense"
+                className="cursor-pointer text-ink/30 transition-colors hover:text-expense"
               >
                 <Trash2 className="h-4 w-4" aria-hidden />
               </button>

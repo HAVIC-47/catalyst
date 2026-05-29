@@ -33,23 +33,23 @@ export default function DashboardPage() {
   }, [moods]);
 
   const tiles = [
-    { label: "Spent", value: formatCurrency(spent), icon: ArrowUpRight, tint: "#F43F5E" },
-    { label: "Earned", value: formatCurrency(earned), icon: ArrowDownLeft, tint: "#34D399" },
+    { label: "Spent", value: formatCurrency(spent), icon: ArrowUpRight, tint: "#B23A2C" },
+    { label: "Earned", value: formatCurrency(earned), icon: ArrowDownLeft, tint: "#2F6B4E" },
     {
       label: "Saved",
       value: formatCurrency(saved),
       sub: `${savedRate}% rate`,
       icon: Wallet,
-      tint: saved >= 0 ? "#22D3EE" : "#F43F5E",
+      tint: saved >= 0 ? "#34618A" : "#B23A2C",
     },
-    { label: "Avg mood", value: avgMood ? `${avgMood} / 5` : "—", icon: Smile, tint: "#A855F7" },
+    { label: "Avg mood", value: avgMood ? `${avgMood} / 5` : "—", icon: Smile, tint: "#7A4E86" },
   ];
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
       <div className="mb-6">
         <div className="label mb-2">Dashboard · this month</div>
-        <h1 className="font-display text-5xl font-semibold tracking-tight text-white sm:text-6xl">
+        <h1 className="font-display text-5xl font-semibold tracking-tight text-ink sm:text-6xl">
           The month <span className="serif-italic text-amber/90">so far.</span>
         </h1>
       </div>
@@ -62,8 +62,8 @@ export default function DashboardPage() {
               <span className="label">{label}</span>
               <Icon className="h-4 w-4" style={{ color: tint }} aria-hidden />
             </div>
-            <div className="mt-3 font-mono text-2xl font-semibold tabular text-white">{value}</div>
-            {sub && <div className="mt-0.5 font-mono text-[11px] text-white/35">{sub}</div>}
+            <div className="mt-3 font-mono text-2xl font-semibold tabular text-ink">{value}</div>
+            {sub && <div className="mt-0.5 font-mono text-[11px] text-ink/35">{sub}</div>}
           </div>
         ))}
       </div>
@@ -103,7 +103,7 @@ export default function DashboardPage() {
         </ChartCard>
       </div>
 
-      {loading && <p className="mt-4 text-center font-mono text-xs text-white/30">Loading…</p>}
+      {loading && <p className="mt-4 text-center font-mono text-xs text-ink/30">Loading…</p>}
     </div>
   );
 }
@@ -119,7 +119,7 @@ function ChartCard({
 }) {
   return (
     <div className="card p-6">
-      <h2 className="mb-4 font-display text-xl font-semibold text-white">
+      <h2 className="mb-4 font-display text-xl font-semibold text-ink">
         {title} <span className="serif-italic text-amber/90">{accent}</span>
       </h2>
       {children}

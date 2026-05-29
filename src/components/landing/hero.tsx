@@ -75,28 +75,28 @@ export function Hero() {
       ref={root}
       className="relative isolate overflow-hidden pb-16 pt-28 sm:pt-36 md:pt-40 lg:pb-24 lg:pt-44"
     >
-      {/* Background orbs */}
+      {/* Soft paper washes — warm, low-contrast, no neon. */}
       <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="orb-a absolute -left-32 top-10 h-72 w-72 rounded-full bg-amber/25 blur-[120px] sm:h-96 sm:w-96" />
-        <div className="orb-b absolute right-[-10%] top-32 h-80 w-80 rounded-full bg-fuchsia-500/25 blur-[140px] sm:h-[28rem] sm:w-[28rem]" />
-        <div className="orb-c absolute bottom-[-10%] left-1/3 h-72 w-72 rounded-full bg-cyan-400/20 blur-[120px]" />
+        <div className="orb-a absolute -left-32 top-10 h-72 w-72 rounded-full bg-[#9B3A2D]/[0.10] blur-[130px] sm:h-96 sm:w-96" />
+        <div className="orb-b absolute right-[-10%] top-32 h-80 w-80 rounded-full bg-[#B59A3C]/[0.14] blur-[150px] sm:h-[28rem] sm:w-[28rem]" />
+        <div className="orb-c absolute bottom-[-10%] left-1/3 h-72 w-72 rounded-full bg-[#2F6B4E]/[0.08] blur-[130px]" />
       </div>
 
       <div className="mx-auto grid max-w-6xl gap-12 px-4 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:items-center lg:gap-8">
         <div>
-          <div className="hero-kicker mb-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-medium uppercase tracking-[0.25em] text-amber backdrop-blur">
+          <div className="hero-kicker mb-5 inline-flex items-center gap-2 rounded-full border border-ink/10 bg-ink/[0.03] px-3 py-1.5 text-xs font-medium uppercase tracking-[0.25em] text-amber backdrop-blur">
             <Sparkles className="h-3.5 w-3.5" aria-hidden />
             Mood × Money
           </div>
 
-          <h1 className="font-display text-5xl font-semibold leading-[1.02] tracking-tight text-white sm:text-6xl md:text-7xl">
+          <h1 className="font-display text-5xl font-semibold leading-[1.02] tracking-tight text-ink sm:text-6xl md:text-7xl">
             <span className="hero-line block">Money meets</span>
             <span className="hero-line block">
               <span className="serif-italic text-amber/95">mood.</span>
             </span>
           </h1>
 
-          <p className="hero-sub mt-6 max-w-xl text-base leading-relaxed text-white/55 sm:text-lg">
+          <p className="hero-sub mt-6 max-w-xl text-base leading-relaxed text-ink/55 sm:text-lg">
             Catalyst maps every taka against how you actually felt that day. Spot the days they
             collide — and stop letting low moods drain your wallet.
           </p>
@@ -104,14 +104,14 @@ export function Hero() {
           <div className="hero-ctas mt-8 flex flex-wrap items-center gap-3">
             <Link
               href="/signup?from=landing"
-              className="entry-btn group inline-flex min-h-[48px] cursor-pointer items-center gap-2 rounded-xl px-6 text-sm font-semibold text-black shadow-entry transition-transform duration-200 hover:brightness-110 active:scale-[0.99]"
+              className="entry-btn group inline-flex min-h-[48px] cursor-pointer items-center gap-2 rounded-xl px-6 text-sm font-semibold text-paper shadow-entry transition-transform duration-200 hover:brightness-110 active:scale-[0.99]"
             >
               Start tracking free
               <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden />
             </Link>
             <Link
               href="/login?from=landing"
-              className="inline-flex min-h-[48px] cursor-pointer items-center rounded-xl border border-white/10 px-6 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.04]"
+              className="inline-flex min-h-[48px] cursor-pointer items-center rounded-xl border border-ink/10 px-6 text-sm font-medium text-ink/80 transition-colors hover:bg-ink/[0.04]"
             >
               I have an account
             </Link>
@@ -124,8 +124,8 @@ export function Hero() {
               { v: "RLS", l: "Private by default" },
             ].map((s) => (
               <div key={s.l}>
-                <div className="font-display text-2xl font-semibold text-white">{s.v}</div>
-                <div className="mt-1 font-mono text-[10px] uppercase tracking-widest text-white/40">
+                <div className="font-display text-2xl font-semibold text-ink">{s.v}</div>
+                <div className="mt-1 font-mono text-[10px] uppercase tracking-widest text-ink/40">
                   {s.l}
                 </div>
               </div>
@@ -135,17 +135,17 @@ export function Hero() {
 
         {/* Right side: mocked preview card */}
         <div className="relative">
-          <div className="hero-card relative mx-auto w-full max-w-md rounded-3xl border border-white/10 bg-card/80 p-6 shadow-card backdrop-blur-xl">
+          <div className="hero-card relative mx-auto w-full max-w-md rounded-3xl border border-ink/10 bg-card/80 p-6 shadow-card backdrop-blur-xl">
             <div className="label mb-2">Dashboard · this month</div>
-            <h3 className="font-display text-3xl font-semibold text-white">
+            <h3 className="font-display text-3xl font-semibold text-ink">
               The month <span className="serif-italic text-amber/90">so far.</span>
             </h3>
             <div className="mt-5 grid grid-cols-2 gap-3">
-              <div className="rounded-xl border border-line bg-white/[0.02] p-3">
+              <div className="rounded-xl border border-line bg-ink/[0.02] p-3">
                 <div className="label">Spent</div>
-                <div className="mt-1 font-mono text-xl text-white">৳1,000</div>
+                <div className="mt-1 font-mono text-xl text-ink">৳1,000</div>
               </div>
-              <div className="rounded-xl border border-line bg-white/[0.02] p-3">
+              <div className="rounded-xl border border-line bg-ink/[0.02] p-3">
                 <div className="label">Earned</div>
                 <div className="mt-1 font-mono text-xl text-income">৳5,500</div>
               </div>
@@ -154,22 +154,22 @@ export function Hero() {
               {[10, 30, 18, 44, 24, 60, 42].map((h, i) => (
                 <div
                   key={i}
-                  className="flex-1 rounded-t-md"
+                  className="flex-1 rounded-sm"
                   style={{
                     height: `${h * 1.6}px`,
-                    background: i % 2 ? "#34D399" : "#F43F5E",
-                    opacity: 0.85,
+                    background: i % 2 ? "#2F6B4E" : "#B23A2C",
+                    opacity: 0.9,
                   }}
                 />
               ))}
             </div>
-            <div className="mt-3 flex items-center justify-between font-mono text-xs text-white/45">
+            <div className="mt-3 flex items-center justify-between font-mono text-xs text-ink/45">
               <span>Mood ×</span>
               <span>r = −0.74</span>
             </div>
           </div>
           {/* Decorative card behind */}
-          <div className="hero-card pointer-events-none absolute -right-6 top-12 -z-10 h-40 w-40 rotate-6 rounded-3xl border border-white/5 bg-gradient-to-br from-amber/30 to-fuchsia-500/30 blur-2xl" />
+          <div className="hero-card pointer-events-none absolute -right-6 top-12 -z-10 h-40 w-40 rotate-6 rounded-3xl border border-ink/5 bg-gradient-to-br from-[#9B3A2D]/20 to-[#B59A3C]/20 blur-2xl" />
         </div>
       </div>
     </section>

@@ -23,7 +23,7 @@ export function RangeControls({
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex gap-1 rounded-xl border border-line bg-white/[0.02] p-1">
+        <div className="flex gap-1 rounded-xl border border-line bg-ink/[0.02] p-1">
           {RANGES.map((r) => (
             <button
               key={r}
@@ -33,7 +33,7 @@ export function RangeControls({
               }}
               className={cn(
                 "cursor-pointer rounded-lg px-2.5 py-1 text-[11px] font-medium capitalize transition-colors duration-200",
-                range === r ? "bg-white/[0.08] text-amber" : "text-white/45 hover:text-white/75",
+                range === r ? "bg-ink/[0.08] text-amber" : "text-ink/45 hover:text-ink/75",
               )}
             >
               {r}
@@ -45,7 +45,7 @@ export function RangeControls({
             onClick={() => setOffset((o) => o - 1)}
             aria-label="Previous period"
             className={cn(
-              "hairline flex cursor-pointer items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/5 hover:text-white",
+              "hairline flex cursor-pointer items-center justify-center rounded-lg text-ink/60 transition-colors hover:bg-ink/5 hover:text-ink",
               sizeCls,
             )}
           >
@@ -56,7 +56,7 @@ export function RangeControls({
             disabled={offset >= 0}
             aria-label="Next period"
             className={cn(
-              "hairline flex cursor-pointer items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/5 hover:text-white disabled:opacity-40",
+              "hairline flex cursor-pointer items-center justify-center rounded-lg text-ink/60 transition-colors hover:bg-ink/5 hover:text-ink disabled:opacity-40",
               sizeCls,
             )}
           >
@@ -64,7 +64,7 @@ export function RangeControls({
           </button>
         </div>
       </div>
-      <div className="font-mono text-[11px] uppercase tracking-widest text-white/35">{label}</div>
+      <div className="font-mono text-[11px] uppercase tracking-widest text-ink/35">{label}</div>
     </div>
   );
 }

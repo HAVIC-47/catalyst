@@ -8,7 +8,7 @@ import type { Category, Transaction } from "@/types";
 import { rangeWindow, type Range } from "@/lib/range";
 import { RangeControls } from "@/components/charts/range-controls";
 
-const FALLBACK = "#64748B";
+const FALLBACK = "#7A746A";
 
 export function CategoryBars({
   transactions,
@@ -59,7 +59,7 @@ export function CategoryBars({
       />
 
       {bars.length === 0 ? (
-        <p className="py-12 text-center text-sm text-white/35">No transactions this period.</p>
+        <p className="py-12 text-center text-sm text-ink/35">No transactions this period.</p>
       ) : (
         <div style={{ height: Math.max(180, bars.length * 36 + 24) }} className="mt-4 w-full">
           <ResponsiveContainer width="100%" height="100%">
@@ -86,8 +86,8 @@ export function CategoryBars({
                   const p = payload[0].payload;
                   return (
                     <div className="card px-3 py-2 text-xs">
-                      <div className="text-white/80">{p.name}</div>
-                      <div className="font-mono text-white/55">
+                      <div className="text-ink/80">{p.name}</div>
+                      <div className="font-mono text-ink/55">
                         {p.count} {p.count === 1 ? "entry" : "entries"} · {p.kind}
                       </div>
                     </div>

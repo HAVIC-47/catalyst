@@ -77,19 +77,19 @@ export function OverlapChart({
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="label">Trend · {periodLabel}</div>
-          <h2 className="mt-1 font-display text-2xl font-semibold text-white">
-            Mood <span className="serif-italic text-white/50">×</span> money
+          <h2 className="mt-1 font-display text-2xl font-semibold text-ink">
+            Mood <span className="serif-italic text-ink/50">×</span> money
           </h2>
         </div>
         <div className="text-right font-mono text-xs">
-          <div className="text-white/40">r = {correlation.toFixed(2)}</div>
-          <div className="text-white/30">{correlationLabel(correlation)}</div>
+          <div className="text-ink/40">r = {correlation.toFixed(2)}</div>
+          <div className="text-ink/30">{correlationLabel(correlation)}</div>
         </div>
       </div>
 
       {/* controls */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex gap-1 rounded-xl border border-line bg-white/[0.02] p-1">
+        <div className="flex gap-1 rounded-xl border border-line bg-ink/[0.02] p-1">
           {RANGES.map((r) => (
             <button
               key={r}
@@ -99,7 +99,7 @@ export function OverlapChart({
               }}
               className={cn(
                 "cursor-pointer rounded-lg px-3 py-1.5 text-xs font-medium capitalize transition-colors duration-200",
-                range === r ? "bg-white/[0.08] text-amber" : "text-white/45 hover:text-white/75",
+                range === r ? "bg-ink/[0.08] text-amber" : "text-ink/45 hover:text-ink/75",
               )}
             >
               {r}
@@ -110,14 +110,14 @@ export function OverlapChart({
           <button
             onClick={() => setOffset((o) => o - 1)}
             aria-label="Previous period"
-            className="hairline flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/5 hover:text-white"
+            className="hairline flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-ink/60 transition-colors hover:bg-ink/5 hover:text-ink"
           >
             <ChevronLeft className="h-4 w-4" aria-hidden />
           </button>
           <button
             onClick={() => setOffset(0)}
             disabled={offset === 0}
-            className="hairline h-9 cursor-pointer rounded-lg px-3 font-mono text-[11px] uppercase tracking-widest text-white/60 transition-colors hover:bg-white/5 hover:text-white disabled:opacity-40"
+            className="hairline h-9 cursor-pointer rounded-lg px-3 font-mono text-[11px] uppercase tracking-widest text-ink/60 transition-colors hover:bg-ink/5 hover:text-ink disabled:opacity-40"
           >
             Now
           </button>
@@ -125,7 +125,7 @@ export function OverlapChart({
             onClick={() => setOffset((o) => Math.min(0, o + 1))}
             disabled={offset >= 0}
             aria-label="Next period"
-            className="hairline flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/5 hover:text-white disabled:opacity-40"
+            className="hairline flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-ink/60 transition-colors hover:bg-ink/5 hover:text-ink disabled:opacity-40"
           >
             <ChevronRight className="h-4 w-4" aria-hidden />
           </button>
@@ -157,7 +157,7 @@ export function OverlapChart({
               orientation="right"
               domain={[0, 5]}
               ticks={[1, 2, 3, 4, 5]}
-              tick={{ fill: "rgba(168,85,247,0.7)", fontSize: 11 }}
+              tick={{ fill: "rgba(122,78,134,0.75)", fontSize: 11 }}
               axisLine={false}
               tickLine={false}
               width={22}
@@ -166,14 +166,14 @@ export function OverlapChart({
             <Tooltip content={<OverlapTooltip />} cursor={{ fill: "rgba(255,255,255,0.04)" }} />
             <Bar yAxisId="money" dataKey="net" name="Net" radius={[3, 3, 0, 0]} maxBarSize={byMonth ? 24 : 14}>
               {points.map((p) => (
-                <Cell key={p.key} fill={p.net >= 0 ? "#34D399" : "#F43F5E"} />
+                <Cell key={p.key} fill={p.net >= 0 ? "#2F6B4E" : "#B23A2C"} />
               ))}
             </Bar>
             <Bar
               yAxisId="money"
               dataKey="saving"
               name="Saving"
-              fill="#60A5FA"
+              fill="#34618A"
               radius={[3, 3, 0, 0]}
               maxBarSize={byMonth ? 24 : 14}
             />
@@ -182,11 +182,11 @@ export function OverlapChart({
               type="monotone"
               dataKey="mood"
               name="Mood"
-              stroke="#A855F7"
+              stroke="#7A4E86"
               strokeWidth={2}
-              dot={range === "day" || range === "week" ? { r: 3, fill: "#A855F7" } : false}
+              dot={range === "day" || range === "week" ? { r: 3, fill: "#7A4E86" } : false}
               connectNulls
-              activeDot={{ r: 4, fill: "#A855F7" }}
+              activeDot={{ r: 4, fill: "#7A4E86" }}
             />
           </ComposedChart>
         </ResponsiveContainer>
@@ -309,12 +309,12 @@ function OverlapTooltip({ active, payload }: any) {
   const p = payload[0].payload as Point;
   return (
     <div className="card px-3 py-2 text-xs">
-      <div className="mb-1 font-mono text-white/50">{p.label}</div>
+      <div className="mb-1 font-mono text-ink/50">{p.label}</div>
       <div className={p.net >= 0 ? "text-income" : "text-expense"}>
         Net {formatCurrency(p.net, { sign: true })}
       </div>
       {p.saving > 0 && (
-        <div style={{ color: "#60A5FA" }}>Saving +{formatCurrency(p.saving)}</div>
+        <div style={{ color: "#34618A" }}>Saving +{formatCurrency(p.saving)}</div>
       )}
       <div className="text-neon-purple">
         Mood {p.mood ?? "—"}

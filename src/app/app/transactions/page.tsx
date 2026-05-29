@@ -27,21 +27,21 @@ export default function TransactionsPage() {
       <div className="mb-6 flex items-end justify-between gap-4">
         <div>
           <div className="label mb-2">Ledger · {transactions.length} total</div>
-          <h1 className="font-display text-5xl font-semibold tracking-tight text-white sm:text-6xl">
+          <h1 className="font-display text-5xl font-semibold tracking-tight text-ink sm:text-6xl">
             Trans<span className="serif-italic text-amber/90">actions.</span>
           </h1>
         </div>
         <button
           onClick={() => openEntry({ tab: "money" })}
-          className="entry-btn min-h-[42px] cursor-pointer rounded-xl px-4 text-sm font-semibold text-black shadow-entry"
+          className="entry-btn min-h-[42px] cursor-pointer rounded-xl px-4 text-sm font-semibold text-paper shadow-entry"
         >
           + Add
         </button>
       </div>
 
       {!loading && transactions.length === 0 && (
-        <div className="card px-6 py-16 text-center text-sm text-white/40">
-          No transactions yet. Hit <span className="text-white/70">+ Add</span> or click a calendar day.
+        <div className="card px-6 py-16 text-center text-sm text-ink/40">
+          No transactions yet. Hit <span className="text-ink/70">+ Add</span> or click a calendar day.
         </div>
       )}
 
@@ -51,7 +51,7 @@ export default function TransactionsPage() {
           return (
             <div key={date} className="card overflow-hidden">
               <div className="flex items-center justify-between border-b border-line px-5 py-3">
-                <span className="font-mono text-xs uppercase tracking-widest text-white/45">
+                <span className="font-mono text-xs uppercase tracking-widest text-ink/45">
                   {format(parseISO(date), "EEE · MMM d, yyyy")}
                 </span>
                 <span className={cn("font-mono text-xs tabular", dayNet >= 0 ? "text-income" : "text-expense")}>
@@ -61,7 +61,7 @@ export default function TransactionsPage() {
               <ul className="divide-y divide-line">
                 {items.map((t) => {
                   const Icon = t.kind === "income" ? ArrowDownLeft : ArrowUpRight;
-                  const color = colorOf.get(t.categoryName) ?? "#64748B";
+                  const color = colorOf.get(t.categoryName) ?? "#7A746A";
                   return (
                     <li key={t.id} className="group flex items-center gap-3 px-5 py-3">
                       <span
@@ -71,10 +71,10 @@ export default function TransactionsPage() {
                         {t.categoryName.slice(0, 1).toUpperCase()}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm text-white/85">
+                        <div className="truncate text-sm text-ink/85">
                           {t.note || t.categoryName}
                         </div>
-                        <div className="flex items-center gap-1.5 text-[11px] text-white/40">
+                        <div className="flex items-center gap-1.5 text-[11px] text-ink/40">
                           <span>{t.categoryName}</span>
                           {t.place && (
                             <>
@@ -88,13 +88,13 @@ export default function TransactionsPage() {
                         className={cn("h-3.5 w-3.5 shrink-0", t.kind === "income" ? "text-income" : "text-expense")}
                         aria-hidden
                       />
-                      <span className={cn("font-mono text-sm tabular", t.kind === "income" ? "text-income" : "text-white/80")}>
+                      <span className={cn("font-mono text-sm tabular", t.kind === "income" ? "text-income" : "text-ink/80")}>
                         {formatCurrency(t.kind === "income" ? t.amount : -t.amount, { sign: true })}
                       </span>
                       <button
                         onClick={() => removeMoney(t.id)}
                         aria-label="Delete"
-                        className="cursor-pointer text-white/0 transition-colors group-hover:text-white/30 hover:!text-expense"
+                        className="cursor-pointer text-ink/0 transition-colors group-hover:text-ink/30 hover:!text-expense"
                       >
                         <Trash2 className="h-4 w-4" aria-hidden />
                       </button>

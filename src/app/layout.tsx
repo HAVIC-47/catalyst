@@ -1,20 +1,22 @@
 import type { Metadata } from "next";
-import { Fraunces, Manrope, JetBrains_Mono } from "next/font/google";
+import { Newsreader, Hanken_Grotesk, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 
-// High-contrast characterful serif for big display headings ("May 2026").
-const display = Fraunces({
+// Editorial newspaper serif for display headings + its expressive italic.
+const display = Newsreader({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
   style: ["normal", "italic"],
   variable: "--font-display",
 });
-const body = Manrope({
+// Humanist grotesque for body copy — clean, characterful, not Inter.
+const body = Hanken_Grotesk({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
+  weight: ["300", "400", "500", "600", "700"],
   variable: "--font-body",
 });
-const mono = JetBrains_Mono({
+// Typewriter-leaning mono for ledger numbers.
+const mono = IBM_Plex_Mono({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
   variable: "--font-mono",
@@ -23,13 +25,13 @@ const mono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Catalyst — Mood & Money",
   description:
-    "Correlate daily cash flow with daily mood. Predictive personal analytics with a Main Character aesthetic.",
+    "An honest ledger that maps every taka against how the day actually felt.",
 };
 
 export const viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#050506",
+  themeColor: "#F4F0E8",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

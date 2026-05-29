@@ -24,7 +24,7 @@ export function Why() {
       <div className="mx-auto max-w-5xl">
         <div className="mb-12 text-center">
           <div className="label mb-3">Why Catalyst</div>
-          <h2 className="font-display text-4xl font-semibold leading-tight tracking-tight text-white sm:text-5xl">
+          <h2 className="font-display text-4xl font-semibold leading-tight tracking-tight text-ink sm:text-5xl">
             Most trackers count taka. <br className="hidden sm:block" />
             <span className="serif-italic text-amber/90">Catalyst counts you.</span>
           </h2>
@@ -36,8 +36,8 @@ export function Why() {
             return (
               <div key={w.title} className="rounded-2xl border border-line bg-card p-7">
                 <Icon className="mb-5 h-6 w-6 text-amber" aria-hidden />
-                <h3 className="font-display text-xl font-semibold text-white">{w.title}</h3>
-                <p className="mt-3 text-sm leading-relaxed text-white/55">{w.body}</p>
+                <h3 className="font-display text-xl font-semibold text-ink">{w.title}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-ink/55">{w.body}</p>
               </div>
             );
           })}

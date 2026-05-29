@@ -39,7 +39,7 @@ export function MoodDonut({ moods }: { moods: MoodLog[] }) {
       />
 
       {slices.length === 0 ? (
-        <p className="py-12 text-center text-sm text-white/35">No moods logged this period.</p>
+        <p className="py-12 text-center text-sm text-ink/35">No moods logged this period.</p>
       ) : (
         <div className="mt-4 flex flex-col items-center gap-5">
           <div className="relative h-44 w-44">
@@ -62,7 +62,7 @@ export function MoodDonut({ moods }: { moods: MoodLog[] }) {
             </ResponsiveContainer>
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
               <span className="label">Logs</span>
-              <span className="font-mono text-lg font-semibold tabular text-white">{total}</span>
+              <span className="font-mono text-lg font-semibold tabular text-ink">{total}</span>
             </div>
           </div>
 
@@ -70,11 +70,11 @@ export function MoodDonut({ moods }: { moods: MoodLog[] }) {
             {slices.map((s) => (
               <li key={s.name} className="flex items-center gap-2 text-sm">
                 <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: s.color }} />
-                <span className="text-white/65">
+                <span className="text-ink/65">
                   <span className="mr-1">{s.emoji}</span>
                   {s.name}
                 </span>
-                <span className="ml-auto font-mono tabular text-white/50">
+                <span className="ml-auto font-mono tabular text-ink/50">
                   {s.value} {s.value === 1 ? "log" : "logs"}
                 </span>
               </li>

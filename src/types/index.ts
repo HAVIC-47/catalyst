@@ -66,13 +66,14 @@ export interface MoodPreset {
   color: string;
 }
 
-// Mood scale: red (low) -> green (high), passing through orange/yellow/lime.
+// Mood scale: earthy brick (low) -> forest green (high). Muted, printed-ink tones
+// that sit naturally on bone paper (no neon).
 export const MOOD_PRESETS: MoodPreset[] = [
-  { value: 1, label: "Awful", emoji: "😩", color: "#EF4444" }, // red
-  { value: 2, label: "Low", emoji: "😕", color: "#F97316" }, // orange
-  { value: 3, label: "Okay", emoji: "😐", color: "#EAB308" }, // yellow
-  { value: 4, label: "Good", emoji: "🙂", color: "#84CC16" }, // lime
-  { value: 5, label: "Great", emoji: "🤩", color: "#22C55E" }, // green
+  { value: 1, label: "Awful", emoji: "😩", color: "#A8322A" }, // brick red
+  { value: 2, label: "Low", emoji: "😕", color: "#C06A33" }, // burnt orange
+  { value: 3, label: "Okay", emoji: "😐", color: "#B59A3C" }, // ochre
+  { value: 4, label: "Good", emoji: "🙂", color: "#6E8C46" }, // olive
+  { value: 5, label: "Great", emoji: "🤩", color: "#2F6B4E" }, // forest
 ];
 
 export function moodPreset(value: number): MoodPreset {
@@ -137,29 +138,29 @@ export interface ActivityLog {
 
 /** Default categories seeded for new users (editable in Settings). */
 export const DEFAULT_EXPENSE_CATEGORIES: { name: string; color: string }[] = [
-  { name: "Food", color: "#F59E0B" },
-  { name: "Groceries", color: "#34D399" },
-  { name: "Transport", color: "#38BDF8" },
-  { name: "Rent", color: "#A855F7" },
-  { name: "Utilities", color: "#FBBF24" },
-  { name: "Internet", color: "#22D3EE" },
-  { name: "Health", color: "#F43F5E" },
-  { name: "Education", color: "#818CF8" },
-  { name: "Shopping", color: "#EC4899" },
-  { name: "Entertainment", color: "#FB7185" },
-  { name: "Travel", color: "#2DD4BF" },
-  { name: "Subscriptions", color: "#C084FC" },
-  { name: "Gifts", color: "#F472B6" },
-  { name: "Fitness", color: "#4ADE80" },
-  { name: "Personal Care", color: "#E879F9" },
-  { name: "Pets", color: "#FCD34D" },
-  { name: BREAK_SAVING, color: "#60A5FA" }, // pulls from savings pool when used
-  { name: "Other", color: "#64748B" },
+  { name: "Food", color: "#C06A33" },
+  { name: "Groceries", color: "#2F6B4E" },
+  { name: "Transport", color: "#34618A" },
+  { name: "Rent", color: "#7A4E86" },
+  { name: "Utilities", color: "#B59A3C" },
+  { name: "Internet", color: "#34618A" },
+  { name: "Health", color: "#B23A2C" },
+  { name: "Education", color: "#4C5B82" },
+  { name: "Shopping", color: "#8E5B6E" },
+  { name: "Entertainment", color: "#A6694A" },
+  { name: "Travel", color: "#2F6F6B" },
+  { name: "Subscriptions", color: "#7A4E86" },
+  { name: "Gifts", color: "#8E5B6E" },
+  { name: "Fitness", color: "#6E8C46" },
+  { name: "Personal Care", color: "#7A4E86" },
+  { name: "Pets", color: "#B59A3C" },
+  { name: BREAK_SAVING, color: "#34618A" }, // pulls from savings pool when used
+  { name: "Other", color: "#7A746A" },
 ];
 
 export const DEFAULT_INCOME_CATEGORIES: { name: string; color: string }[] = [
-  { name: "Salary", color: "#34D399" },
-  { name: "Freelance", color: "#22D3EE" },
-  { name: "Gift", color: "#C084FC" },
-  { name: "Other", color: "#64748B" },
+  { name: "Salary", color: "#2F6B4E" },
+  { name: "Freelance", color: "#34618A" },
+  { name: "Gift", color: "#7A4E86" },
+  { name: "Other", color: "#7A746A" },
 ];

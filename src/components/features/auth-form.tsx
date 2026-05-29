@@ -61,15 +61,15 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       <Link
         href="/"
         aria-label="Back to Catalyst home"
-        className="mb-6 inline-flex cursor-pointer items-center gap-2 text-xs font-medium uppercase tracking-[0.3em] text-neon-purple/80 transition-colors hover:text-amber"
+        className="mb-6 inline-flex cursor-pointer items-center gap-2 text-xs font-medium uppercase tracking-[0.3em] text-amber/80 transition-colors hover:text-amber"
       >
         <Sparkles className="h-3.5 w-3.5" aria-hidden />
         Catalyst
       </Link>
-      <h1 className="font-display text-3xl font-bold tracking-tight text-white">
+      <h1 className="font-display text-3xl font-bold tracking-tight text-ink">
         {isSignup ? "Create account" : "Welcome back"}
       </h1>
-      <p className="mt-1.5 text-sm text-white/50">
+      <p className="mt-1.5 text-sm text-ink/50">
         {isSignup ? "Start mapping your money against your mood." : "Log in to your dashboard."}
       </p>
 
@@ -77,7 +77,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         <label className="block">
           <span className="sr-only">Email</span>
           <div className="relative">
-            <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" aria-hidden />
+            <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/35" aria-hidden />
             <input
               type="email"
               autoComplete="email"
@@ -85,14 +85,14 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@email.com"
-              className="min-h-[44px] w-full rounded-xl border border-white/10 bg-white/[0.03] pl-10 pr-3 text-sm text-white outline-none focus:border-neon-cyan/50"
+              className="min-h-[44px] w-full rounded-xl border border-ink/10 bg-ink/[0.03] pl-10 pr-3 text-sm text-ink outline-none focus:border-neon-cyan/50"
             />
           </div>
         </label>
         <label className="block">
           <span className="sr-only">Password</span>
           <div className="relative">
-            <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" aria-hidden />
+            <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/35" aria-hidden />
             <input
               type="password"
               autoComplete={isSignup ? "new-password" : "current-password"}
@@ -101,7 +101,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder={isSignup ? "Create a password (min 6)" : "Password"}
-              className="min-h-[44px] w-full rounded-xl border border-white/10 bg-white/[0.03] pl-10 pr-3 text-sm text-white outline-none focus:border-neon-cyan/50"
+              className="min-h-[44px] w-full rounded-xl border border-ink/10 bg-ink/[0.03] pl-10 pr-3 text-sm text-ink outline-none focus:border-neon-cyan/50"
             />
           </div>
         </label>
@@ -120,20 +120,20 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         <button
           type="submit"
           disabled={loading}
-          className="inline-flex min-h-[44px] w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-neon-cyan/40 bg-neon-cyan/15 px-4 text-sm font-medium text-neon-cyan transition-all duration-200 hover:bg-neon-cyan/25 hover:shadow-neon-cyan disabled:cursor-not-allowed disabled:opacity-50"
+          className="entry-btn inline-flex min-h-[44px] w-full cursor-pointer items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-paper shadow-entry transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
           {isSignup ? "Sign up" : "Log in"}
         </button>
       </form>
 
-      <div className="mt-6 border-t border-white/[0.06] pt-5">
-        <p className="mb-3 text-center text-xs text-white/45">
+      <div className="mt-6 border-t border-ink/[0.06] pt-5">
+        <p className="mb-3 text-center text-xs text-ink/45">
           {isSignup ? "Already have an account?" : "No account yet?"}
         </p>
         <Link
           href={isSignup ? "/login?from=landing" : "/signup?from=landing"}
-          className="flex min-h-[44px] cursor-pointer items-center justify-center rounded-xl border border-white/15 px-4 text-sm font-semibold text-white/90 transition-colors duration-200 hover:border-amber/40 hover:bg-white/[0.04] hover:text-amber"
+          className="flex min-h-[44px] cursor-pointer items-center justify-center rounded-xl border border-ink/15 px-4 text-sm font-semibold text-ink/90 transition-colors duration-200 hover:border-amber/40 hover:bg-ink/[0.04] hover:text-amber"
         >
           {isSignup ? "Log in instead" : "Create account"}
         </Link>

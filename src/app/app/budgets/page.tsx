@@ -43,11 +43,11 @@ export default function BudgetsPage() {
     <div className="px-4 py-6 sm:px-6 lg:px-8">
       <div className="mb-6">
         <div className="label mb-2">Budgets · this month</div>
-        <h1 className="font-display text-5xl font-semibold tracking-tight text-white sm:text-6xl">
+        <h1 className="font-display text-5xl font-semibold tracking-tight text-ink sm:text-6xl">
           Spend <span className="serif-italic text-amber/90">limits.</span>
         </h1>
         {budgets.length > 0 && (
-          <p className="mt-3 font-mono text-sm text-white/45">
+          <p className="mt-3 font-mono text-sm text-ink/45">
             {formatCurrency(totalSpent)} of {formatCurrency(totalBudget)} used
           </p>
         )}
@@ -59,7 +59,7 @@ export default function BudgetsPage() {
           value={newCatId}
           onChange={(e) => setNewCatId(e.target.value)}
           aria-label="Category"
-          className="min-h-[44px] cursor-pointer rounded-xl border border-line bg-card px-3 text-sm text-white/80 outline-none focus:border-amber/50"
+          className="min-h-[44px] cursor-pointer rounded-xl border border-line bg-card px-3 text-sm text-ink/80 outline-none focus:border-amber/50"
         >
           {available.length === 0 ? (
             <option value="">All categories budgeted</option>
@@ -71,28 +71,28 @@ export default function BudgetsPage() {
             ))
           )}
         </select>
-        <div className="flex flex-1 items-center gap-2 rounded-xl border border-line bg-white/[0.02] px-3 focus-within:border-amber/50">
-          <span className="font-mono text-white/40">{TAKA}</span>
+        <div className="flex flex-1 items-center gap-2 rounded-xl border border-line bg-ink/[0.02] px-3 focus-within:border-amber/50">
+          <span className="font-mono text-ink/40">{TAKA}</span>
           <input
             inputMode="decimal"
             value={newAmt}
             onChange={(e) => setNewAmt(e.target.value.replace(/[^0-9.]/g, ""))}
             placeholder="Monthly limit"
             aria-label="Monthly limit"
-            className="min-h-[44px] w-full bg-transparent font-mono text-sm text-white outline-none"
+            className="min-h-[44px] w-full bg-transparent font-mono text-sm text-ink outline-none"
           />
         </div>
         <button
           onClick={add}
           disabled={available.length === 0 || !(parseFloat(newAmt) > 0)}
-          className="entry-btn inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl px-4 text-sm font-semibold text-black disabled:opacity-40"
+          className="entry-btn inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl px-4 text-sm font-semibold text-paper disabled:opacity-40"
         >
           <Plus className="h-4 w-4" strokeWidth={2.5} aria-hidden /> Set budget
         </button>
       </div>
 
       {!loading && budgets.length === 0 && (
-        <div className="card px-6 py-16 text-center text-sm text-white/40">
+        <div className="card px-6 py-16 text-center text-sm text-ink/40">
           No budgets yet. Pick a category and set a monthly limit.
         </div>
       )}
@@ -103,29 +103,29 @@ export default function BudgetsPage() {
           const spent = spentByCat.get(b.categoryName) ?? 0;
           const pct = b.amount > 0 ? Math.min(100, (spent / b.amount) * 100) : 0;
           const over = spent > b.amount;
-          const color = over ? "#F43F5E" : cat?.color ?? "#22D3EE";
+          const color = over ? "#B23A2C" : cat?.color ?? "#34618A";
           return (
             <div key={b.id} className="card p-5">
               <div className="mb-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span
                     className="flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold"
-                    style={{ backgroundColor: `${cat?.color ?? "#64748B"}22`, color: cat?.color ?? "#64748B" }}
+                    style={{ backgroundColor: `${cat?.color ?? "#7A746A"}22`, color: cat?.color ?? "#7A746A" }}
                   >
                     {b.categoryName.slice(0, 1).toUpperCase()}
                   </span>
-                  <span className="text-sm font-medium text-white/85">{b.categoryName}</span>
+                  <span className="text-sm font-medium text-ink/85">{b.categoryName}</span>
                 </div>
                 <button
                   onClick={() => removeBudget(b.id)}
                   aria-label="Delete budget"
-                  className="cursor-pointer text-white/30 transition-colors hover:text-expense"
+                  className="cursor-pointer text-ink/30 transition-colors hover:text-expense"
                 >
                   <Trash2 className="h-4 w-4" aria-hidden />
                 </button>
               </div>
 
-              <div className="h-2 overflow-hidden rounded-full bg-white/[0.06]">
+              <div className="h-2 overflow-hidden rounded-full bg-ink/[0.06]">
                 <div
                   className="h-full rounded-full transition-all duration-500"
                   style={{ width: `${pct}%`, backgroundColor: color }}
@@ -133,10 +133,10 @@ export default function BudgetsPage() {
               </div>
 
               <div className="mt-2 flex items-center justify-between font-mono text-xs">
-                <span className={over ? "text-expense" : "text-white/55"}>
+                <span className={over ? "text-expense" : "text-ink/55"}>
                   {formatCurrency(spent)} spent
                 </span>
-                <span className="flex items-center gap-1 text-white/40">
+                <span className="flex items-center gap-1 text-ink/40">
                   of
                   <input
                     defaultValue={String(b.amount)}
@@ -146,7 +146,7 @@ export default function BudgetsPage() {
                     }}
                     inputMode="decimal"
                     aria-label="Edit limit"
-                    className="w-16 rounded border border-transparent bg-transparent text-right text-white/70 outline-none hover:border-line focus:border-amber/50"
+                    className="w-16 rounded border border-transparent bg-transparent text-right text-ink/70 outline-none hover:border-line focus:border-amber/50"
                   />
                 </span>
               </div>

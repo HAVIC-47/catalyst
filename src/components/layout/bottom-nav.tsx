@@ -21,7 +21,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-ink/80 backdrop-blur-xl lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-paper/90 backdrop-blur-xl lg:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <ul className="mx-auto flex max-w-md items-stretch justify-between px-2 py-1.5">
@@ -34,7 +34,7 @@ export function BottomNav() {
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "relative flex h-14 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-xl text-[10px] font-medium transition-colors duration-200",
-                  active ? "text-amber" : "text-white/45 hover:text-white/75",
+                  active ? "text-amber" : "text-ink/45 hover:text-ink/75",
                 )}
               >
                 {active && (

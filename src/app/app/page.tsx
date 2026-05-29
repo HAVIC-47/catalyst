@@ -50,17 +50,18 @@ function dayCellStyle(data: CellData | undefined, maxFlow: number): CSSPropertie
   const flow = data.expense + data.income;
   if (flow === 0 && !data.mood) return {};
 
-  const moodRgb = data.mood ? hexToRgb(moodPreset(data.mood).color) : "100, 116, 139";
-  const moodA = data.mood ? 0.22 : 0.06;
+  const moodRgb = data.mood ? hexToRgb(moodPreset(data.mood).color) : "122, 116, 106";
+  const moodA = data.mood ? 0.2 : 0.05;
 
   const spendRatio = maxFlow > 0 ? data.expense / maxFlow : 0;
   const incomeRatio = maxFlow > 0 ? data.income / maxFlow : 0;
-  const spendA = Math.min(0.5, spendRatio * 0.55);
-  const incomeA = Math.min(0.5, incomeRatio * 0.55);
+  const spendA = Math.min(0.42, spendRatio * 0.48);
+  const incomeA = Math.min(0.42, incomeRatio * 0.48);
 
   const layers: string[] = [];
-  if (spendA > 0) layers.push(`linear-gradient(rgba(168,85,247,${spendA}),rgba(168,85,247,${spendA}))`);
-  if (incomeA > 0) layers.push(`linear-gradient(rgba(59,130,246,${incomeA}),rgba(59,130,246,${incomeA}))`);
+  // oxblood overlay for spend, ink-blue overlay for income — printed-ink tints.
+  if (spendA > 0) layers.push(`linear-gradient(rgba(155,58,45,${spendA}),rgba(155,58,45,${spendA}))`);
+  if (incomeA > 0) layers.push(`linear-gradient(rgba(52,97,138,${incomeA}),rgba(52,97,138,${incomeA}))`);
   layers.push(`rgba(${moodRgb}, ${moodA})`);
   return { background: layers.join(", ") };
 }
@@ -141,28 +142,28 @@ export default function CalendarPage() {
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="label mb-2">Calendar · {summary.count} active days</div>
-          <h1 className="font-display text-5xl font-semibold tracking-tight text-white sm:text-6xl">
+          <h1 className="font-display text-5xl font-semibold tracking-tight text-ink sm:text-6xl">
             {period.label}
           </h1>
           <div className="mt-3 flex flex-wrap items-center gap-4 font-mono text-sm">
-            <span className="text-white/45">
+            <span className="text-ink/45">
               NET{" "}
               <span className={summary.net >= 0 ? "text-income" : "text-expense"}>
                 {formatCurrency(summary.net, { sign: true })}
               </span>
             </span>
-            <span className="text-white/30">·</span>
-            <span className="text-white/45">
+            <span className="text-ink/30">·</span>
+            <span className="text-ink/45">
               IN <span className="text-income">{compactCurrency(summary.income)}</span>
             </span>
-            <span className="text-white/45">
+            <span className="text-ink/45">
               OUT <span className="text-expense">{compactCurrency(summary.expense)}</span>
             </span>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex gap-1 rounded-xl border border-line bg-white/[0.02] p-1">
+          <div className="flex gap-1 rounded-xl border border-line bg-ink/[0.02] p-1">
             {RANGES.map((r) => (
               <button
                 key={r}
@@ -172,7 +173,7 @@ export default function CalendarPage() {
                 }}
                 className={cn(
                   "cursor-pointer rounded-lg px-3 py-1.5 text-xs font-medium capitalize transition-colors duration-200",
-                  range === r ? "bg-white/[0.08] text-amber" : "text-white/45 hover:text-white/75",
+                  range === r ? "bg-ink/[0.08] text-amber" : "text-ink/45 hover:text-ink/75",
                 )}
               >
                 {r}
@@ -183,20 +184,20 @@ export default function CalendarPage() {
           <button
             onClick={goPrev}
             aria-label="Previous"
-            className="hairline flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl text-white/60 transition-colors hover:bg-white/5 hover:text-white"
+            className="hairline flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl text-ink/60 transition-colors hover:bg-ink/5 hover:text-ink"
           >
             <ChevronLeft className="h-4 w-4" aria-hidden />
           </button>
           <button
             onClick={() => setCursor(new Date())}
-            className="hairline h-10 cursor-pointer rounded-xl px-4 font-mono text-xs uppercase tracking-widest text-white/70 transition-colors hover:bg-white/5 hover:text-white"
+            className="hairline h-10 cursor-pointer rounded-xl px-4 font-mono text-xs uppercase tracking-widest text-ink/70 transition-colors hover:bg-ink/5 hover:text-ink"
           >
             Today
           </button>
           <button
             onClick={goNext}
             aria-label="Next"
-            className="hairline flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl text-white/60 transition-colors hover:bg-white/5 hover:text-white"
+            className="hairline flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl text-ink/60 transition-colors hover:bg-ink/5 hover:text-ink"
           >
             <ChevronRight className="h-4 w-4" aria-hidden />
           </button>
@@ -204,17 +205,17 @@ export default function CalendarPage() {
       </div>
 
       {/* Legend */}
-      <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[10px] uppercase tracking-widest text-white/40">
+      <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[10px] uppercase tracking-widest text-ink/40">
         <div className="flex items-center gap-2">
-          <span className="text-white/55">Mood</span>
-          <div className="h-2.5 w-28 rounded-full bg-gradient-to-r from-[#EF4444] via-[#EAB308] to-[#22C55E]" />
+          <span className="text-ink/55">Mood</span>
+          <div className="h-2.5 w-28 rounded-full bg-gradient-to-r from-[#A8322A] via-[#B59A3C] to-[#2F6B4E]" />
         </div>
         <div className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: "#A855F7" }} />
+          <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: "#7A4E86" }} />
           Heavier spend
         </div>
         <div className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: "#3B82F6" }} />
+          <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: "#34618A" }} />
           Heavier income
         </div>
       </div>
@@ -225,7 +226,7 @@ export default function CalendarPage() {
       )}
       {range === "year" && <YearView cursor={cursor} byDay={byDay} openEntry={openEntry} />}
 
-      {loading && <p className="mt-4 text-center font-mono text-xs text-white/30">Loading…</p>}
+      {loading && <p className="mt-4 text-center font-mono text-xs text-ink/30">Loading…</p>}
     </div>
   );
 }
@@ -254,7 +255,7 @@ function MonthGrid({
     <div className="card overflow-hidden">
       <div className="grid grid-cols-7 border-b border-line">
         {WEEKDAYS.map((d) => (
-          <div key={d} className="px-3 py-2.5 font-mono text-[10px] tracking-[0.2em] text-white/35">
+          <div key={d} className="px-3 py-2.5 font-mono text-[10px] tracking-[0.2em] text-ink/35">
             {d}
           </div>
         ))}
@@ -275,7 +276,7 @@ function MonthGrid({
               onClick={() => openEntry({ date: key, tab: "money" })}
               style={dayCellStyle(data, maxFlow)}
               className={cn(
-                "group relative flex min-h-[92px] cursor-pointer flex-col border-b border-r border-line p-2 text-left transition-colors duration-150 hover:!bg-white/[0.06] sm:min-h-[110px]",
+                "group relative flex min-h-[92px] cursor-pointer flex-col border-b border-r border-line p-2 text-left transition-colors duration-150 hover:!bg-ink/[0.06] sm:min-h-[110px]",
                 !inMonth && "opacity-35",
                 (i + 1) % 7 === 0 && "border-r-0",
               )}
@@ -285,8 +286,8 @@ function MonthGrid({
                   className={cn(
                     "font-mono text-xs tabular",
                     today
-                      ? "flex h-6 w-6 items-center justify-center rounded-full bg-amber font-semibold text-black"
-                      : "text-white/70",
+                      ? "flex h-6 w-6 items-center justify-center rounded-full bg-amber font-semibold text-paper"
+                      : "text-ink/70",
                   )}
                 >
                   {format(day, "dd")}
@@ -327,7 +328,7 @@ function WeekView({
     <div className="card overflow-hidden">
       <div className="grid grid-cols-7 border-b border-line">
         {WEEKDAYS.map((d) => (
-          <div key={d} className="px-3 py-2.5 font-mono text-[10px] tracking-[0.2em] text-white/35">
+          <div key={d} className="px-3 py-2.5 font-mono text-[10px] tracking-[0.2em] text-ink/35">
             {d}
           </div>
         ))}
@@ -344,7 +345,7 @@ function WeekView({
               onClick={() => openEntry({ date: key, tab: "money" })}
               style={dayCellStyle(data, maxFlow)}
               className={cn(
-                "group flex min-h-[200px] cursor-pointer flex-col border-r border-line p-3 text-left transition-colors duration-150 hover:!bg-white/[0.06]",
+                "group flex min-h-[200px] cursor-pointer flex-col border-r border-line p-3 text-left transition-colors duration-150 hover:!bg-ink/[0.06]",
                 i === 6 && "border-r-0",
               )}
             >
@@ -353,8 +354,8 @@ function WeekView({
                   className={cn(
                     "font-mono text-sm tabular",
                     today
-                      ? "flex h-7 w-7 items-center justify-center rounded-full bg-amber font-semibold text-black"
-                      : "text-white/75",
+                      ? "flex h-7 w-7 items-center justify-center rounded-full bg-amber font-semibold text-paper"
+                      : "text-ink/75",
                   )}
                 >
                   {format(day, "dd")}
@@ -368,7 +369,7 @@ function WeekView({
                 {data?.income ? (
                   <div className="text-income">+{compactCurrency(data.income)}</div>
                 ) : null}
-                {preset && <div className="text-white/45">{preset.label}</div>}
+                {preset && <div className="text-ink/45">{preset.label}</div>}
               </div>
             </button>
           );
@@ -412,14 +413,14 @@ function YearView({
         return (
           <div key={mDate.getMonth()} className="card p-3">
             <div className="mb-2 flex items-baseline justify-between px-1">
-              <h3 className="font-display text-lg font-semibold text-white">{format(mDate, "MMM")}</h3>
-              <span className="font-mono text-[10px] uppercase tracking-widest text-white/30">
+              <h3 className="font-display text-lg font-semibold text-ink">{format(mDate, "MMM")}</h3>
+              <span className="font-mono text-[10px] uppercase tracking-widest text-ink/30">
                 {format(mDate, "yyyy")}
               </span>
             </div>
             <div className="grid grid-cols-7 gap-0.5">
               {WEEKDAYS.map((d) => (
-                <div key={d} className="text-center font-mono text-[8px] tracking-widest text-white/25">
+                <div key={d} className="text-center font-mono text-[8px] tracking-widest text-ink/25">
                   {d[0]}
                 </div>
               ))}
@@ -439,13 +440,13 @@ function YearView({
                         : format(day, "MMM d")
                     }
                     className={cn(
-                      "flex aspect-square cursor-pointer items-center justify-center rounded-[3px] font-mono text-[9px] tabular transition-colors hover:!bg-white/15",
+                      "flex aspect-square cursor-pointer items-center justify-center rounded-[3px] font-mono text-[9px] tabular transition-colors hover:!bg-ink/15",
                       !inMonth && "opacity-25",
                       today && "ring-1 ring-amber",
-                      !data && "bg-white/[0.03]",
+                      !data && "bg-ink/[0.03]",
                     )}
                   >
-                    <span className="text-white/55">{format(day, "d")}</span>
+                    <span className="text-ink/55">{format(day, "d")}</span>
                   </button>
                 );
               })}

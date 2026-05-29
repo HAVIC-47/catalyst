@@ -9,8 +9,8 @@ import { formatCurrency } from "@/lib/utils";
 import { rangeWindow, type Range } from "@/lib/range";
 import { RangeControls } from "@/components/charts/range-controls";
 
-const ADDED_COLOR = "#60A5FA"; // blue
-const BROKEN_COLOR = "#F43F5E"; // rose
+const ADDED_COLOR = "#34618A"; // blue
+const BROKEN_COLOR = "#B23A2C"; // rose
 
 export function SavingsDonut({ transactions }: { transactions: Transaction[] }) {
   const [range, setRange] = useState<Range>("month");
@@ -45,7 +45,7 @@ export function SavingsDonut({ transactions }: { transactions: Transaction[] }) 
       />
 
       {slices.length === 0 ? (
-        <p className="py-12 text-center text-sm text-white/35">No saving activity this period.</p>
+        <p className="py-12 text-center text-sm text-ink/35">No saving activity this period.</p>
       ) : (
         <div className="mt-4 flex flex-col items-center gap-5">
           <div className="relative h-44 w-44">
@@ -80,13 +80,13 @@ export function SavingsDonut({ transactions }: { transactions: Transaction[] }) 
           <ul className="w-full space-y-1.5">
             <li className="flex items-center gap-2 text-sm">
               <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: ADDED_COLOR }} />
-              <span className="text-white/65">Added</span>
-              <span className="ml-auto font-mono tabular text-white/50">{formatCurrency(added)}</span>
+              <span className="text-ink/65">Added</span>
+              <span className="ml-auto font-mono tabular text-ink/50">{formatCurrency(added)}</span>
             </li>
             <li className="flex items-center gap-2 text-sm">
               <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: BROKEN_COLOR }} />
-              <span className="text-white/65">Broken</span>
-              <span className="ml-auto font-mono tabular text-white/50">{formatCurrency(broken)}</span>
+              <span className="text-ink/65">Broken</span>
+              <span className="ml-auto font-mono tabular text-ink/50">{formatCurrency(broken)}</span>
             </li>
           </ul>
         </div>
