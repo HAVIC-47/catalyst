@@ -34,17 +34,16 @@ export const viewport = {
   themeColor: "#F4F0E8",
 };
 
-// Runs before paint: applies the saved theme (or system preference) so there's
-// no flash of the wrong palette.
-// Dark is the default; only an explicit 'light' choice opts out.
-const themeInit = `(function(){try{if(localStorage.getItem('theme')!=='light'){document.documentElement.classList.add('dark')}}catch(e){document.documentElement.classList.add('dark')}})();`;
+// Dark ships by default in the server-rendered HTML (class="dark"); this runs
+// before paint and only removes it when the user explicitly chose light.
+const themeInit = `(function(){try{if(localStorage.getItem('theme')==='light'){document.documentElement.classList.remove('dark')}}catch(e){}})();`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${display.variable} ${body.variable} ${mono.variable}`}
+      className={`dark ${display.variable} ${body.variable} ${mono.variable}`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInit }} />
