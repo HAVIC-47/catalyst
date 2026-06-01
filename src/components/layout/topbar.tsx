@@ -17,7 +17,8 @@ export function Topbar() {
         <span className="font-mono text-sm text-ink/70">{format(today, "EEE, MMM d, yyyy")}</span>
       </div>
 
-      <div className="ml-auto flex items-center gap-3">
+      {/* Desktop actions only — on mobile these live in the bottom bar / More sheet. */}
+      <div className="ml-auto hidden items-center gap-3 lg:flex">
         <button
           onClick={() => openEntry()}
           className="entry-btn inline-flex min-h-[42px] cursor-pointer items-center gap-2 rounded-xl px-4 text-sm font-semibold text-paper shadow-entry transition-transform duration-200 hover:brightness-110 active:scale-[0.98]"

@@ -14,8 +14,6 @@ import {
   Bell,
   NotebookPen,
   Settings,
-  Sun,
-  Moon,
   LogOut,
   X,
   type LucideIcon,
@@ -38,12 +36,10 @@ export function MoreSheet({ open, onClose }: { open: boolean; onClose: () => voi
   const pathname = usePathname();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
-  const [dark, setDark] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
-    setDark(document.documentElement.classList.contains("dark"));
     createClient()
       .auth.getUser()
       .then(({ data }) => setEmail(data.user?.email ?? null));
@@ -55,17 +51,6 @@ export function MoreSheet({ open, onClose }: { open: boolean; onClose: () => voi
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
-
-  const toggleTheme = () => {
-    const next = !document.documentElement.classList.contains("dark");
-    document.documentElement.classList.toggle("dark", next);
-    try {
-      localStorage.setItem("theme", next ? "dark" : "light");
-    } catch {
-      /* ignore */
-    }
-    setDark(next);
-  };
 
   const signOut = async () => {
     await createClient().auth.signOut();
@@ -132,15 +117,8 @@ export function MoreSheet({ open, onClose }: { open: boolean; onClose: () => voi
               })}
             </div>
 
-            {/* theme + sign out */}
-            <div className="mt-4 space-y-2 border-t border-line pt-4">
-              <button
-                onClick={toggleTheme}
-                className="flex min-h-[48px] w-full cursor-pointer items-center gap-3 rounded-xl border border-line px-4 text-sm text-ink/80 transition-colors hover:bg-ink/[0.04]"
-              >
-                {dark ? <Sun className="h-4 w-4 text-amber" aria-hidden /> : <Moon className="h-4 w-4 text-amber" aria-hidden />}
-                {dark ? "Light mode" : "Dark mode"}
-              </button>
+            {/* sign out (theme toggle lives in the bottom bar) */}
+            <div className="mt-4 border-t border-line pt-4">
               <button
                 onClick={signOut}
                 className="flex min-h-[48px] w-full cursor-pointer items-center gap-3 rounded-xl border border-line px-4 text-sm text-ink/80 transition-colors hover:border-expense/40 hover:text-expense"
