@@ -76,6 +76,11 @@ interface AppDataValue {
   closeEntry: () => void;
   setEntryTab: (t: EntryTab) => void;
 
+  // Vault Mode: when on, every income also adds to the savings pool and every
+  // expense draws from it, so savings reflect true net flow.
+  vaultMode: boolean;
+  setVaultMode: (on: boolean) => void;
+
   // money / mood
   addMoney: (t: NewTransaction) => Promise<void>;
   removeMoney: (id: string) => Promise<void>;
@@ -130,6 +135,23 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [entryOpen, setEntryOpen] = useState(false);
   const [entryTab, setEntryTab] = useState<EntryTab>("money");
   const [entryDate, setEntryDate] = useState<string>(toDateKey(new Date()));
+
+  const [vaultMode, setVaultModeState] = useState(false);
+  useEffect(() => {
+    try {
+      setVaultModeState(localStorage.getItem("vaultMode") === "1");
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  const setVaultMode = useCallback((on: boolean) => {
+    setVaultModeState(on);
+    try {
+      localStorage.setItem("vaultMode", on ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const didInit = useRef(false);
   useEffect(() => {
@@ -337,6 +359,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       openEntry,
       closeEntry,
       setEntryTab,
+      vaultMode,
+      setVaultMode,
       addMoney,
       removeMoney,
       saveMood,
@@ -362,7 +386,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     }),
     [
       loading, categories, transactions, moods, budgets, goals, bills, journal, activities,
-      activityLogs, entryOpen, entryTab, entryDate, openEntry, closeEntry, addMoney, removeMoney,
+      activityLogs, entryOpen, entryTab, entryDate, openEntry, closeEntry, vaultMode, setVaultMode, addMoney, removeMoney,
       saveMood, moodsForDate, avgMoodForDate, createCategory, editCategory, removeCategory, createBudget, editBudget,
       removeBudget, createGoal, editGoal, removeGoal, createBill, editBill, removeBill, createJournal,
       removeJournal, createActivity, removeActivity, toggleActivity,

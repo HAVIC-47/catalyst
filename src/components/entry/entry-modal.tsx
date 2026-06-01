@@ -512,18 +512,23 @@ function MoodForm({ dateKey }: { dateKey: string }) {
 /* --------------------------------------------------------------- Saving tab */
 
 function SavingForm({ dateKey }: { dateKey: string }) {
-  const { addMoney, closeEntry, transactions } = useAppData();
+  const { addMoney, closeEntry, transactions, vaultMode } = useAppData();
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [time, setTime] = useState(nowTime);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Vault Mode folds all income/expense into the savings pool.
   const added = transactions
-    .filter((t) => t.kind === "saving")
+    .filter((t) => t.kind === "saving" || (vaultMode && t.kind === "income"))
     .reduce((s, t) => s + t.amount, 0);
   const broken = transactions
-    .filter((t) => t.kind === "expense" && t.categoryName === "Break saving")
+    .filter(
+      (t) =>
+        (t.kind === "expense" && t.categoryName === "Break saving") ||
+        (vaultMode && t.kind === "expense" && t.categoryName !== "Break saving"),
+    )
     .reduce((s, t) => s + t.amount, 0);
   const total = added - broken;
 

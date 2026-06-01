@@ -47,16 +47,31 @@ export default function TransactionsPage() {
 
       <div className="space-y-6">
         {groups.map(([date, items]) => {
-          const dayNet = items.reduce((s, t) => s + (t.kind === "income" ? t.amount : -t.amount), 0);
+          const dayIncome = items.filter((t) => t.kind === "income").reduce((s, t) => s + t.amount, 0);
+          const dayExpense = items.filter((t) => t.kind === "expense").reduce((s, t) => s + t.amount, 0);
+          const daySaving = items.filter((t) => t.kind === "saving").reduce((s, t) => s + t.amount, 0);
+          const dayNet = dayIncome - dayExpense;
           return (
             <div key={date} className="card overflow-hidden">
-              <div className="flex items-center justify-between border-b border-line px-5 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-line px-5 py-3">
                 <span className="font-mono text-xs uppercase tracking-widest text-ink/45">
                   {format(parseISO(date), "EEE · MMM d, yyyy")}
                 </span>
-                <span className={cn("font-mono text-xs tabular", dayNet >= 0 ? "text-income" : "text-expense")}>
-                  {formatCurrency(dayNet, { sign: true })}
-                </span>
+                <div className="flex items-center gap-3 font-mono text-xs tabular">
+                  {dayIncome > 0 && (
+                    <span className="text-income">In {formatCurrency(dayIncome)}</span>
+                  )}
+                  {dayExpense > 0 && (
+                    <span className="text-expense">Out {formatCurrency(dayExpense)}</span>
+                  )}
+                  {daySaving > 0 && (
+                    <span className="text-saving">Saved {formatCurrency(daySaving)}</span>
+                  )}
+                  <span className="text-ink/30">·</span>
+                  <span className={cn(dayNet >= 0 ? "text-income" : "text-expense")}>
+                    Net {formatCurrency(dayNet, { sign: true })}
+                  </span>
+                </div>
               </div>
               <ul className="divide-y divide-line">
                 {items.map((t) => {

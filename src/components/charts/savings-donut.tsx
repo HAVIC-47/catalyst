@@ -8,11 +8,14 @@ import { BREAK_SAVING, type Transaction } from "@/types";
 import { formatCurrency } from "@/lib/utils";
 import { rangeWindow, type Range } from "@/lib/range";
 import { RangeControls } from "@/components/charts/range-controls";
+import { VaultModeToggle } from "@/components/features/vault-mode-toggle";
+import { useAppData } from "@/hooks/use-app-data";
 
 const ADDED_COLOR = "#3D80BC"; // blue
 const BROKEN_COLOR = "#CB453B"; // rose
 
 export function SavingsDonut({ transactions }: { transactions: Transaction[] }) {
+  const { vaultMode } = useAppData();
   const [range, setRange] = useState<Range>("month");
   const [offset, setOffset] = useState(0);
   const { startKey, endKey, label } = useMemo(() => rangeWindow(range, offset), [range, offset]);
@@ -24,9 +27,11 @@ export function SavingsDonut({ transactions }: { transactions: Transaction[] }) 
       if (t.occurredOn < startKey || t.occurredOn > endKey) continue;
       if (t.kind === "saving") a += t.amount;
       else if (t.kind === "expense" && t.categoryName === BREAK_SAVING) b += t.amount;
+      else if (vaultMode && t.kind === "income") a += t.amount; // vault: income → savings
+      else if (vaultMode && t.kind === "expense") b += t.amount; // vault: expense → from savings
     }
     return { added: a, broken: b, net: a - b };
-  }, [transactions, startKey, endKey]);
+  }, [transactions, startKey, endKey, vaultMode]);
 
   const slices = [
     { name: "Added", value: added, color: ADDED_COLOR },
@@ -35,6 +40,9 @@ export function SavingsDonut({ transactions }: { transactions: Transaction[] }) 
 
   return (
     <div>
+      <div className="mb-3 flex justify-end">
+        <VaultModeToggle />
+      </div>
       <RangeControls
         range={range}
         setRange={setRange}
