@@ -8,7 +8,6 @@ import { BREAK_SAVING, type Transaction } from "@/types";
 import { formatCurrency } from "@/lib/utils";
 import { rangeWindow, type Range } from "@/lib/range";
 import { RangeControls } from "@/components/charts/range-controls";
-import { VaultModeToggle } from "@/components/features/vault-mode-toggle";
 import { useAppData } from "@/hooks/use-app-data";
 
 const ADDED_COLOR = "#3D80BC"; // blue
@@ -40,9 +39,6 @@ export function SavingsDonut({ transactions }: { transactions: Transaction[] }) 
 
   return (
     <div>
-      <div className="mb-3 flex justify-end">
-        <VaultModeToggle />
-      </div>
       <RangeControls
         range={range}
         setRange={setRange}

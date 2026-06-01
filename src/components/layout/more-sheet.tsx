@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { VaultModeToggle } from "@/components/features/vault-mode-toggle";
 
 const ALL_NAV: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/app", label: "Calendar", icon: CalendarDays },
@@ -117,8 +118,12 @@ export function MoreSheet({ open, onClose }: { open: boolean; onClose: () => voi
               })}
             </div>
 
-            {/* sign out (theme toggle lives in the bottom bar) */}
-            <div className="mt-4 border-t border-line pt-4">
+            {/* vault mode + sign out (theme toggle lives in the bottom bar) */}
+            <div className="mt-4 flex items-center justify-between border-t border-line pt-4">
+              <span className="text-sm text-ink/70">Vault Mode</span>
+              <VaultModeToggle />
+            </div>
+            <div className="mt-3">
               <button
                 onClick={signOut}
                 className="flex min-h-[48px] w-full cursor-pointer items-center gap-3 rounded-xl border border-line px-4 text-sm text-ink/80 transition-colors hover:border-expense/40 hover:text-expense"

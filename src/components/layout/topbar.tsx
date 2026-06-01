@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
 import { UserMenu } from "@/components/features/user-menu";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { VaultModeToggle } from "@/components/features/vault-mode-toggle";
 
 export function Topbar() {
   const { openEntry } = useAppData();
@@ -19,6 +20,7 @@ export function Topbar() {
 
       {/* Desktop actions only — on mobile these live in the bottom bar / More sheet. */}
       <div className="ml-auto hidden items-center gap-3 lg:flex">
+        <VaultModeToggle />
         <button
           onClick={() => openEntry()}
           className="entry-btn inline-flex min-h-[42px] cursor-pointer items-center gap-2 rounded-xl px-4 text-sm font-semibold text-paper shadow-entry transition-transform duration-200 hover:brightness-110 active:scale-[0.98]"
