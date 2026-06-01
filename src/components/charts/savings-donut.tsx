@@ -2,22 +2,27 @@
 
 // Savings donut — Added (saving entries) vs Broken (Break-saving expenses), with the
 // net value in the center. Mirrors the CategoryDonut format.
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 import { BREAK_SAVING, type Transaction } from "@/types";
 import { formatCurrency } from "@/lib/utils";
 import { rangeWindow, type Range } from "@/lib/range";
-import { RangeControls } from "@/components/charts/range-controls";
 import { useAppData } from "@/hooks/use-app-data";
 
 const ADDED_COLOR = "#3D80BC"; // blue
 const BROKEN_COLOR = "#CB453B"; // rose
 
-export function SavingsDonut({ transactions }: { transactions: Transaction[] }) {
+export function SavingsDonut({
+  transactions,
+  range,
+  offset,
+}: {
+  transactions: Transaction[];
+  range: Range;
+  offset: number;
+}) {
   const { vaultMode } = useAppData();
-  const [range, setRange] = useState<Range>("month");
-  const [offset, setOffset] = useState(0);
-  const { startKey, endKey, label } = useMemo(() => rangeWindow(range, offset), [range, offset]);
+  const { startKey, endKey } = useMemo(() => rangeWindow(range, offset), [range, offset]);
 
   const { added, broken, net } = useMemo(() => {
     let a = 0;
@@ -39,15 +44,6 @@ export function SavingsDonut({ transactions }: { transactions: Transaction[] }) 
 
   return (
     <div>
-      <RangeControls
-        range={range}
-        setRange={setRange}
-        offset={offset}
-        setOffset={setOffset}
-        label={label}
-        compact
-      />
-
       {slices.length === 0 ? (
         <p className="py-12 text-center text-sm text-ink/35">No saving activity this period.</p>
       ) : (

@@ -2,11 +2,10 @@
 
 // Bar chart of mood-context tag frequency: how many times each
 // "What was it about?" tag (Family time / Travel / Work…) was selected.
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { MoodLog } from "@/types";
 import { rangeWindow, type Range } from "@/lib/range";
-import { RangeControls } from "@/components/charts/range-controls";
 
 const TAG_COLORS = [
   "#3D80BC", "#7A4E86", "#C06A33", "#2E8159", "#CB453B",
@@ -14,10 +13,8 @@ const TAG_COLORS = [
   "#B59A3C", "#2F6F6B",
 ];
 
-export function MoodTagBars({ moods }: { moods: MoodLog[] }) {
-  const [range, setRange] = useState<Range>("month");
-  const [offset, setOffset] = useState(0);
-  const { startKey, endKey, label } = useMemo(() => rangeWindow(range, offset), [range, offset]);
+export function MoodTagBars({ moods, range, offset }: { moods: MoodLog[]; range: Range; offset: number }) {
+  const { startKey, endKey } = useMemo(() => rangeWindow(range, offset), [range, offset]);
 
   const bars = useMemo(() => {
     const counts = new Map<string, number>();
@@ -33,26 +30,17 @@ export function MoodTagBars({ moods }: { moods: MoodLog[] }) {
 
   return (
     <div>
-      <RangeControls
-        range={range}
-        setRange={setRange}
-        offset={offset}
-        setOffset={setOffset}
-        label={label}
-        compact
-      />
-
       {bars.length === 0 ? (
         <p className="py-12 text-center text-sm text-ink/35">
           No mood tags logged this period.
         </p>
       ) : (
-        <div style={{ height: Math.max(180, bars.length * 36 + 24) }} className="mt-4 w-full">
+        <div style={{ height: Math.max(180, bars.length * 36 + 24) }} className="mt-1 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={bars} layout="vertical" margin={{ top: 0, right: 12, left: 0, bottom: 0 }}>
               <XAxis
                 type="number"
-                tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 11 }}
+                tick={{ fill: "rgb(var(--c-ink) / 0.5)", fontSize: 11 }}
                 axisLine={false}
                 tickLine={false}
                 allowDecimals={false}
@@ -61,12 +49,12 @@ export function MoodTagBars({ moods }: { moods: MoodLog[] }) {
                 type="category"
                 dataKey="name"
                 width={110}
-                tick={{ fill: "rgba(255,255,255,0.6)", fontSize: 12 }}
+                tick={{ fill: "rgb(var(--c-ink) / 0.7)", fontSize: 12 }}
                 axisLine={false}
                 tickLine={false}
               />
               <Tooltip
-                cursor={{ fill: "rgba(255,255,255,0.04)" }}
+                cursor={{ fill: "rgb(var(--c-ink) / 0.06)" }}
                 content={({ active, payload }) => {
                   if (!active || !payload?.length) return null;
                   const p = payload[0].payload;

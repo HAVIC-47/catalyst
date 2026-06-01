@@ -1,11 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 import type { Category, Kind, Transaction } from "@/types";
 import { formatCurrency } from "@/lib/utils";
 import { rangeWindow, type Range } from "@/lib/range";
-import { RangeControls } from "@/components/charts/range-controls";
 
 const FALLBACK = "#7A746A";
 
@@ -13,15 +12,16 @@ export function CategoryDonut({
   transactions,
   categories,
   kind,
+  range,
+  offset,
 }: {
   transactions: Transaction[];
   categories: Category[];
   kind: Kind;
+  range: Range;
+  offset: number;
 }) {
-  const [range, setRange] = useState<Range>("month");
-  const [offset, setOffset] = useState(0);
-
-  const { startKey, endKey, label } = useMemo(() => rangeWindow(range, offset), [range, offset]);
+  const { startKey, endKey } = useMemo(() => rangeWindow(range, offset), [range, offset]);
 
   const slices = useMemo(() => {
     const colorOf = new Map(categories.map((c) => [c.name, c.color]));
@@ -42,14 +42,6 @@ export function CategoryDonut({
 
   return (
     <div>
-      <RangeControls
-        range={range}
-        setRange={setRange}
-        offset={offset}
-        setOffset={setOffset}
-        label={label}
-        compact
-      />
 
       {slices.length === 0 ? (
         <p className="py-12 text-center text-sm text-ink/35">{emptyLabel}</p>

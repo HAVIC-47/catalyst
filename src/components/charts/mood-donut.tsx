@@ -1,15 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 import { MOOD_PRESETS, type MoodLog } from "@/types";
 import { rangeWindow, type Range } from "@/lib/range";
-import { RangeControls } from "@/components/charts/range-controls";
 
-export function MoodDonut({ moods }: { moods: MoodLog[] }) {
-  const [range, setRange] = useState<Range>("month");
-  const [offset, setOffset] = useState(0);
-  const { startKey, endKey, label } = useMemo(() => rangeWindow(range, offset), [range, offset]);
+export function MoodDonut({ moods, range, offset }: { moods: MoodLog[]; range: Range; offset: number }) {
+  const { startKey, endKey } = useMemo(() => rangeWindow(range, offset), [range, offset]);
 
   const slices = useMemo(() => {
     const counts = new Map<number, number>();
@@ -29,14 +26,6 @@ export function MoodDonut({ moods }: { moods: MoodLog[] }) {
 
   return (
     <div>
-      <RangeControls
-        range={range}
-        setRange={setRange}
-        offset={offset}
-        setOffset={setOffset}
-        label={label}
-        compact
-      />
 
       {slices.length === 0 ? (
         <p className="py-12 text-center text-sm text-ink/35">No moods logged this period.</p>

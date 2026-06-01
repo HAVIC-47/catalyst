@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { isSameMonth } from "date-fns";
 import { ArrowUpRight, ArrowDownLeft, Wallet, Smile } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
@@ -11,10 +11,15 @@ import { SavingsDonut } from "@/components/charts/savings-donut";
 import { CategoryBars } from "@/components/charts/category-bars";
 import { MoodTagBars } from "@/components/charts/mood-tag-bars";
 import { formatCurrency } from "@/lib/utils";
+import type { Range } from "@/lib/range";
 
 export default function DashboardPage() {
   const { transactions, moods, categories, loading } = useAppData();
   const now = new Date();
+
+  // One period selector drives every chart on the dashboard (set in the top trend chart).
+  const [range, setRange] = useState<Range>("month");
+  const [offset, setOffset] = useState(0);
 
   const monthTx = useMemo(
     () => transactions.filter((t) => isSameMonth(new Date(t.occurredOn), now)),
@@ -68,38 +73,45 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Trend (full width) */}
+      {/* Trend (full width) — owns the single period selector for all charts */}
       <div className="card mb-6 p-6">
-        <OverlapChart transactions={transactions} moods={moods} />
+        <OverlapChart
+          transactions={transactions}
+          moods={moods}
+          range={range}
+          offset={offset}
+          setRange={setRange}
+          setOffset={setOffset}
+        />
       </div>
 
       {/* Money donuts: Spent + Earned */}
       <div className="mb-6 grid gap-6 lg:grid-cols-2">
         <ChartCard title="Spent" accent="by category">
-          <CategoryDonut transactions={transactions} categories={categories} kind="expense" />
+          <CategoryDonut transactions={transactions} categories={categories} kind="expense" range={range} offset={offset} />
         </ChartCard>
         <ChartCard title="Earned" accent="by category">
-          <CategoryDonut transactions={transactions} categories={categories} kind="income" />
+          <CategoryDonut transactions={transactions} categories={categories} kind="income" range={range} offset={offset} />
         </ChartCard>
       </div>
 
       {/* Mood donut + Savings donut */}
       <div className="mb-6 grid gap-6 lg:grid-cols-2">
         <ChartCard title="Mood" accent="distribution">
-          <MoodDonut moods={moods} />
+          <MoodDonut moods={moods} range={range} offset={offset} />
         </ChartCard>
         <ChartCard title="Savings" accent="added vs broken">
-          <SavingsDonut transactions={transactions} />
+          <SavingsDonut transactions={transactions} range={range} offset={offset} />
         </ChartCard>
       </div>
 
       {/* Mood tag frequency + Category frequency side by side */}
       <div className="grid gap-6 lg:grid-cols-2">
         <ChartCard title="Mood was about" accent="frequency">
-          <MoodTagBars moods={moods} />
+          <MoodTagBars moods={moods} range={range} offset={offset} />
         </ChartCard>
         <ChartCard title="Category" accent="frequency">
-          <CategoryBars transactions={transactions} categories={categories} />
+          <CategoryBars transactions={transactions} categories={categories} range={range} offset={offset} />
         </ChartCard>
       </div>
 

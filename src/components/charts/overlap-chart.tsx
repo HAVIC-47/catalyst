@@ -2,7 +2,7 @@
 
 // Mood ↔ money overlap chart with Day / Week / Month / Year ranges and
 // prev/next navigation. Net cash flow (bars) vs mood index (line), dual Y-axes.
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   addDays,
   addMonths,
@@ -35,8 +35,8 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { MoodLog, Transaction } from "@/types";
 import { pearson, correlationLabel } from "@/lib/math";
 import { cn, compactCurrency, formatCurrency, toDateKey } from "@/lib/utils";
+import type { Range } from "@/lib/range";
 
-type Range = "day" | "week" | "month" | "year";
 const RANGES: Range[] = ["day", "week", "month", "year"];
 
 interface Point {
@@ -47,16 +47,23 @@ interface Point {
   mood: number | null;
 }
 
+// Single source of truth for the period — the dashboard owns range/offset and
+// every chart (this one + all the donuts/bars) reads the same value.
 export function OverlapChart({
   transactions,
   moods,
+  range,
+  offset,
+  setRange,
+  setOffset,
 }: {
   transactions: Transaction[];
   moods: MoodLog[];
+  range: Range;
+  offset: number;
+  setRange: (r: Range) => void;
+  setOffset: (o: number | ((p: number) => number)) => void;
 }) {
-  const [range, setRange] = useState<Range>("month");
-  const [offset, setOffset] = useState(0); // 0 = current period, -1 = previous, etc.
-
   const { points, periodLabel } = useMemo(
     () => buildPoints(transactions, moods, range, offset),
     [transactions, moods, range, offset],
@@ -135,10 +142,10 @@ export function OverlapChart({
       <div className="h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={points} margin={{ top: 8, right: 4, left: -10, bottom: 0 }}>
-            <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
+            <CartesianGrid stroke="rgb(var(--c-ink) / 0.08)" vertical={false} />
             <XAxis
               dataKey="label"
-              tick={{ fill: "rgba(255,255,255,0.35)", fontSize: 11 }}
+              tick={{ fill: "rgb(var(--c-ink) / 0.55)", fontSize: 11 }}
               axisLine={false}
               tickLine={false}
               minTickGap={byMonth ? 8 : 20}
@@ -146,7 +153,7 @@ export function OverlapChart({
             />
             <YAxis
               yAxisId="money"
-              tick={{ fill: "rgba(255,255,255,0.35)", fontSize: 11 }}
+              tick={{ fill: "rgb(var(--c-ink) / 0.55)", fontSize: 11 }}
               axisLine={false}
               tickLine={false}
               tickFormatter={(v) => compactCurrency(v)}
@@ -157,13 +164,13 @@ export function OverlapChart({
               orientation="right"
               domain={[0, 5]}
               ticks={[1, 2, 3, 4, 5]}
-              tick={{ fill: "rgba(122,78,134,0.75)", fontSize: 11 }}
+              tick={{ fill: "#9268A0", fontSize: 11 }}
               axisLine={false}
               tickLine={false}
               width={22}
             />
-            <ReferenceLine yAxisId="money" y={0} stroke="rgba(255,255,255,0.12)" />
-            <Tooltip content={<OverlapTooltip />} cursor={{ fill: "rgba(255,255,255,0.04)" }} />
+            <ReferenceLine yAxisId="money" y={0} stroke="rgb(var(--c-ink) / 0.18)" />
+            <Tooltip content={<OverlapTooltip />} cursor={{ fill: "rgb(var(--c-ink) / 0.06)" }} />
             <Bar yAxisId="money" dataKey="net" name="Net" radius={[3, 3, 0, 0]} maxBarSize={byMonth ? 24 : 14}>
               {points.map((p) => (
                 <Cell key={p.key} fill={p.net >= 0 ? "#2E8159" : "#CB453B"} />

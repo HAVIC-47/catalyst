@@ -2,24 +2,25 @@
 
 // Horizontal bar chart: how many times each category appeared in a period.
 // Renders both expense + income categories; each bar colored by its category's color.
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { Category, Transaction } from "@/types";
 import { rangeWindow, type Range } from "@/lib/range";
-import { RangeControls } from "@/components/charts/range-controls";
 
 const FALLBACK = "#7A746A";
 
 export function CategoryBars({
   transactions,
   categories,
+  range,
+  offset,
 }: {
   transactions: Transaction[];
   categories: Category[];
+  range: Range;
+  offset: number;
 }) {
-  const [range, setRange] = useState<Range>("month");
-  const [offset, setOffset] = useState(0);
-  const { startKey, endKey, label } = useMemo(() => rangeWindow(range, offset), [range, offset]);
+  const { startKey, endKey } = useMemo(() => rangeWindow(range, offset), [range, offset]);
 
   const bars = useMemo(() => {
     const colorOf = new Map(categories.map((c) => [c.name, c.color]));
@@ -49,24 +50,15 @@ export function CategoryBars({
 
   return (
     <div>
-      <RangeControls
-        range={range}
-        setRange={setRange}
-        offset={offset}
-        setOffset={setOffset}
-        label={label}
-        compact
-      />
-
       {bars.length === 0 ? (
         <p className="py-12 text-center text-sm text-ink/35">No transactions this period.</p>
       ) : (
-        <div style={{ height: Math.max(180, bars.length * 36 + 24) }} className="mt-4 w-full">
+        <div style={{ height: Math.max(180, bars.length * 36 + 24) }} className="mt-1 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={bars} layout="vertical" margin={{ top: 0, right: 12, left: 0, bottom: 0 }}>
               <XAxis
                 type="number"
-                tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 11 }}
+                tick={{ fill: "rgb(var(--c-ink) / 0.5)", fontSize: 11 }}
                 axisLine={false}
                 tickLine={false}
                 allowDecimals={false}
@@ -75,12 +67,12 @@ export function CategoryBars({
                 type="category"
                 dataKey="name"
                 width={100}
-                tick={{ fill: "rgba(255,255,255,0.6)", fontSize: 12 }}
+                tick={{ fill: "rgb(var(--c-ink) / 0.7)", fontSize: 12 }}
                 axisLine={false}
                 tickLine={false}
               />
               <Tooltip
-                cursor={{ fill: "rgba(255,255,255,0.04)" }}
+                cursor={{ fill: "rgb(var(--c-ink) / 0.06)" }}
                 content={({ active, payload }) => {
                   if (!active || !payload?.length) return null;
                   const p = payload[0].payload;
