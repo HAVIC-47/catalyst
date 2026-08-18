@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Newsreader, Hanken_Grotesk, IBM_Plex_Mono } from "next/font/google";
+import { Heartbeat } from "@/components/system/heartbeat";
 import "./globals.css";
 
 // Editorial newspaper serif for display headings + its expressive italic.
@@ -49,6 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: themeInit }} />
       </head>
       <body className="font-sans antialiased">
+        <Heartbeat />
         <div className="relative z-10">{children}</div>
       </body>
     </html>

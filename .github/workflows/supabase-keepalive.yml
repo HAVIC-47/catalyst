@@ -1,0 +1,25 @@
+# Supabase free-tier projects pause after ~7 days with no activity. This makes one
+# anonymous REST call an hour so the project always looks live. The query is
+# RLS-scoped like any other read, so it comes back empty — it exists only for the
+# round-trip.
+name: Supabase keepalive
+
+on:
+  schedule:
+    # Not on the hour: GitHub's :00 slot is congested and runs get delayed or dropped.
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping Supabase REST
+        run: |
+          code=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/categories?select=id&limit=1")
+          echo "HTTP $code"
+          [ "$code" = "200" ] || exit 1
