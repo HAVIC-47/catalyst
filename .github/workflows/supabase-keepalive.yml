@@ -1,7 +1,7 @@
-# Supabase free-tier projects pause after ~7 days with no activity. This makes one
-# anonymous REST call an hour so the project always looks live. The query is
-# RLS-scoped like any other read, so it comes back empty — it exists only for the
-# round-trip.
+# Supabase free-tier projects pause after ~7 days with no activity. This calls
+# keepalive_ping() once an hour, which writes a timestamp to the single-row
+# public.keepalive table — unambiguous database activity, unlike a plain read.
+# See db/keepalive.sql for the table and the function.
 name: Supabase keepalive
 
 on:
@@ -15,11 +15,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Ping Supabase REST
+      - name: Bump keepalive row
         run: |
-          code=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' \
+          resp=$(curl -sS --max-time 30 -w '\n%{http_code}' \
+            -X POST \
             -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
-            "${{ secrets.SUPABASE_URL }}/rest/v1/categories?select=id&limit=1")
-          echo "HTTP $code"
+            -H "Content-Type: application/json" \
+            -d '{}' \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/rpc/keepalive_ping")
+          code=$(printf '%s' "$resp" | tail -n1)
+          body=$(printf '%s' "$resp" | sed '$d')
+          echo "HTTP $code — $body"
           [ "$code" = "200" ] || exit 1
+          # The function returns the timestamp it just wrote. Today's date being in
+          # there is the proof the write landed, rather than trusting the 200.
+          printf '%s' "$body" | grep -q "$(date -u +%Y-%m-%d)" || { echo "no write landed"; exit 1; }
