@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Plus, Trash2, Check } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES, type Kind } from "@/types";
+import { DASHBOARD_SECTIONS } from "@/lib/dashboard-sections";
 import { cn } from "@/lib/utils";
 
 const SWATCHES = [
@@ -18,9 +19,17 @@ export default function SettingsPage() {
       <div className="mb-6">
         <div className="label mb-2">Settings</div>
         <h1 className="font-display text-5xl font-semibold tracking-tight text-ink sm:text-6xl">
-          Your <span className="serif-italic text-amber/90">categories.</span>
+          Make it <span className="serif-italic text-amber/90">yours.</span>
         </h1>
-        <p className="mt-2 max-w-lg text-sm text-ink/45">
+      </div>
+
+      <DashboardSections />
+
+      <div className="mb-4 mt-10">
+        <h2 className="font-display text-2xl font-semibold text-ink">
+          Your <span className="serif-italic text-amber/90">categories.</span>
+        </h2>
+        <p className="mt-1 max-w-lg text-sm text-ink/45">
           Add, rename, recolor, or remove categories for expenses and income. Deleting one keeps
           past transactions labeled.
         </p>
@@ -35,6 +44,82 @@ export default function SettingsPage() {
         <p className="mt-4 font-mono text-xs text-ink/30">Loading categories…</p>
       )}
     </div>
+  );
+}
+
+// Show / hide each of the dashboard's sections. Hiding never touches data.
+function DashboardSections() {
+  const { dashboardHidden, setDashboardHidden } = useAppData();
+  const hidden = dashboardHidden ?? [];
+  const shownCount = DASHBOARD_SECTIONS.length - hidden.length;
+
+  return (
+    <section id="dashboard" className="card scroll-mt-20 p-5 sm:p-6">
+      <div className="mb-1 flex items-center justify-between gap-3">
+        <h2 className="font-display text-xl font-semibold text-ink">
+          Dashboard <span className="serif-italic text-amber/90">sections</span>
+        </h2>
+        <div className="flex items-center gap-3">
+          {hidden.length > 0 && (
+            <button
+              onClick={() => setDashboardHidden([])}
+              className="cursor-pointer font-mono text-[11px] uppercase tracking-widest text-amber/80 transition-colors hover:text-amber"
+            >
+              Show all
+            </button>
+          )}
+          <span className="label">
+            {shownCount} / {DASHBOARD_SECTIONS.length}
+          </span>
+        </div>
+      </div>
+      <p className="mb-4 max-w-lg text-sm text-ink/45">
+        Choose what the dashboard shows. Hidden sections keep all their data — it&apos;s still
+        recorded and comes back the moment you turn the section on.
+      </p>
+
+      <ul className="grid gap-2 sm:grid-cols-2">
+        {DASHBOARD_SECTIONS.map((s) => {
+          const on = !hidden.includes(s.id);
+          return (
+            <li key={s.id}>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={on}
+                disabled={dashboardHidden === null}
+                onClick={() =>
+                  setDashboardHidden(on ? [...hidden, s.id] : hidden.filter((id) => id !== s.id))
+                }
+                className={cn(
+                  "flex min-h-[56px] w-full cursor-pointer items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors duration-200 disabled:cursor-default disabled:opacity-50",
+                  on ? "border-line bg-ink/[0.02] hover:bg-ink/[0.04]" : "border-dashed border-line hover:bg-ink/[0.02]",
+                )}
+              >
+                <span className="min-w-0 flex-1">
+                  <span className={cn("block text-sm", on ? "text-ink/85" : "text-ink/45")}>{s.label}</span>
+                  <span className="block truncate text-[11px] text-ink/35">{s.hint}</span>
+                </span>
+                <span
+                  aria-hidden
+                  className={cn(
+                    "relative h-5 w-9 shrink-0 rounded-full transition-colors",
+                    on ? "bg-amber/70" : "bg-ink/20",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "absolute top-0.5 h-4 w-4 rounded-full bg-paper shadow-sm transition-all",
+                      on ? "left-[18px]" : "left-0.5",
+                    )}
+                  />
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 
@@ -74,7 +159,7 @@ function CategorySection({ kind }: { kind: Kind }) {
   };
 
   return (
-    <div className="card p-6">
+    <div className="card min-w-0 p-5 sm:p-6">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="font-display text-xl font-semibold capitalize text-ink">{kind}</h2>
         <div className="flex items-center gap-3">
@@ -105,7 +190,7 @@ function CategorySection({ kind }: { kind: Kind }) {
                 if (v && v !== c.name) editCategory(c.id, { name: v });
               }}
               aria-label={`Rename ${c.name}`}
-              className="min-w-0 flex-1 bg-transparent text-sm text-ink/85 outline-none focus:text-ink"
+              className="w-0 min-w-0 flex-1 bg-transparent text-sm text-ink/85 outline-none focus:text-ink"
             />
             <div className="flex items-center gap-1">
               {SWATCHES.slice(0, 6).map((s) => (
@@ -138,7 +223,7 @@ function CategorySection({ kind }: { kind: Kind }) {
             onKeyDown={(e) => e.key === "Enter" && add()}
             placeholder={`New ${kind} category`}
             aria-label={`New ${kind} category name`}
-            className="min-h-[40px] flex-1 rounded-lg border border-line bg-ink/[0.02] px-3 text-sm text-ink outline-none focus:border-amber/50"
+            className="min-h-[40px] w-0 min-w-0 flex-1 rounded-lg border border-line bg-ink/[0.02] px-3 text-sm text-ink outline-none focus:border-amber/50"
           />
           <button
             onClick={add}

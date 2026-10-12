@@ -12,7 +12,7 @@ export function Topbar() {
   const today = new Date();
 
   return (
-    <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-line bg-paper/85 px-4 py-3 backdrop-blur-xl sm:px-6">
+    <header className="sticky top-0 z-30 flex h-[var(--topbar-h)] items-center gap-3 border-b border-line bg-paper/85 px-4 backdrop-blur-xl sm:px-6 lg:h-auto lg:py-3">
       <div className="flex items-baseline gap-2">
         <span className="label">Today</span>
         <span className="font-mono text-sm text-ink/70">{format(today, "EEE, MMM d, yyyy")}</span>

@@ -11,6 +11,10 @@
   --c-accent: 155 58 45; /* oxblood */
   --c-line: rgba(26, 23, 20, 0.14);
   color-scheme: light;
+  /* Mobile app chrome. The top bar, bottom nav and <main> padding all read these,
+     so a page (the calendar) can size itself to exactly the space between them. */
+  --topbar-h: 2.75rem;
+  --bottomnav-h: calc(4.25rem + env(safe-area-inset-bottom));
 }
 
 .dark {
@@ -36,6 +40,8 @@ body {
 
 body {
   min-height: 100vh;
+  /* dvh = the visible height with browser bars shown, so a page that fits never scrolls. */
+  min-height: 100dvh;
   /* Faint grain so the background reads as printed stock, not a flat fill. */
   background-image:
     radial-gradient(rgb(var(--c-ink) / 0.02) 1px, transparent 1px);
@@ -144,6 +150,55 @@ body {
   /* Hairline rule used as a section divider. */
   .rule {
     @apply border-t border-line;
+  }
+}
+
+/* Below lg (bottom-nav layouts) the calendar fills exactly the visible space
+   between the top bar and the bottom nav: header + full grid, no scrolling, on
+   any phone. Never shrinks past a usable size — very short (landscape) screens
+   scroll instead. */
+@media (max-width: 1023.98px) {
+  .cal-fit {
+    height: calc(100vh - var(--topbar-h) - var(--bottomnav-h));
+    height: calc(100dvh - var(--topbar-h) - var(--bottomnav-h));
+    min-height: 26rem;
+  }
+}
+
+/* Month day cells are size containers: as the fitted grid gives each day less
+   height, the in/out lines collapse to one net line, then to the tint alone.
+   Heights are the cell's content box: date row ≤20px, each amount line ~12.5px. */
+.cal-cell {
+  container-type: size;
+}
+.cal-net {
+  display: none;
+}
+@container (max-height: 47.98px) {
+  .cal-flow {
+    display: none;
+  }
+  .cal-net {
+    display: block;
+  }
+}
+@container (max-height: 29.98px) {
+  .cal-net {
+    display: none;
+  }
+}
+
+/* Dashboard trend plot: on phones it takes whatever height is left so the
+   heading, summary tiles and the whole trend card share the first screen.
+   31.5rem = top bar + heading + 2×2 tiles + trend card chrome + bottom nav + gap
+   (all fixed-height on phones; keep in sync if those change). */
+.trend-plot {
+  height: 18rem;
+}
+@media (max-width: 639.98px) {
+  .trend-plot {
+    height: clamp(9rem, calc(100vh - 31.5rem), 18rem);
+    height: clamp(9rem, calc(100svh - 31.5rem), 18rem);
   }
 }
 

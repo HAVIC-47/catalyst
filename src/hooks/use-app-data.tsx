@@ -52,9 +52,14 @@ import {
   listActivities,
   listActivityLogs,
 } from "@/lib/db/activities";
+import { loadPrefs, savePrefs } from "@/lib/db/prefs";
+import { parseHiddenSections, type DashboardSectionId } from "@/lib/dashboard-sections";
 import { toDateKey } from "@/lib/utils";
 
 export type EntryTab = "money" | "mood" | "saving";
+
+// Key for the hidden dashboard sections, both in localStorage and user metadata.
+const DASHBOARD_HIDDEN = "dashboardHidden";
 
 interface AppDataValue {
   loading: boolean;
@@ -80,6 +85,11 @@ interface AppDataValue {
   // expense draws from it, so savings reflect true net flow.
   vaultMode: boolean;
   setVaultMode: (on: boolean) => void;
+
+  // Dashboard sections hidden in Settings (null until read from storage). Hiding
+  // only changes what the dashboard renders — the data behind it is untouched.
+  dashboardHidden: DashboardSectionId[] | null;
+  setDashboardHidden: (ids: DashboardSectionId[]) => void;
 
   // money / mood
   addMoney: (t: NewTransaction) => Promise<void>;
@@ -151,6 +161,47 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     } catch {
       /* ignore */
     }
+  }, []);
+
+  const [dashboardHidden, setDashboardHiddenState] = useState<DashboardSectionId[] | null>(null);
+  const dashboardTouched = useRef(false);
+  const dashboardSave = useRef<Promise<void>>(Promise.resolve());
+  useEffect(() => {
+    // Local copy first so the dashboard renders right away, then the account copy
+    // (authoritative — it follows the user across devices) unless they already
+    // changed something this session.
+    let local: DashboardSectionId[] = [];
+    try {
+      local = parseHiddenSections(JSON.parse(localStorage.getItem(DASHBOARD_HIDDEN) ?? "[]")) ?? [];
+    } catch {
+      /* ignore */
+    }
+    setDashboardHiddenState(local);
+    loadPrefs()
+      .then((meta) => {
+        if (dashboardTouched.current) return;
+        const remote = parseHiddenSections(meta[DASHBOARD_HIDDEN]) ?? [];
+        setDashboardHiddenState(remote);
+        try {
+          localStorage.setItem(DASHBOARD_HIDDEN, JSON.stringify(remote));
+        } catch {
+          /* ignore */
+        }
+      })
+      .catch((err) => console.warn("[catalyst] could not load preferences", err));
+  }, []);
+  const setDashboardHidden = useCallback((ids: DashboardSectionId[]) => {
+    dashboardTouched.current = true;
+    setDashboardHiddenState(ids);
+    try {
+      localStorage.setItem(DASHBOARD_HIDDEN, JSON.stringify(ids));
+    } catch {
+      /* ignore */
+    }
+    // Chain saves so rapid toggles reach the server in order (last write wins).
+    dashboardSave.current = dashboardSave.current
+      .then(() => savePrefs({ [DASHBOARD_HIDDEN]: ids }))
+      .catch((err) => console.warn("[catalyst] could not save preferences", err));
   }, []);
 
   const didInit = useRef(false);
@@ -361,6 +412,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       setEntryTab,
       vaultMode,
       setVaultMode,
+      dashboardHidden,
+      setDashboardHidden,
       addMoney,
       removeMoney,
       saveMood,
@@ -386,7 +439,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     }),
     [
       loading, categories, transactions, moods, budgets, goals, bills, journal, activities,
-      activityLogs, entryOpen, entryTab, entryDate, openEntry, closeEntry, vaultMode, setVaultMode, addMoney, removeMoney,
+      activityLogs, entryOpen, entryTab, entryDate, openEntry, closeEntry, vaultMode, setVaultMode,
+      dashboardHidden, setDashboardHidden, addMoney, removeMoney,
       saveMood, moodsForDate, avgMoodForDate, createCategory, editCategory, removeCategory, createBudget, editBudget,
       removeBudget, createGoal, editGoal, removeGoal, createBill, editBill, removeBill, createJournal,
       removeJournal, createActivity, removeActivity, toggleActivity,

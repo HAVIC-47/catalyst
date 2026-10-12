@@ -15,12 +15,15 @@ import {
   NotebookPen,
   Settings,
   LogOut,
+  Plus,
   X,
   type LucideIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { useAppData } from "@/hooks/use-app-data";
 import { VaultModeToggle } from "@/components/features/vault-mode-toggle";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const ALL_NAV: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/app", label: "Calendar", icon: CalendarDays },
@@ -36,6 +39,7 @@ const ALL_NAV: { href: string; label: string; icon: LucideIcon }[] = [
 export function MoreSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { openEntry } = useAppData();
   const [mounted, setMounted] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
 
@@ -118,10 +122,26 @@ export function MoreSheet({ open, onClose }: { open: boolean; onClose: () => voi
               })}
             </div>
 
-            {/* vault mode + sign out (theme toggle lives in the bottom bar) */}
-            <div className="mt-4 flex items-center justify-between border-t border-line pt-4">
+            {/* new entry + vault mode + theme + sign out */}
+            <div className="mt-4 border-t border-line pt-4">
+              <button
+                onClick={() => {
+                  onClose();
+                  openEntry();
+                }}
+                className="entry-btn flex min-h-[48px] w-full cursor-pointer items-center justify-center gap-2 rounded-xl text-sm font-semibold shadow-entry active:scale-[0.98]"
+              >
+                <Plus className="h-4 w-4" aria-hidden strokeWidth={2.5} />
+                New entry
+              </button>
+            </div>
+            <div className="mt-4 flex items-center justify-between">
               <span className="text-sm text-ink/70">Vault Mode</span>
               <VaultModeToggle />
+            </div>
+            <div className="mt-3 flex items-center justify-between">
+              <span className="text-sm text-ink/70">Theme</span>
+              <ThemeToggle />
             </div>
             <div className="mt-3">
               <button

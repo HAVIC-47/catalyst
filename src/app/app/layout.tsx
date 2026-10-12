@@ -8,12 +8,12 @@ import { EntryModal } from "@/components/entry/entry-modal";
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <AppDataProvider>
-      <div className="flex min-h-screen">
+      <div className="flex min-h-screen min-h-dvh">
         <Sidebar />
         <div className="flex min-w-0 flex-1 flex-col">
           <Topbar />
           {/* Bottom-nav padding so content doesn't hide under it on mobile. */}
-          <main className="flex-1 pb-20 lg:pb-0">{children}</main>
+          <main className="flex-1 pb-[var(--bottomnav-h)] lg:pb-0">{children}</main>
         </div>
       </div>
       <BottomNav />

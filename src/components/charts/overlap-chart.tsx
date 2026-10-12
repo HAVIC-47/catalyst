@@ -31,13 +31,11 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { MoodLog, Transaction } from "@/types";
 import { pearson, correlationLabel } from "@/lib/math";
-import { cn, compactCurrency, formatCurrency, toDateKey } from "@/lib/utils";
+import { compactCurrency, formatCurrency, toDateKey } from "@/lib/utils";
 import type { Range } from "@/lib/range";
-
-const RANGES: Range[] = ["day", "week", "month", "year"];
+import { RangeControls } from "@/components/charts/range-controls";
 
 interface Point {
   key: string; // bucket key
@@ -81,67 +79,28 @@ export function OverlapChart({
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="label">Trend · {periodLabel}</div>
-          <h2 className="mt-1 font-display text-2xl font-semibold text-ink">
-            Mood <span className="serif-italic text-ink/50">×</span> money
-          </h2>
+      {/* Fixed three-line header (nothing wraps), so the phone layout can budget its height. */}
+      <div className="mb-3 sm:mb-4">
+        <div className="flex items-baseline justify-between gap-3">
+          <div className="label truncate">Trend · {periodLabel}</div>
+          <div className="shrink-0 font-mono text-[11px] text-ink/40 sm:text-xs">r = {correlation.toFixed(2)}</div>
         </div>
-        <div className="text-right font-mono text-xs">
-          <div className="text-ink/40">r = {correlation.toFixed(2)}</div>
-          <div className="text-ink/30">{correlationLabel(correlation)}</div>
-        </div>
-      </div>
-
-      {/* controls */}
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex gap-1 rounded-xl border border-line bg-ink/[0.02] p-1">
-          {RANGES.map((r) => (
-            <button
-              key={r}
-              onClick={() => {
-                setRange(r);
-                setOffset(0);
-              }}
-              className={cn(
-                "cursor-pointer rounded-lg px-3 py-1.5 text-xs font-medium capitalize transition-colors duration-200",
-                range === r ? "bg-ink/[0.08] text-amber" : "text-ink/45 hover:text-ink/75",
-              )}
-            >
-              {r}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setOffset((o) => o - 1)}
-            aria-label="Previous period"
-            className="hairline flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-ink/60 transition-colors hover:bg-ink/5 hover:text-ink"
-          >
-            <ChevronLeft className="h-4 w-4" aria-hidden />
-          </button>
-          <button
-            onClick={() => setOffset(0)}
-            disabled={offset === 0}
-            className="hairline h-9 cursor-pointer rounded-lg px-3 font-mono text-[11px] uppercase tracking-widest text-ink/60 transition-colors hover:bg-ink/5 hover:text-ink disabled:opacity-40"
-          >
-            Now
-          </button>
-          <button
-            onClick={() => setOffset((o) => Math.min(0, o + 1))}
-            disabled={offset >= 0}
-            aria-label="Next period"
-            className="hairline flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-ink/60 transition-colors hover:bg-ink/5 hover:text-ink disabled:opacity-40"
-          >
-            <ChevronRight className="h-4 w-4" aria-hidden />
-          </button>
+        <h2 className="mt-1 font-display text-xl font-semibold text-ink sm:text-2xl">
+          Mood <span className="serif-italic text-ink/50">×</span> money
+        </h2>
+        <div className="truncate font-mono text-[11px] text-ink/30 sm:text-xs">
+          {correlationLabel(correlation)}
         </div>
       </div>
 
-      <div className="h-72 w-full">
+      <div className="mb-3 sm:mb-4">
+        <RangeControls range={range} setRange={setRange} offset={offset} setOffset={setOffset} />
+      </div>
+
+      {/* .trend-plot: shrinks on phones so the card fits the first screen. */}
+      <div className="trend-plot w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={points} margin={{ top: 8, right: 4, left: -10, bottom: 0 }}>
+          <ComposedChart data={points} margin={{ top: 8, right: 0, left: 0, bottom: 0 }}>
             <CartesianGrid stroke="rgb(var(--c-ink) / 0.08)" vertical={false} />
             <XAxis
               dataKey="label"
@@ -157,7 +116,7 @@ export function OverlapChart({
               axisLine={false}
               tickLine={false}
               tickFormatter={(v) => compactCurrency(v)}
-              width={52}
+              width={48}
             />
             <YAxis
               yAxisId="mood"

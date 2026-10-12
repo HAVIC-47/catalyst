@@ -136,16 +136,23 @@ export default function CalendarPage() {
   const goNext = () =>
     setCursor((c) => (range === "week" ? addWeeks(c, 1) : range === "year" ? addYears(c, 1) : addMonths(c, 1)));
 
+  // Week + month fit the phone screen exactly (see .cal-fit); the 12-month year
+  // view is too tall for that and scrolls normally.
+  const fit = range !== "year";
+
   return (
-    <div className="px-4 py-6 sm:px-6 lg:px-8">
+    <div className={cn("flex flex-col px-4 pb-3 pt-4 sm:px-6 lg:block lg:px-8 lg:py-6", fit && "cal-fit")}>
       {/* Header */}
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-x-4 gap-y-3 lg:mb-6">
         <div>
-          <div className="label mb-2">Calendar · {summary.count} active days</div>
-          <h1 className="font-display text-5xl font-semibold tracking-tight text-ink sm:text-6xl">
+          <div className="label mb-1 lg:mb-2">
+            Calendar · {loading ? "loading…" : `${summary.count} active days`}
+          </div>
+          {/* Scales with screen height on phones so short screens keep room for the grid. */}
+          <h1 className="font-display text-[length:clamp(2rem,5.6vh,3rem)] font-semibold leading-none tracking-tight text-ink sm:text-6xl">
             {period.label}
           </h1>
-          <div className="mt-3 flex flex-wrap items-center gap-4 font-mono text-sm">
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-xs sm:text-sm lg:mt-3">
             <span className="text-ink/45">
               NET{" "}
               <span className={summary.net >= 0 ? "text-income" : "text-expense"}>
@@ -162,8 +169,9 @@ export default function CalendarPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex gap-1 rounded-xl border border-line bg-ink/[0.02] p-1">
+        {/* One row on phones: range tabs left, prev / today / next right. */}
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <div className="flex gap-0.5 rounded-xl border border-line bg-ink/[0.02] p-1 sm:gap-1">
             {RANGES.map((r) => (
               <button
                 key={r}
@@ -172,7 +180,7 @@ export default function CalendarPage() {
                   setCursor(new Date());
                 }}
                 className={cn(
-                  "cursor-pointer rounded-lg px-3 py-1.5 text-xs font-medium capitalize transition-colors duration-200",
+                  "cursor-pointer rounded-lg px-2.5 py-1.5 text-xs font-medium capitalize transition-colors duration-200 sm:px-3",
                   range === r ? "bg-ink/[0.08] text-amber" : "text-ink/45 hover:text-ink/75",
                 )}
               >
@@ -181,42 +189,48 @@ export default function CalendarPage() {
             ))}
           </div>
 
-          <button
-            onClick={goPrev}
-            aria-label="Previous"
-            className="hairline flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl text-ink/60 transition-colors hover:bg-ink/5 hover:text-ink"
-          >
-            <ChevronLeft className="h-4 w-4" aria-hidden />
-          </button>
-          <button
-            onClick={() => setCursor(new Date())}
-            className="hairline h-10 cursor-pointer rounded-xl px-4 font-mono text-xs uppercase tracking-widest text-ink/70 transition-colors hover:bg-ink/5 hover:text-ink"
-          >
-            Today
-          </button>
-          <button
-            onClick={goNext}
-            aria-label="Next"
-            className="hairline flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl text-ink/60 transition-colors hover:bg-ink/5 hover:text-ink"
-          >
-            <ChevronRight className="h-4 w-4" aria-hidden />
-          </button>
+          <div className="ml-auto flex items-center gap-1.5 sm:ml-0 sm:gap-2">
+            <button
+              onClick={goPrev}
+              aria-label="Previous"
+              className="hairline flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl text-ink/60 transition-colors hover:bg-ink/5 hover:text-ink sm:h-10 sm:w-10"
+            >
+              <ChevronLeft className="h-4 w-4" aria-hidden />
+            </button>
+            <button
+              onClick={() => setCursor(new Date())}
+              className="hairline h-9 cursor-pointer rounded-xl px-3 font-mono text-xs uppercase tracking-widest text-ink/70 transition-colors hover:bg-ink/5 hover:text-ink sm:h-10 sm:px-4"
+            >
+              Today
+            </button>
+            <button
+              onClick={goNext}
+              aria-label="Next"
+              className="hairline flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl text-ink/60 transition-colors hover:bg-ink/5 hover:text-ink sm:h-10 sm:w-10"
+            >
+              <ChevronRight className="h-4 w-4" aria-hidden />
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Legend */}
-      <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[10px] uppercase tracking-widest text-ink/40">
+      <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[10px] uppercase tracking-widest text-ink/40 sm:gap-x-5 lg:mb-4">
         <div className="flex items-center gap-2">
           <span className="text-ink/55">Mood</span>
-          <div className="h-2.5 w-28 rounded-full bg-gradient-to-r from-[#A8322A] via-[#B59A3C] to-[#2E8159]" />
+          <div className="h-2.5 w-14 rounded-full bg-gradient-to-r from-[#A8322A] via-[#B59A3C] to-[#2E8159] sm:w-28" />
         </div>
         <div className="flex items-center gap-2">
           <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: "#7A4E86" }} />
-          Heavier spend
+          <span>
+            <span className="hidden sm:inline">Heavier </span>spend
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: "#3D80BC" }} />
-          Heavier income
+          <span>
+            <span className="hidden sm:inline">Heavier </span>income
+          </span>
         </div>
       </div>
 
@@ -225,8 +239,6 @@ export default function CalendarPage() {
         <MonthGrid cursor={cursor} byDay={byDay} maxFlow={summary.maxFlow} openEntry={openEntry} />
       )}
       {range === "year" && <YearView cursor={cursor} byDay={byDay} openEntry={openEntry} />}
-
-      {loading && <p className="mt-4 text-center font-mono text-xs text-ink/30">Loading…</p>}
     </div>
   );
 }
@@ -252,21 +264,30 @@ function MonthGrid({
   const days = eachDayOfInterval({ start: gridStart, end: gridEnd });
 
   return (
-    <div className="card overflow-hidden">
+    // Below lg the card takes all height left in .cal-fit and the 4–6 week rows
+    // split it evenly; on desktop rows keep their fixed minimum height.
+    <div className="card flex min-h-0 flex-1 flex-col overflow-hidden lg:block">
       <div className="grid grid-cols-7 border-b border-line">
         {WEEKDAYS.map((d) => (
-          <div key={d} className="px-3 py-2.5 font-mono text-[10px] tracking-[0.2em] text-ink/35">
+          <div
+            key={d}
+            className="px-1.5 py-2 font-mono text-[10px] tracking-[0.12em] text-ink/35 sm:px-3 sm:py-2.5 sm:tracking-[0.2em]"
+          >
             {d}
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-7">
+      <div
+        className="grid min-h-0 flex-1 grid-cols-7"
+        style={{ gridTemplateRows: `repeat(${days.length / 7}, minmax(0, 1fr))` }}
+      >
         {days.map((day, i) => {
           const key = toDateKey(day);
           const inMonth = isSameMonth(day, cursor);
           const data = byDay.get(key);
           const today = isToday(day);
           const preset = data?.mood ? moodPreset(data.mood) : null;
+          const hasFlow = !!data && (data.income > 0 || data.expense > 0);
           return (
             <motion.button
               key={key}
@@ -276,30 +297,38 @@ function MonthGrid({
               onClick={() => openEntry({ date: key, tab: "money" })}
               style={dayCellStyle(data, maxFlow)}
               className={cn(
-                "group relative flex min-h-[92px] cursor-pointer flex-col border-b border-r border-line p-2 text-left transition-colors duration-150 hover:!bg-ink/[0.06] sm:min-h-[110px]",
+                "cal-cell group relative flex cursor-pointer flex-col overflow-hidden border-b border-r border-line p-1 text-left transition-colors duration-150 hover:!bg-ink/[0.06] sm:p-2 lg:min-h-[110px]",
                 !inMonth && "opacity-35",
                 (i + 1) % 7 === 0 && "border-r-0",
               )}
             >
-              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between gap-0.5">
                 <span
                   className={cn(
-                    "font-mono text-xs tabular",
+                    "font-mono text-[11px] tabular sm:text-xs",
                     today
-                      ? "flex h-6 w-6 items-center justify-center rounded-full bg-amber font-semibold text-paper"
+                      ? "flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber font-semibold text-paper sm:h-6 sm:w-6"
                       : "text-ink/70",
                   )}
                 >
                   {format(day, "dd")}
                 </span>
-                {preset && <span className="text-base leading-none">{preset.emoji}</span>}
+                {preset && <span className="text-sm leading-none sm:text-base">{preset.emoji}</span>}
               </div>
-              {data && (data.income > 0 || data.expense > 0) && (
-                <div className="mt-auto space-y-0.5 font-mono text-[11px] tabular">
-                  {data.expense > 0 && (
-                    <div className="text-expense">−{compactCurrency(data.expense).replace(TAKA, TAKA)}</div>
-                  )}
-                  {data.income > 0 && <div className="text-income">+{compactCurrency(data.income)}</div>}
+              {hasFlow && (
+                <div className="mt-auto whitespace-nowrap font-mono text-[10px] leading-tight tracking-tight tabular sm:text-[11px] sm:tracking-normal">
+                  {/* Roomy cells: separate out / in lines. */}
+                  <div className="cal-flow space-y-0.5">
+                    {data.expense > 0 && (
+                      <div className="text-expense">−{compactCurrency(data.expense).replace(TAKA, TAKA)}</div>
+                    )}
+                    {data.income > 0 && <div className="text-income">+{compactCurrency(data.income)}</div>}
+                  </div>
+                  {/* Short cells: one net line (the tint still shows the split). */}
+                  <div className={cn("cal-net", data.net >= 0 ? "text-income" : "text-expense")}>
+                    {data.net >= 0 ? "+" : ""}
+                    {compactCurrency(data.net)}
+                  </div>
                 </div>
               )}
             </motion.button>
@@ -325,15 +354,19 @@ function WeekView({
   const start = startOfWeek(cursor);
   const days = eachDayOfInterval({ start, end: endOfWeek(cursor) });
   return (
-    <div className="card overflow-hidden">
+    // Below lg the single week row stretches to the height left in .cal-fit.
+    <div className="card flex min-h-0 flex-1 flex-col overflow-hidden lg:block">
       <div className="grid grid-cols-7 border-b border-line">
         {WEEKDAYS.map((d) => (
-          <div key={d} className="px-3 py-2.5 font-mono text-[10px] tracking-[0.2em] text-ink/35">
+          <div
+            key={d}
+            className="px-1.5 py-2 font-mono text-[10px] tracking-[0.12em] text-ink/35 sm:px-3 sm:py-2.5 sm:tracking-[0.2em]"
+          >
             {d}
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-7">
+      <div className="grid min-h-0 flex-1 grid-cols-7">
         {days.map((day, i) => {
           const key = toDateKey(day);
           const data = byDay.get(key);
@@ -345,24 +378,24 @@ function WeekView({
               onClick={() => openEntry({ date: key, tab: "money" })}
               style={dayCellStyle(data, maxFlow)}
               className={cn(
-                "group flex min-h-[200px] cursor-pointer flex-col border-r border-line p-3 text-left transition-colors duration-150 hover:!bg-ink/[0.06]",
+                "group flex cursor-pointer flex-col overflow-hidden border-r border-line p-1.5 text-left transition-colors duration-150 hover:!bg-ink/[0.06] sm:p-3 lg:min-h-[200px]",
                 i === 6 && "border-r-0",
               )}
             >
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-1">
                 <span
                   className={cn(
-                    "font-mono text-sm tabular",
+                    "font-mono text-xs tabular sm:text-sm",
                     today
-                      ? "flex h-7 w-7 items-center justify-center rounded-full bg-amber font-semibold text-paper"
+                      ? "flex h-6 w-6 items-center justify-center rounded-full bg-amber font-semibold text-paper sm:h-7 sm:w-7"
                       : "text-ink/75",
                   )}
                 >
                   {format(day, "dd")}
                 </span>
-                {preset && <span className="text-2xl">{preset.emoji}</span>}
+                {preset && <span className="text-lg leading-none sm:text-2xl">{preset.emoji}</span>}
               </div>
-              <div className="mt-auto space-y-1 font-mono text-xs tabular">
+              <div className="mt-auto space-y-1 whitespace-nowrap font-mono text-[10px] tracking-tight tabular sm:text-xs sm:tracking-normal">
                 {data?.expense ? (
                   <div className="text-expense">−{compactCurrency(data.expense)}</div>
                 ) : null}
@@ -393,7 +426,7 @@ function YearView({
   const months = Array.from({ length: 12 }, (_, i) => new Date(year, i, 1));
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
       {months.map((mDate) => {
         const ms = startOfMonth(mDate);
         const me = endOfMonth(mDate);
@@ -411,7 +444,7 @@ function YearView({
         }
 
         return (
-          <div key={mDate.getMonth()} className="card p-3">
+          <div key={mDate.getMonth()} className="card p-2 sm:p-3">
             <div className="mb-2 flex items-baseline justify-between px-1">
               <h3 className="font-display text-lg font-semibold text-ink">{format(mDate, "MMM")}</h3>
               <span className="font-mono text-[10px] uppercase tracking-widest text-ink/30">
