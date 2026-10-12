@@ -1,8 +1,8 @@
 import type { Config } from "tailwindcss";
 
-// Editorial Almanac palette — warm bone paper, ink-black type, oxblood accent.
-// Token names kept stable (amber/income/expense/neon) so existing classes remap
-// automatically; values are the only thing that changed.
+// Editorial Almanac palette — warm-white paper (light) / true black (dark), ink
+// type, terracotta-clay accent. Token names kept stable (amber/income/expense/neon)
+// so existing classes remap automatically; values live in CSS vars (globals.css).
 const config: Config = {
   content: ["./src/**/*.{ts,tsx}"],
   darkMode: "class",
@@ -21,11 +21,15 @@ const config: Config = {
           soft: "rgb(var(--c-accent) / <alpha-value>)",
         },
         accent: "rgb(var(--c-accent) / <alpha-value>)",
-        // Data tones stay fixed — readable on both bone and pure black.
-        income: "#2E8159", // ledger green (credit)
-        expense: "#CB453B", // ledger red (debit)
-        saving: "#3D80BC", // ink blue
-        neon: { cyan: "#3D80BC", purple: "#9268A0", rose: "#CB453B" },
+        // Data tones: same hues in both themes, a shade deeper on white for contrast.
+        income: "rgb(var(--c-income) / <alpha-value>)", // ledger green (credit)
+        expense: "rgb(var(--c-expense) / <alpha-value>)", // ledger red (debit)
+        saving: "rgb(var(--c-saving) / <alpha-value>)", // ink blue
+        neon: {
+          cyan: "rgb(var(--c-saving) / <alpha-value>)",
+          purple: "#9268A0",
+          rose: "rgb(var(--c-expense) / <alpha-value>)",
+        },
       },
       fontFamily: {
         display: ["var(--font-display)", "Georgia", "serif"],
@@ -33,9 +37,10 @@ const config: Config = {
         mono: ["var(--font-mono)", "ui-monospace", "monospace"],
       },
       boxShadow: {
-        // Flat editorial — barely-there paper lift, no glow.
-        card: "0 1px 2px rgba(26,23,20,0.04), 0 1px 0 rgba(255,255,255,0.6) inset",
-        entry: "0 2px 0 rgba(26,23,20,0.18)",
+        // Light: white cards lifted off the paper by a hairline + soft layered shadow.
+        // (Dark mode overrides both in globals.css.)
+        card: "0 1px 2px rgb(24 21 18 / 0.05), 0 8px 24px -14px rgb(24 21 18 / 0.16)",
+        entry: "inset 0 1px 0 rgb(255 255 255 / 0.18), 0 6px 16px -8px rgb(var(--c-accent) / 0.6)",
       },
       keyframes: {
         "fade-up": {

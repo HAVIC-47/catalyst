@@ -34,7 +34,7 @@ export function Why() {
           {WHY.map((w) => {
             const Icon = w.icon;
             return (
-              <div key={w.title} className="rounded-2xl border border-line bg-card p-7">
+              <div key={w.title} className="rounded-2xl border border-line bg-card p-7 shadow-card">
                 <Icon className="mb-5 h-6 w-6 text-amber" aria-hidden />
                 <h3 className="font-display text-xl font-semibold text-ink">{w.title}</h3>
                 <p className="mt-3 text-sm leading-relaxed text-ink/55">{w.body}</p>

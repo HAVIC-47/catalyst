@@ -5,9 +5,9 @@ export function CtaFooter() {
   return (
     <section className="relative px-4 pb-20 pt-8 sm:px-6 sm:pb-28">
       <div className="mx-auto max-w-4xl">
-        <div className="relative overflow-hidden rounded-3xl border border-line bg-card p-10 text-center sm:p-14">
-          <div className="pointer-events-none absolute -left-20 -top-20 h-64 w-64 rounded-full bg-[#9B3A2D]/10 blur-3xl" />
-          <div className="pointer-events-none absolute -right-20 -bottom-20 h-64 w-64 rounded-full bg-[#B59A3C]/12 blur-3xl" />
+        <div className="relative overflow-hidden rounded-3xl border border-line bg-card p-10 text-center shadow-card sm:p-14">
+          <div className="pointer-events-none absolute -left-20 -top-20 h-64 w-64 rounded-full bg-amber/10 blur-3xl" />
+          <div className="pointer-events-none absolute -right-20 -bottom-20 h-64 w-64 rounded-full bg-saving/10 blur-3xl" />
 
           <h2 className="relative font-display text-3xl font-semibold tracking-tight text-ink sm:text-5xl">
             Start the <span className="serif-italic text-amber/90">honest</span> ledger.

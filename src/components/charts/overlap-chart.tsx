@@ -88,7 +88,7 @@ export function OverlapChart({
         <h2 className="mt-1 font-display text-xl font-semibold text-ink sm:text-2xl">
           Mood <span className="serif-italic text-ink/50">×</span> money
         </h2>
-        <div className="truncate font-mono text-[11px] text-ink/30 sm:text-xs">
+        <div className="truncate font-mono text-[11px] text-ink/40 sm:text-xs">
           {correlationLabel(correlation)}
         </div>
       </div>

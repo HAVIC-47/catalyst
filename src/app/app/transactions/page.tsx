@@ -6,7 +6,7 @@ import { ArrowUpRight, ArrowDownLeft, Trash2, MapPin, Search, SlidersHorizontal,
 import { useAppData } from "@/hooks/use-app-data";
 import { useDebounce } from "@/hooks/use-debounce";
 import type { Kind, Transaction } from "@/types";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency, tintText } from "@/lib/utils";
 import { inRange, rangeWindow, type Range } from "@/lib/range";
 
 type KindFilter = "all" | Kind;
@@ -372,7 +372,7 @@ export default function TransactionsPage() {
                     <li key={t.id} className="group flex items-center gap-3 px-5 py-3">
                       <span
                         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-bold"
-                        style={{ backgroundColor: `${color}22`, color }}
+                        style={{ backgroundColor: `${color}22`, color: tintText(color) }}
                       >
                         {t.categoryName.slice(0, 1).toUpperCase()}
                       </span>

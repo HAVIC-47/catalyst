@@ -5,7 +5,7 @@ import { Plus, Trash2, Check } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES, type Kind } from "@/types";
 import { DASHBOARD_SECTIONS } from "@/lib/dashboard-sections";
-import { cn } from "@/lib/utils";
+import { cn, tintText } from "@/lib/utils";
 
 const SWATCHES = [
   "#C06A33", "#2E8159", "#3D80BC", "#7A4E86", "#B59A3C", "#3D80BC",
@@ -109,7 +109,7 @@ function DashboardSections() {
                 >
                   <span
                     className={cn(
-                      "absolute top-0.5 h-4 w-4 rounded-full bg-paper shadow-sm transition-all",
+                      "absolute top-0.5 h-4 w-4 rounded-full bg-card shadow-sm transition-all",
                       on ? "left-[18px]" : "left-0.5",
                     )}
                   />
@@ -179,7 +179,7 @@ function CategorySection({ kind }: { kind: Kind }) {
           <li key={c.id} className="flex items-center gap-3 rounded-xl border border-line bg-ink/[0.02] p-2.5">
             <span
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold"
-              style={{ backgroundColor: `${c.color}22`, color: c.color }}
+              style={{ backgroundColor: `${c.color}22`, color: tintText(c.color) }}
             >
               {c.name.slice(0, 1).toUpperCase()}
             </span>

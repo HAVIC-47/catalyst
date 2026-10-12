@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { Sun, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// Browser-chrome color per theme (paper color); keep in sync with the root layout.
+const THEME_COLOR = { light: "#F6F5F1", dark: "#000000" };
+
 // Toggles the `dark` class on <html> and persists the choice. The no-flash script
 // in the root layout applies the saved/system theme before first paint.
 export function ThemeToggle({ className }: { className?: string }) {
@@ -18,6 +21,9 @@ export function ThemeToggle({ className }: { className?: string }) {
   const toggle = () => {
     const next = !document.documentElement.classList.contains("dark");
     document.documentElement.classList.toggle("dark", next);
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", next ? THEME_COLOR.dark : THEME_COLOR.light);
     try {
       localStorage.setItem("theme", next ? "dark" : "light");
     } catch {

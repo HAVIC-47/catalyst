@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { isSameMonth } from "date-fns";
 import { Plus, Trash2 } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
-import { TAKA, cn, formatCurrency } from "@/lib/utils";
+import { TAKA, cn, formatCurrency, tintText } from "@/lib/utils";
 
 export default function BudgetsPage() {
   const { budgets, transactions, categories, createBudget, editBudget, removeBudget, loading } =
@@ -53,39 +53,44 @@ export default function BudgetsPage() {
         )}
       </div>
 
-      {/* add budget */}
-      <div className="card mb-6 flex flex-wrap items-center gap-2 p-4">
-        <select
-          value={newCatId}
-          onChange={(e) => setNewCatId(e.target.value)}
-          aria-label="Category"
-          className="min-h-[44px] cursor-pointer rounded-xl border border-line bg-card px-3 text-sm text-ink/80 outline-none focus:border-amber/50"
-        >
-          {available.length === 0 ? (
-            <option value="">All categories budgeted</option>
-          ) : (
-            available.map((c) => (
-              <option key={c.id} value={c.id} className="bg-card">
-                {c.name}
-              </option>
-            ))
-          )}
-        </select>
-        <div className="flex flex-1 items-center gap-2 rounded-xl border border-line bg-ink/[0.02] px-3 focus-within:border-amber/50">
-          <span className="font-mono text-ink/40">{TAKA}</span>
-          <input
-            inputMode="decimal"
-            value={newAmt}
-            onChange={(e) => setNewAmt(e.target.value.replace(/[^0-9.]/g, ""))}
-            placeholder="Monthly limit"
-            aria-label="Monthly limit"
-            className="min-h-[44px] w-full bg-transparent font-mono text-sm text-ink outline-none"
-          />
-        </div>
+      {/* add budget — category, limit and button each get a full row on phones, one row from sm up */}
+      <div className="card mb-6 grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+        <label className="block min-w-0">
+          <span className="label mb-1.5 block">Category</span>
+          <select
+            value={newCatId}
+            onChange={(e) => setNewCatId(e.target.value)}
+            className="min-h-[44px] w-full cursor-pointer rounded-xl border border-line bg-card px-3 text-sm text-ink/80 outline-none focus:border-amber/50"
+          >
+            {available.length === 0 ? (
+              <option value="">All categories budgeted</option>
+            ) : (
+              available.map((c) => (
+                <option key={c.id} value={c.id} className="bg-card">
+                  {c.name}
+                </option>
+              ))
+            )}
+          </select>
+        </label>
+        <label className="block min-w-0">
+          <span className="label mb-1.5 block">Monthly limit</span>
+          <span className="flex items-center gap-2 rounded-xl border border-line bg-ink/[0.02] px-3 focus-within:border-amber/50">
+            <span className="font-mono text-ink/40">{TAKA}</span>
+            <input
+              inputMode="decimal"
+              value={newAmt}
+              onChange={(e) => setNewAmt(e.target.value.replace(/[^0-9.]/g, ""))}
+              onKeyDown={(e) => e.key === "Enter" && add()}
+              placeholder="0"
+              className="min-h-[44px] w-full min-w-0 bg-transparent font-mono text-sm text-ink outline-none"
+            />
+          </span>
+        </label>
         <button
           onClick={add}
           disabled={available.length === 0 || !(parseFloat(newAmt) > 0)}
-          className="entry-btn inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl px-4 text-sm font-semibold text-paper disabled:opacity-40"
+          className="entry-btn inline-flex min-h-[44px] w-full cursor-pointer items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-paper disabled:opacity-40 sm:w-auto"
         >
           <Plus className="h-4 w-4" strokeWidth={2.5} aria-hidden /> Set budget
         </button>
@@ -110,7 +115,7 @@ export default function BudgetsPage() {
                 <div className="flex items-center gap-2">
                   <span
                     className="flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold"
-                    style={{ backgroundColor: `${cat?.color ?? "#7A746A"}22`, color: cat?.color ?? "#7A746A" }}
+                    style={{ backgroundColor: `${cat?.color ?? "#7A746A"}22`, color: tintText(cat?.color ?? "#7A746A") }}
                   >
                     {b.categoryName.slice(0, 1).toUpperCase()}
                   </span>

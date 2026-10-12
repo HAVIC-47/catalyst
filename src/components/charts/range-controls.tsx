@@ -31,7 +31,7 @@ export function RangeControls({
             }}
             className={cn(
               "cursor-pointer rounded-lg px-2 py-1 text-[11px] font-medium capitalize transition-colors duration-200 sm:px-3 sm:py-1.5 sm:text-xs",
-              range === r ? "bg-ink/[0.08] text-amber" : "text-ink/45 hover:text-ink/75",
+              range === r ? "seg-on text-amber" : "text-ink/45 hover:text-ink/75",
             )}
           >
             {r}

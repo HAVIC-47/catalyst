@@ -7,7 +7,8 @@ import { format, parseISO } from "date-fns";
 import { X, ArrowUpRight, ArrowDownLeft, MapPin } from "lucide-react";
 import { useAppData, type EntryTab } from "@/hooks/use-app-data";
 import { MOOD_PRESETS, MOOD_TAGS, type Category, type Kind } from "@/types";
-import { TAKA, cn } from "@/lib/utils";
+import { TAKA, cn, tintText } from "@/lib/utils";
+import { MoodIcon } from "@/components/ui/mood-icon";
 
 // Combine a yyyy-mm-dd date with an HH:mm time into a local ISO timestamp.
 function combineDateTime(dateKey: string, time: string): string {
@@ -27,7 +28,7 @@ function TimeField({ value, onChange }: { value: string; onChange: (v: string) =
         value={value}
         onChange={(e) => onChange(e.target.value)}
         aria-label="Time"
-        className="min-h-[44px] rounded-xl border border-line bg-ink/[0.02] px-3 text-sm text-ink/80 outline-none focus:border-amber/50 [color-scheme:dark]"
+        className="min-h-[44px] rounded-xl border border-line bg-ink/[0.02] px-3 text-sm text-ink/80 outline-none focus:border-amber/50"
       />
     </div>
   );
@@ -343,7 +344,7 @@ function CategoryTile({
     >
       <span
         className="flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold"
-        style={{ backgroundColor: `${cat.color}22`, color: cat.color }}
+        style={{ backgroundColor: `${cat.color}22`, color: tintText(cat.color) }}
       >
         {cat.name.slice(0, 1).toUpperCase()}
       </span>
@@ -408,17 +409,22 @@ function MoodForm({ dateKey }: { dateKey: string }) {
                 aria-label={m.label}
                 aria-pressed={on}
                 className={cn(
-                  "flex h-20 flex-1 cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border transition-all duration-200",
-                  on ? "border-ink/30 bg-ink/[0.06]" : "border-line hover:bg-ink/[0.03]",
+                  "flex h-20 min-w-0 flex-1 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-2xl border transition-colors duration-200",
+                  on ? "font-semibold" : "border-line text-ink/40 hover:bg-ink/[0.03] hover:text-ink/70",
                 )}
-                style={on ? { boxShadow: `0 0 26px -8px ${m.color}` } : undefined}
+                style={
+                  on
+                    ? {
+                        borderColor: `${m.color}80`,
+                        backgroundColor: `${m.color}1a`,
+                        boxShadow: `0 0 26px -10px ${m.color}`,
+                        color: tintText(m.color),
+                      }
+                    : undefined
+                }
               >
-                <span className={cn("text-3xl transition-all", on ? "grayscale-0" : "grayscale opacity-55")}>
-                  {m.emoji}
-                </span>
-                <span className="text-[10px] font-medium" style={{ color: on ? m.color : "rgba(255,255,255,0.4)" }}>
-                  {m.label}
-                </span>
+                <MoodIcon mood={m.value} muted={!on} className="h-7 w-7" strokeWidth={1.75} />
+                <span className="text-[10px] font-medium">{m.label}</span>
               </button>
             );
           })}
@@ -468,18 +474,15 @@ function MoodForm({ dateKey }: { dateKey: string }) {
         <div>
           <div className="label mb-2">Already logged today · {dayMoods.length}</div>
           <div className="flex flex-wrap gap-2">
-            {dayMoods.map((m) => {
-              const pr = MOOD_PRESETS.find((x) => x.value === m.mood)!;
-              return (
-                <span
-                  key={m.id}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-ink/[0.02] px-2.5 py-1 text-xs text-ink/60"
-                >
-                  <span className="text-sm">{pr.emoji}</span>
-                  {new Date(m.loggedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                </span>
-              );
-            })}
+            {dayMoods.map((m) => (
+              <span
+                key={m.id}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-ink/[0.02] px-2.5 py-1 text-xs text-ink/60"
+              >
+                <MoodIcon mood={m.mood} className="h-3.5 w-3.5" />
+                {new Date(m.loggedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </span>
+            ))}
           </div>
           <p className="mt-1.5 text-[11px] text-ink/35">
             Multiple moods per day are kept — the day shows their average.
@@ -500,7 +503,7 @@ function MoodForm({ dateKey }: { dateKey: string }) {
         style={{
           borderColor: `${active.color}66`,
           backgroundColor: `${active.color}1f`,
-          color: active.color,
+          color: tintText(active.color),
         }}
       >
         Save mood
@@ -570,7 +573,7 @@ function SavingForm({ dateKey }: { dateKey: string }) {
       {/* Total savings tile */}
       <div className="rounded-2xl border border-line bg-ink/[0.02] p-5 text-center">
         <div className="label">Total savings</div>
-        <div className="mt-1 font-mono text-3xl font-semibold tabular text-[#3D80BC]">
+        <div className="mt-1 font-mono text-3xl font-semibold tabular text-saving">
           {TAKA}
           {new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 }).format(total)}
         </div>
@@ -584,7 +587,7 @@ function SavingForm({ dateKey }: { dateKey: string }) {
       {/* Amount */}
       <div>
         <div className="label mb-2">Add to savings</div>
-        <div className="flex items-center gap-3 rounded-xl border border-line bg-ink/[0.02] px-4 py-3 focus-within:border-[#3D80BC]/50">
+        <div className="flex items-center gap-3 rounded-xl border border-line bg-ink/[0.02] px-4 py-3 focus-within:border-saving/50">
           <span className="font-mono text-2xl text-ink/40">{TAKA}</span>
           <input
             autoFocus
@@ -607,12 +610,12 @@ function SavingForm({ dateKey }: { dateKey: string }) {
           onChange={(e) => setNote(e.target.value)}
           placeholder="What is this saving for?"
           aria-label="Saving note"
-          className="min-h-[44px] w-full rounded-xl border border-line bg-ink/[0.02] px-3 text-sm text-ink outline-none focus:border-[#3D80BC]/50"
+          className="min-h-[44px] w-full rounded-xl border border-line bg-ink/[0.02] px-3 text-sm text-ink outline-none focus:border-saving/50"
         />
       </div>
 
       <p className="rounded-xl border border-line bg-ink/[0.02] px-3 py-2 text-[11px] text-ink/45">
-        Tip: pick the <span className="text-[#3D80BC]">Break saving</span> category on the Money tab
+        Tip: pick the <span className="text-saving">Break saving</span> category on the Money tab
         to pull from this pool.
       </p>
 
@@ -625,7 +628,7 @@ function SavingForm({ dateKey }: { dateKey: string }) {
       <button
         onClick={submit}
         disabled={!valid || saving}
-        className="min-h-[48px] w-full cursor-pointer rounded-xl border border-[#3D80BC]/40 bg-[#3D80BC]/15 text-sm font-semibold text-[#3D80BC] transition-all duration-200 hover:bg-[#3D80BC]/25 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"
+        className="min-h-[48px] w-full cursor-pointer rounded-xl border border-saving/40 bg-saving/15 text-sm font-semibold text-saving transition-all duration-200 hover:bg-saving/25 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"
       >
         Save saving
       </button>

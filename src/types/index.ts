@@ -58,22 +58,21 @@ export const MOOD_TAGS = [
 
 export type NewMoodLog = Omit<MoodLog, "id" | "createdAt">;
 
-/** 5 moods, 5 emojis (1 = lowest .. 5 = highest). */
+/** 5 moods (1 = lowest .. 5 = highest). Rendered with <MoodIcon> faces. */
 export interface MoodPreset {
   value: number;
   label: string;
-  emoji: string;
   color: string;
 }
 
 // Mood scale: earthy brick (low) -> forest green (high). Muted, printed-ink tones
-// that sit naturally on bone paper (no neon).
+// that read on both white paper and black.
 export const MOOD_PRESETS: MoodPreset[] = [
-  { value: 1, label: "Awful", emoji: "😩", color: "#A8322A" }, // brick red
-  { value: 2, label: "Low", emoji: "😕", color: "#C06A33" }, // burnt orange
-  { value: 3, label: "Okay", emoji: "😐", color: "#B59A3C" }, // ochre
-  { value: 4, label: "Good", emoji: "🙂", color: "#6E8C46" }, // olive
-  { value: 5, label: "Great", emoji: "🤩", color: "#2E8159" }, // forest
+  { value: 1, label: "Awful", color: "#A8322A" }, // brick red
+  { value: 2, label: "Low", color: "#C06A33" }, // burnt orange
+  { value: 3, label: "Okay", color: "#B59A3C" }, // ochre
+  { value: 4, label: "Good", color: "#6E8C46" }, // olive
+  { value: 5, label: "Great", color: "#2E8159" }, // forest
 ];
 
 export function moodPreset(value: number): MoodPreset {

@@ -23,7 +23,7 @@ const FEATURES = [
     icon: CalendarDays,
     title: "Calendar entry",
     body: "Tap any date to log money or mood. Each day glows by your spend and feeling.",
-    accent: "#F5B544",
+    accent: "#C88A1E",
   },
   {
     icon: Wallet,
@@ -83,13 +83,13 @@ const FEATURES = [
     icon: Lock,
     title: "Yours alone",
     body: "Email signup, Postgres with row-level security. Your data, your eyes only.",
-    accent: "#94A3B8",
+    accent: "#64748B",
   },
   {
     icon: Sparkles,
     title: "Built for taka",
     body: "৳ native, en-IN grouping, dark moody aesthetic. Made for how you actually live.",
-    accent: "#F5B544",
+    accent: "#C88A1E",
   },
 ];
 
@@ -145,7 +145,7 @@ export function Features() {
             return (
               <div
                 key={f.title}
-                className="feature-card group relative overflow-hidden rounded-2xl border border-line bg-card p-6 transition-colors duration-300 hover:border-ink/15"
+                className="feature-card group relative overflow-hidden rounded-2xl border border-line bg-card p-6 shadow-card transition-colors duration-300 hover:border-ink/15"
               >
                 <div
                   className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl"

@@ -5,7 +5,7 @@
 import { useMemo } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 import { BREAK_SAVING, type Transaction } from "@/types";
-import { formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import { rangeWindow, type Range } from "@/lib/range";
 import { useAppData } from "@/hooks/use-app-data";
 
@@ -69,8 +69,7 @@ export function SavingsDonut({
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
               <span className="label">Net</span>
               <span
-                className="font-mono text-lg font-semibold tabular"
-                style={{ color: net >= 0 ? ADDED_COLOR : BROKEN_COLOR }}
+                className={cn("font-mono text-lg font-semibold tabular", net >= 0 ? "text-saving" : "text-expense")}
               >
                 {formatCurrency(net, { sign: true })}
               </span>

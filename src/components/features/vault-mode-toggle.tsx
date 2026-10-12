@@ -64,7 +64,7 @@ export function VaultModeToggle() {
         >
           <span
             className={cn(
-              "absolute top-0.5 h-2.5 w-2.5 rounded-full bg-paper transition-all",
+              "absolute top-0.5 h-2.5 w-2.5 rounded-full bg-card shadow-sm transition-all",
               vaultMode ? "left-3" : "left-0.5",
             )}
           />

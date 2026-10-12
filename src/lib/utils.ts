@@ -24,6 +24,15 @@ export function compactCurrency(value: number): string {
   return `${value < 0 ? "−" : ""}${TAKA}${formatted}`;
 }
 
+/**
+ * A data color (category / mood hex) made readable as text on its own pale tint:
+ * pulled toward ink on light paper, left as-is on black. Strength is the
+ * --tint-text var in globals.css (100% in dark mode = unchanged).
+ */
+export function tintText(color: string): string {
+  return `color-mix(in srgb, ${color} var(--tint-text), rgb(var(--c-ink)))`;
+}
+
 /** yyyy-mm-dd in local time (avoids UTC off-by-one from toISOString). */
 export function toDateKey(d: Date): string {
   const y = d.getFullYear();

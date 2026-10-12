@@ -61,7 +61,7 @@ export default function BillsPage() {
           value={due}
           onChange={(e) => setDue(e.target.value)}
           aria-label="Due date"
-          className="min-h-[44px] rounded-xl border border-line bg-ink/[0.02] px-3 text-sm text-ink/70 outline-none focus:border-amber/50 [color-scheme:dark]"
+          className="min-h-[44px] rounded-xl border border-line bg-ink/[0.02] px-3 text-sm text-ink/70 outline-none focus:border-amber/50"
         />
         <select
           value={recurrence}

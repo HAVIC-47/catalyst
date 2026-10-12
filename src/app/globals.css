@@ -2,14 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Palette as RGB channels so Tailwind alpha modifiers work, flipped on .dark. */
+/* Palette as RGB channels so Tailwind alpha modifiers work, flipped on .dark.
+   Light = fresh newsprint: soft warm-white paper, white cards and sidebar, warm
+   near-black ink, terracotta accent from the same hue family as the dark clay. */
 :root {
-  --c-paper: 244 240 232; /* bone */
-  --c-panel: 236 228 210;
-  --c-card: 251 247 238;
-  --c-ink: 26 23 20; /* near-black warm */
-  --c-accent: 155 58 45; /* oxblood */
-  --c-line: rgba(26, 23, 20, 0.14);
+  --c-paper: 246 245 241; /* #F6F5F1 soft warm white */
+  --c-panel: 255 255 255; /* sidebar: clean white column */
+  --c-card: 255 255 255; /* white cards, lifted by hairline + soft shadow */
+  --c-ink: 24 21 18; /* #181512 warm near-black */
+  --c-accent: 178 70 44; /* #B2462C terracotta, 5.5:1 on white */
+  --c-line: rgba(24, 21, 18, 0.1);
+  /* Data tones, a shade deeper on white so amounts clear 5:1. */
+  --c-income: 31 112 73;
+  --c-expense: 185 58 48;
+  --c-saving: 44 108 166;
+  /* Calendar day tints: pastel washes on white. */
+  --tint-spend: 203 69 59;
+  --tint-income: 61 128 188;
+  --tint-k: 0.6;
+  --tint-mood-k: 0.75;
+  /* Category / mood colors used as text are pulled toward ink by this much. */
+  --tint-text: 62%;
+  /* Year view: tiny cells where the tint is the only signal, so much stronger
+     fills (mood base alpha; flow alpha = floor + span × √share-of-month-max). */
+  --yr-mood: 0.55;
+  --yr-floor: 0.35;
+  --yr-span: 0.45;
   color-scheme: light;
   /* Mobile app chrome. The top bar, bottom nav and <main> padding all read these,
      so a page (the calendar) can size itself to exactly the space between them. */
@@ -24,6 +42,18 @@
   --c-ink: 250 249 246; /* near-white, high contrast */
   --c-accent: 226 134 112; /* bright clay-oxblood, pops on black */
   --c-line: rgba(255, 255, 255, 0.16);
+  --c-income: 46 129 89;
+  --c-expense: 203 69 59;
+  --c-saving: 61 128 188;
+  /* Deep printed-ink tints over black. */
+  --tint-spend: 155 58 45;
+  --tint-income: 52 97 138;
+  --tint-k: 1;
+  --tint-mood-k: 1;
+  --tint-text: 100%;
+  --yr-mood: 0.7;
+  --yr-floor: 0.42;
+  --yr-span: 0.45;
   color-scheme: dark;
 }
 
@@ -42,10 +72,20 @@ body {
   min-height: 100vh;
   /* dvh = the visible height with browser bars shown, so a page that fits never scrolls. */
   min-height: 100dvh;
-  /* Faint grain so the background reads as printed stock, not a flat fill. */
+  /* Light atmosphere: a soft terracotta glow top-left, cool wash bottom-right and a
+     hint of lilac top-right over faint grain, so the paper never reads as a flat
+     fill. Fixed so it stays put while scrolling. */
   background-image:
-    radial-gradient(rgb(var(--c-ink) / 0.02) 1px, transparent 1px);
-  background-size: 3px 3px;
+    radial-gradient(60% 46% at 8% -8%, rgb(178 70 44 / 0.09), transparent 62%),
+    radial-gradient(52% 46% at 104% 106%, rgb(61 128 188 / 0.08), transparent 60%),
+    radial-gradient(40% 30% at 82% -4%, rgb(146 104 160 / 0.06), transparent 60%),
+    radial-gradient(rgb(var(--c-ink) / 0.025) 1px, transparent 1px);
+  background-size: auto, auto, auto, 3px 3px;
+  background-attachment: fixed, fixed, fixed, fixed;
+}
+
+::selection {
+  background: rgb(var(--c-accent) / 0.18);
 }
 
 /* Dark mode gets atmosphere: warm accent glow top-left, cool wash bottom-right,
@@ -80,6 +120,21 @@ body {
   }
   .label {
     @apply font-mono text-[11px] uppercase tracking-[0.18em] text-ink/45;
+  }
+  /* Kept in this layer so utilities (e.g. `label text-amber/70`) still win. */
+  :where(:root:not(.dark)) .label {
+    color: rgb(var(--c-ink) / 0.64);
+  }
+  /* Active segment of a segmented control: a tint in the dark, a raised white
+     pill on light paper (accent text on grey falls under 4.5:1). */
+  .seg-on {
+    background-color: rgb(var(--c-ink) / 0.08);
+  }
+  :where(:root:not(.dark)) .seg-on {
+    background-color: rgb(var(--c-card));
+    box-shadow:
+      0 1px 2px rgb(24 21 18 / 0.1),
+      0 0 0 1px rgb(24 21 18 / 0.06);
   }
   /* Solid oxblood block button — printed-stamp feel, no gradients. */
   .entry-btn {
@@ -136,6 +191,32 @@ body {
 .dark h2.font-display {
   text-shadow: 0 0 32px rgb(226 134 112 / 0.16);
 }
+
+/* Light mode contrast. The muted ink alphas used across the app are tuned for
+   white-on-black; the same alphas on white sit at 2–3:1. Lift each step so
+   muted text clears WCAG AA (≥4.5:1 from /35 up) on paper and cards. The
+   :where() prefix keeps specificity equal to the utility, so hover/responsive
+   variants (emitted later) still win. */
+:where(:root:not(.dark)) .text-ink\/25 { color: rgb(var(--c-ink) / 0.5); }
+:where(:root:not(.dark)) .text-ink\/30 { color: rgb(var(--c-ink) / 0.6); }
+:where(:root:not(.dark)) .text-ink\/35 { color: rgb(var(--c-ink) / 0.6); }
+:where(:root:not(.dark)) .text-ink\/40 { color: rgb(var(--c-ink) / 0.62); }
+:where(:root:not(.dark)) .text-ink\/45 { color: rgb(var(--c-ink) / 0.65); }
+:where(:root:not(.dark)) .text-ink\/50 { color: rgb(var(--c-ink) / 0.68); }
+:where(:root:not(.dark)) .text-ink\/55 { color: rgb(var(--c-ink) / 0.7); }
+:where(:root:not(.dark)) .text-ink\/60 { color: rgb(var(--c-ink) / 0.72); }
+:where(:root:not(.dark)) .text-ink\/65 { color: rgb(var(--c-ink) / 0.75); }
+:where(:root:not(.dark)) .text-ink\/70 { color: rgb(var(--c-ink) / 0.78); }
+:where(:root:not(.dark)) input::placeholder,
+:where(:root:not(.dark)) textarea::placeholder {
+  color: rgb(var(--c-ink) / 0.46);
+}
+:root:not(.dark) .placeholder\:text-ink\/30::placeholder {
+  color: rgb(var(--c-ink) / 0.46);
+}
+/* Accent text at reduced alpha (brand tags, small links) gets the same lift. */
+:where(:root:not(.dark)) .text-amber\/70 { color: rgb(var(--c-accent) / 0.94); }
+:where(:root:not(.dark)) .text-amber\/80 { color: rgb(var(--c-accent) / 0.97); }
 
 @layer utilities {
   .tabular {

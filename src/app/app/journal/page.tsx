@@ -6,6 +6,7 @@ import { Plus, Trash2, Check, X } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
 import { MOOD_PRESETS, moodPreset } from "@/types";
 import { cn, toDateKey } from "@/lib/utils";
+import { MoodIcon } from "@/components/ui/mood-icon";
 
 const ACT_COLORS = ["#3D80BC", "#2E8159", "#7A4E86", "#C06A33", "#CB453B", "#8E5B6E", "#3D80BC"];
 
@@ -81,20 +82,29 @@ export default function JournalPage() {
             />
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-1.5">
-                {MOOD_PRESETS.map((m) => (
-                  <button
-                    key={m.value}
-                    onClick={() => setMood(mood === m.value ? null : m.value)}
-                    aria-label={m.label}
-                    className={cn(
-                      "flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border text-lg transition-all",
-                      mood === m.value ? "border-ink/30 bg-ink/[0.06]" : "border-line opacity-55 hover:opacity-90",
-                    )}
-                    style={mood === m.value ? { boxShadow: `0 0 18px -8px ${m.color}` } : undefined}
-                  >
-                    {m.emoji}
-                  </button>
-                ))}
+                {MOOD_PRESETS.map((m) => {
+                  const on = mood === m.value;
+                  return (
+                    <button
+                      key={m.value}
+                      onClick={() => setMood(on ? null : m.value)}
+                      aria-label={m.label}
+                      aria-pressed={on}
+                      title={m.label}
+                      className={cn(
+                        "flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border transition-colors duration-200",
+                        on ? "" : "border-line text-ink/40 hover:bg-ink/[0.03] hover:text-ink/70",
+                      )}
+                      style={
+                        on
+                          ? { borderColor: `${m.color}80`, backgroundColor: `${m.color}1a`, boxShadow: `0 0 18px -8px ${m.color}` }
+                          : undefined
+                      }
+                    >
+                      <MoodIcon mood={m.value} muted={!on} className="h-5 w-5" strokeWidth={1.75} />
+                    </button>
+                  );
+                })}
               </div>
               <button
                 onClick={saveEntry}
@@ -119,7 +129,11 @@ export default function JournalPage() {
                 <div key={j.id} className="card group p-5">
                   <div className="mb-1 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      {p && <span className="text-lg">{p.emoji}</span>}
+                      {p && (
+                        <span title={p.label} className="flex shrink-0">
+                          <MoodIcon mood={p.value} className="h-5 w-5" strokeWidth={1.75} />
+                        </span>
+                      )}
                       <h3 className="font-display text-lg font-semibold text-ink">
                         {j.title || "Untitled"}
                       </h3>
@@ -166,7 +180,7 @@ export default function JournalPage() {
                     <span
                       className="flex h-5 w-5 items-center justify-center rounded-md border"
                       style={{
-                        borderColor: on ? a.color : "rgba(255,255,255,0.15)",
+                        borderColor: on ? a.color : "rgb(var(--c-ink) / 0.2)",
                         backgroundColor: on ? `${a.color}33` : "transparent",
                         color: a.color,
                       }}

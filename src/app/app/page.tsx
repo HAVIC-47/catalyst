@@ -21,6 +21,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
 import { moodPreset } from "@/types";
 import { TAKA, cn, compactCurrency, formatCurrency, toDateKey } from "@/lib/utils";
+import { MoodIcon } from "@/components/ui/mood-icon";
 
 type Range = "week" | "month" | "year";
 const RANGES: Range[] = ["week", "month", "year"];
@@ -33,24 +34,27 @@ interface CellData {
   mood?: number;
 }
 
+/** "#RRGGBB" -> "r g b" (space-separated, for rgb(r g b / a)). */
 function hexToRgb(hex: string): string {
   const m = hex.replace("#", "");
-  return `${parseInt(m.slice(0, 2), 16)}, ${parseInt(m.slice(2, 4), 16)}, ${parseInt(m.slice(4, 6), 16)}`;
+  return `${parseInt(m.slice(0, 2), 16)} ${parseInt(m.slice(2, 4), 16)} ${parseInt(m.slice(4, 6), 16)}`;
 }
 
 /**
  * Layered tint for a day:
  *  - Base = mood color (red → green scale).
- *  - Purple overlay weighted by expense (higher spend = stronger purple).
- *  - Blue overlay weighted by income (higher income = stronger blue).
+ *  - Red overlay weighted by expense (higher spend = stronger).
+ *  - Blue overlay weighted by income (higher income = stronger).
  * Layers stack via CSS `background` so both flow tints sit ON TOP of the mood base.
+ * Colors and strength come from theme variables (--tint-*): deep printed-ink
+ * overlays on black, lighter pastel washes on white.
  */
 function dayCellStyle(data: CellData | undefined, maxFlow: number): CSSProperties {
   if (!data) return {};
   const flow = data.expense + data.income;
   if (flow === 0 && !data.mood) return {};
 
-  const moodRgb = data.mood ? hexToRgb(moodPreset(data.mood).color) : "122, 116, 106";
+  const moodRgb = data.mood ? hexToRgb(moodPreset(data.mood).color) : "122 116 106";
   const moodA = data.mood ? 0.2 : 0.05;
 
   const spendRatio = maxFlow > 0 ? data.expense / maxFlow : 0;
@@ -58,11 +62,36 @@ function dayCellStyle(data: CellData | undefined, maxFlow: number): CSSPropertie
   const spendA = Math.min(0.42, spendRatio * 0.48);
   const incomeA = Math.min(0.42, incomeRatio * 0.48);
 
+  const wash = (rgb: string, a: number) => {
+    const c = `rgb(${rgb} / calc(${a.toFixed(3)} * var(--tint-k)))`;
+    return `linear-gradient(${c},${c})`;
+  };
   const layers: string[] = [];
-  // oxblood overlay for spend, ink-blue overlay for income — printed-ink tints.
-  if (spendA > 0) layers.push(`linear-gradient(rgba(155,58,45,${spendA}),rgba(155,58,45,${spendA}))`);
-  if (incomeA > 0) layers.push(`linear-gradient(rgba(52,97,138,${incomeA}),rgba(52,97,138,${incomeA}))`);
-  layers.push(`rgba(${moodRgb}, ${moodA})`);
+  if (spendA > 0) layers.push(wash("var(--tint-spend)", spendA));
+  if (incomeA > 0) layers.push(wash("var(--tint-income)", incomeA));
+  layers.push(`rgb(${moodRgb} / calc(${moodA} * var(--tint-mood-k)))`);
+  return { background: layers.join(", ") };
+}
+
+/**
+ * Year-view tint. Same idea as dayCellStyle (mood base + flow overlay) but built
+ * for tiny cells where the color is the only signal: brighter data colors, much
+ * stronger alphas (theme-tuned via --yr-*), only the dominant flow (no red-over-
+ * blue mud), and √-scaled intensity with a floor so an ordinary spend still shows
+ * in a month whose max is one big salary day.
+ */
+function yearCellStyle(data: CellData | undefined, maxFlow: number): CSSProperties {
+  if (!data || (!data.mood && data.income + data.expense === 0)) return {};
+  const layers: string[] = [];
+  const spendHeavier = data.expense >= data.income;
+  const flow = spendHeavier ? data.expense : data.income;
+  if (flow > 0) {
+    const level = maxFlow > 0 ? Math.sqrt(Math.min(1, flow / maxFlow)) : 1;
+    const rgb = spendHeavier ? "var(--c-expense)" : "var(--c-saving)";
+    const c = `rgb(${rgb} / calc(var(--yr-floor) + var(--yr-span) * ${level.toFixed(3)}))`;
+    layers.push(`linear-gradient(${c},${c})`);
+  }
+  if (data.mood) layers.push(`rgb(${hexToRgb(moodPreset(data.mood).color)} / var(--yr-mood))`);
   return { background: layers.join(", ") };
 }
 
@@ -181,7 +210,7 @@ export default function CalendarPage() {
                 }}
                 className={cn(
                   "cursor-pointer rounded-lg px-2.5 py-1.5 text-xs font-medium capitalize transition-colors duration-200 sm:px-3",
-                  range === r ? "bg-ink/[0.08] text-amber" : "text-ink/45 hover:text-ink/75",
+                  range === r ? "seg-on text-amber" : "text-ink/45 hover:text-ink/75",
                 )}
               >
                 {r}
@@ -221,13 +250,13 @@ export default function CalendarPage() {
           <div className="h-2.5 w-14 rounded-full bg-gradient-to-r from-[#A8322A] via-[#B59A3C] to-[#2E8159] sm:w-28" />
         </div>
         <div className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: "#7A4E86" }} />
+          <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: "rgb(var(--tint-spend))" }} />
           <span>
             <span className="hidden sm:inline">Heavier </span>spend
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: "#3D80BC" }} />
+          <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: "rgb(var(--tint-income))" }} />
           <span>
             <span className="hidden sm:inline">Heavier </span>income
           </span>
@@ -313,7 +342,9 @@ function MonthGrid({
                 >
                   {format(day, "dd")}
                 </span>
-                {preset && <span className="text-sm leading-none sm:text-base">{preset.emoji}</span>}
+                {preset && (
+                  <MoodIcon mood={preset.value} className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" strokeWidth={2} />
+                )}
               </div>
               {hasFlow && (
                 <div className="mt-auto whitespace-nowrap font-mono text-[10px] leading-tight tracking-tight tabular sm:text-[11px] sm:tracking-normal">
@@ -393,7 +424,7 @@ function WeekView({
                 >
                   {format(day, "dd")}
                 </span>
-                {preset && <span className="text-lg leading-none sm:text-2xl">{preset.emoji}</span>}
+                {preset && <MoodIcon mood={preset.value} className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={1.75} />}
               </div>
               <div className="mt-auto space-y-1 whitespace-nowrap font-mono text-[10px] tracking-tight tabular sm:text-xs sm:tracking-normal">
                 {data?.expense ? (
@@ -466,20 +497,20 @@ function YearView({
                   <button
                     key={key}
                     onClick={() => openEntry({ date: key, tab: "money" })}
-                    style={dayCellStyle(data, maxFlow)}
+                    style={yearCellStyle(data, maxFlow)}
                     title={
                       data
                         ? `${format(day, "MMM d")} · spent ${compactCurrency(data.expense)} · earned ${compactCurrency(data.income)}${data.mood ? ` · mood ${data.mood}/5` : ""}`
                         : format(day, "MMM d")
                     }
                     className={cn(
-                      "flex aspect-square cursor-pointer items-center justify-center rounded-[3px] font-mono text-[9px] tabular transition-colors hover:!bg-ink/15",
+                      "flex aspect-square cursor-pointer items-center justify-center rounded-[3px] font-mono text-[9px] tabular transition-shadow hover:ring-1 hover:ring-ink/50",
                       !inMonth && "opacity-25",
-                      today && "ring-1 ring-amber",
-                      !data && "bg-ink/[0.03]",
+                      today && "ring-2 ring-inset ring-amber hover:ring-2 hover:ring-amber",
+                      !data && "bg-ink/[0.04]",
                     )}
                   >
-                    <span className="text-ink/55">{format(day, "d")}</span>
+                    <span className={data ? "font-medium text-ink" : "text-ink/45"}>{format(day, "d")}</span>
                   </button>
                 );
               })}

@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 import { MOOD_PRESETS, type MoodLog } from "@/types";
 import { rangeWindow, type Range } from "@/lib/range";
+import { MoodIcon } from "@/components/ui/mood-icon";
 
 export function MoodDonut({ moods, range, offset }: { moods: MoodLog[]; range: Range; offset: number }) {
   const { startKey, endKey } = useMemo(() => rangeWindow(range, offset), [range, offset]);
@@ -16,7 +17,7 @@ export function MoodDonut({ moods, range, offset }: { moods: MoodLog[]; range: R
     }
     return MOOD_PRESETS.filter((p) => (counts.get(p.value) ?? 0) > 0).map((p) => ({
       name: p.label,
-      emoji: p.emoji,
+      mood: p.value,
       value: counts.get(p.value) ?? 0,
       color: p.color,
     }));
@@ -58,11 +59,8 @@ export function MoodDonut({ moods, range, offset }: { moods: MoodLog[]; range: R
           <ul className="w-full space-y-1.5">
             {slices.map((s) => (
               <li key={s.name} className="flex items-center gap-2 text-sm">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: s.color }} />
-                <span className="text-ink/65">
-                  <span className="mr-1">{s.emoji}</span>
-                  {s.name}
-                </span>
+                <MoodIcon mood={s.mood} className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+                <span className="text-ink/65">{s.name}</span>
                 <span className="ml-auto font-mono tabular text-ink/50">
                   {s.value} {s.value === 1 ? "log" : "logs"}
                 </span>
