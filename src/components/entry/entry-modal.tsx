@@ -7,18 +7,9 @@ import { format, parseISO } from "date-fns";
 import { X, ArrowUpRight, ArrowDownLeft, MapPin } from "lucide-react";
 import { useAppData, type EntryTab } from "@/hooks/use-app-data";
 import { MOOD_PRESETS, MOOD_TAGS, type Category, type Kind } from "@/types";
-import { TAKA, cn, tintText } from "@/lib/utils";
+import { TAKA, cn, combineDateTime, nowTime, tintText } from "@/lib/utils";
 import { MoodIcon } from "@/components/ui/mood-icon";
 import { LIMITS } from "@/lib/limits";
-
-// Combine a yyyy-mm-dd date with an HH:mm time into a local ISO timestamp.
-function combineDateTime(dateKey: string, time: string): string {
-  return new Date(`${dateKey}T${time || "12:00"}:00`).toISOString();
-}
-function nowTime(): string {
-  const d = new Date();
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
 
 function TimeField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (

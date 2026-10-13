@@ -2,7 +2,8 @@
 -- Run in Supabase → SQL Editor → New query → paste → Run. Safe to re-run.
 --
 -- Tables: categories, transactions, mood_logs (Phase 1) +
--- budgets, goals, bills, journal_entries, activities, activity_logs (later phases).
+-- budgets, goals, bills, journal_entries, activities, activity_logs (later phases) +
+-- memo_scans (daily limit for the memo reader).
 -- Every table is Row-Level-Security scoped to auth.uid() so users see only their own data.
 
 create extension if not exists "pgcrypto";
@@ -124,12 +125,22 @@ create table if not exists public.activity_logs (
   created_at  timestamptz not null default now()
 );
 
+-- MEMO SCANS (one row per photo sent to the memo reader, /api/scan-memo) -------
+-- Only used to cap how many memos each account can scan per day with the server's
+-- Gemini key. Holds no photo and no memo content.
+create table if not exists public.memo_scans (
+  id         bigint generated always as identity primary key,
+  user_id    uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
 -- Indexes ---------------------------------------------------------------------
 create index if not exists idx_tx_user_date  on public.transactions (user_id, occurred_on desc);
 create index if not exists idx_mood_user_date on public.mood_logs (user_id, logged_on desc);
 create index if not exists idx_cat_user on public.categories (user_id, sort);
 create index if not exists idx_journal_user on public.journal_entries (user_id, entry_on desc);
 create index if not exists idx_actlog_user on public.activity_logs (user_id, logged_on desc);
+create index if not exists idx_memo_scans_user on public.memo_scans (user_id, created_at desc);
 
 -- Row-Level Security: enable + owner-only policies on every table -------------
 do $$
@@ -148,3 +159,13 @@ begin
     );
   end loop;
 end $$;
+
+-- memo_scans: users can add and count their own scans but never change or delete
+-- them, so the daily limit can't be reset from the client.
+alter table public.memo_scans enable row level security;
+drop policy if exists memo_scans_insert_own on public.memo_scans;
+create policy memo_scans_insert_own on public.memo_scans for insert with check (auth.uid() = user_id);
+drop policy if exists memo_scans_select_own on public.memo_scans;
+create policy memo_scans_select_own on public.memo_scans for select using (auth.uid() = user_id);
+revoke all on public.memo_scans from anon;
+revoke update, delete, truncate on public.memo_scans from authenticated;

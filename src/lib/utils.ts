@@ -40,3 +40,14 @@ export function toDateKey(d: Date): string {
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
+
+/** Combine a yyyy-mm-dd date with an HH:mm time into a local ISO timestamp. */
+export function combineDateTime(dateKey: string, time: string): string {
+  return new Date(`${dateKey}T${time || "12:00"}:00`).toISOString();
+}
+
+/** The current local time as HH:mm. */
+export function nowTime(): string {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}

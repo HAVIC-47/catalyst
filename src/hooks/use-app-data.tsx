@@ -81,6 +81,11 @@ interface AppDataValue {
   closeEntry: () => void;
   setEntryTab: (t: EntryTab) => void;
 
+  // memo scanner: photo of a memo (receipt) -> one expense per item
+  memoOpen: boolean;
+  openMemo: () => void;
+  closeMemo: () => void;
+
   // Vault Mode: when on, every income also adds to the savings pool and every
   // expense draws from it, so savings reflect true net flow.
   vaultMode: boolean;
@@ -145,6 +150,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [entryOpen, setEntryOpen] = useState(false);
   const [entryTab, setEntryTab] = useState<EntryTab>("money");
   const [entryDate, setEntryDate] = useState<string>(toDateKey(new Date()));
+  const [memoOpen, setMemoOpen] = useState(false);
 
   const [vaultMode, setVaultModeState] = useState(false);
   useEffect(() => {
@@ -282,6 +288,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setEntryOpen(true);
   }, []);
   const closeEntry = useCallback(() => setEntryOpen(false), []);
+  const openMemo = useCallback(() => {
+    setEntryOpen(false);
+    setMemoOpen(true);
+  }, []);
+  const closeMemo = useCallback(() => setMemoOpen(false), []);
 
   const addMoney = useCallback(async (t: NewTransaction) => {
     const c = await addTransaction(t);
@@ -410,6 +421,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       openEntry,
       closeEntry,
       setEntryTab,
+      memoOpen,
+      openMemo,
+      closeMemo,
       vaultMode,
       setVaultMode,
       dashboardHidden,
@@ -439,7 +453,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     }),
     [
       loading, categories, transactions, moods, budgets, goals, bills, journal, activities,
-      activityLogs, entryOpen, entryTab, entryDate, openEntry, closeEntry, vaultMode, setVaultMode,
+      activityLogs, entryOpen, entryTab, entryDate, openEntry, closeEntry, memoOpen, openMemo, closeMemo, vaultMode, setVaultMode,
       dashboardHidden, setDashboardHidden, addMoney, removeMoney,
       saveMood, moodsForDate, avgMoodForDate, createCategory, editCategory, removeCategory, createBudget, editBudget,
       removeBudget, createGoal, editGoal, removeGoal, createBill, editBill, removeBill, createJournal,
