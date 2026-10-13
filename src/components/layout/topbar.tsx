@@ -18,17 +18,8 @@ export function Topbar() {
         <span className="font-mono text-sm text-ink/70">{format(today, "EEE, MMM d, yyyy")}</span>
       </div>
 
-      {/* Phones / tablets: scan a memo (photo -> one expense per item). The rest of the
-          actions live in the bottom bar / More sheet. */}
-      <button
-        onClick={openMemo}
-        aria-label="Scan a memo"
-        className="entry-btn ml-auto inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl text-paper shadow-entry transition-transform duration-200 active:scale-[0.96] lg:hidden"
-      >
-        <Plus className="h-5 w-5" aria-hidden strokeWidth={2.5} />
-      </button>
-
-      {/* Desktop actions. */}
+      {/* Desktop actions. Phones and tablets have them in the bottom bar (+ scans a
+          memo) and the More sheet. */}
       <div className="ml-auto hidden items-center gap-3 lg:flex">
         <VaultModeToggle />
         <button

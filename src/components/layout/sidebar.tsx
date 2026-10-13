@@ -10,6 +10,8 @@ import {
   Target,
   Bell,
   NotebookPen,
+  ListTodo,
+  ShoppingCart,
   Settings,
   type LucideIcon,
 } from "lucide-react";
@@ -23,6 +25,8 @@ const NAV: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/app/goals", label: "Goals", icon: Target },
   { href: "/app/bills", label: "Bills", icon: Bell },
   { href: "/app/journal", label: "Journal", icon: NotebookPen },
+  { href: "/app/todo", label: "To-do", icon: ListTodo },
+  { href: "/app/shopping", label: "To buy", icon: ShoppingCart },
   { href: "/app/settings", label: "Settings", icon: Settings },
 ];
 

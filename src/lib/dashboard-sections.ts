@@ -3,6 +3,7 @@
 export const DASHBOARD_SECTIONS = [
   { id: "kpis", label: "Monthly summary", hint: "Spent · Earned · Saved · Avg mood" },
   { id: "trend", label: "Mood × money trend", hint: "Net flow vs mood over time" },
+  { id: "insights", label: "AI insights", hint: "Mood · money · savings, with suggestions" },
   { id: "spent", label: "Spent by category", hint: "Where the money went" },
   { id: "earned", label: "Earned by category", hint: "Where the money came from" },
   { id: "mood", label: "Mood distribution", hint: "How the days felt" },

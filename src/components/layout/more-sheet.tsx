@@ -6,13 +6,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  CalendarDays,
-  LayoutGrid,
-  Receipt,
   PiggyBank,
   Target,
   Bell,
   NotebookPen,
+  ListTodo,
+  ShoppingCart,
   Settings,
   LogOut,
   Plus,
@@ -25,14 +24,14 @@ import { useAppData } from "@/hooks/use-app-data";
 import { VaultModeToggle } from "@/components/features/vault-mode-toggle";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 
-const ALL_NAV: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: "/app", label: "Calendar", icon: CalendarDays },
-  { href: "/app/dashboard", label: "Dashboard", icon: LayoutGrid },
-  { href: "/app/transactions", label: "Transactions", icon: Receipt },
+/** Sections that aren't in the phone's bottom bar (Calendar, Dashboard, Ledger are). */
+export const MORE_NAV: { href: string; label: string; icon: LucideIcon }[] = [
+  { href: "/app/journal", label: "Journal", icon: NotebookPen },
+  { href: "/app/todo", label: "To-do", icon: ListTodo },
+  { href: "/app/shopping", label: "To buy", icon: ShoppingCart },
   { href: "/app/budgets", label: "Budgets", icon: PiggyBank },
   { href: "/app/goals", label: "Goals", icon: Target },
   { href: "/app/bills", label: "Bills", icon: Bell },
-  { href: "/app/journal", label: "Journal", icon: NotebookPen },
   { href: "/app/settings", label: "Settings", icon: Settings },
 ];
 
@@ -80,16 +79,16 @@ export function MoreSheet({ open, onClose }: { open: boolean; onClose: () => voi
           <motion.div
             role="dialog"
             aria-modal="true"
-            aria-label="All sections"
+            aria-label="More sections"
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
-            className="card relative z-10 w-full rounded-b-none rounded-t-2xl p-5"
+            className="card relative z-10 max-h-[92dvh] w-full overflow-y-auto rounded-b-none rounded-t-2xl p-5"
             style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1rem)" }}
           >
             <div className="mb-4 flex items-center justify-between">
-              <span className="label">All sections</span>
+              <span className="label">More</span>
               <button
                 onClick={onClose}
                 aria-label="Close"
@@ -101,8 +100,8 @@ export function MoreSheet({ open, onClose }: { open: boolean; onClose: () => voi
 
             {/* nav grid */}
             <div className="grid grid-cols-4 gap-2">
-              {ALL_NAV.map(({ href, label, icon: Icon }) => {
-                const active = href === "/app" ? pathname === "/app" : pathname.startsWith(href);
+              {MORE_NAV.map(({ href, label, icon: Icon }) => {
+                const active = pathname.startsWith(href);
                 return (
                   <Link
                     key={href}

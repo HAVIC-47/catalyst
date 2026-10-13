@@ -5,24 +5,27 @@ import { RANGES, type Range } from "@/lib/range";
 import { cn } from "@/lib/utils";
 
 // The dashboard's single period selector: Day / Week / Month / Year + prev / Now / next.
-// Compact on phones so both groups share one row.
+// Compact on phones so both groups share one row. `ranges` narrows the choice
+// (the AI summaries offer Week / Month / Year).
 export function RangeControls({
   range,
   setRange,
   offset,
   setOffset,
+  ranges = RANGES,
 }: {
   range: Range;
   setRange: (r: Range) => void;
   offset: number;
   setOffset: (o: number | ((p: number) => number)) => void;
+  ranges?: readonly Range[];
 }) {
   const navCls =
     "hairline flex h-8 cursor-pointer items-center justify-center rounded-lg text-ink/60 transition-colors hover:bg-ink/5 hover:text-ink disabled:opacity-40 sm:h-9";
   return (
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div className="flex gap-0.5 rounded-xl border border-line bg-ink/[0.02] p-0.5 sm:gap-1 sm:p-1">
-        {RANGES.map((r) => (
+        {ranges.map((r) => (
           <button
             key={r}
             onClick={() => {

@@ -3,39 +3,42 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  CalendarDays,
-  LayoutGrid,
-  Receipt,
-  NotebookPen,
-  MoreHorizontal,
-  type LucideIcon,
-} from "lucide-react";
+import { CalendarDays, LayoutGrid, Receipt, MoreHorizontal, Plus, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { MoreSheet } from "@/components/layout/more-sheet";
+import { useAppData } from "@/hooks/use-app-data";
+import { MORE_NAV, MoreSheet } from "@/components/layout/more-sheet";
 
-// Mobile bottom bar: 4 links + More. Entry, theme, Vault Mode and the rest of
-// the sections live in the More sheet.
-const TABS: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: "/app", label: "Calendar", icon: CalendarDays },
-  { href: "/app/dashboard", label: "Dashboard", icon: LayoutGrid },
-  { href: "/app/transactions", label: "Ledger", icon: Receipt },
-  { href: "/app/journal", label: "Journal", icon: NotebookPen },
-];
-
-const MORE_ROUTES = ["/app/budgets", "/app/goals", "/app/bills", "/app/settings"];
+// Mobile bottom bar: Calendar · Dashboard · + · Ledger · More. The center + takes
+// a photo of a memo; Journal, boards, the rest of the sections, new entry, theme
+// and Vault Mode live in the More sheet.
+type Tab = { href: string; label: string; icon: LucideIcon };
+const CALENDAR: Tab = { href: "/app", label: "Calendar", icon: CalendarDays };
+const DASHBOARD: Tab = { href: "/app/dashboard", label: "Dashboard", icon: LayoutGrid };
+const LEDGER: Tab = { href: "/app/transactions", label: "Ledger", icon: Receipt };
 
 export function BottomNav() {
   const pathname = usePathname();
+  const { openMemo } = useAppData();
   const [moreOpen, setMoreOpen] = useState(false);
 
-  const moreActive = MORE_ROUTES.some((r) => pathname.startsWith(r));
+  const moreActive = MORE_NAV.some(({ href }) => pathname.startsWith(href));
 
   const tabClass = (active: boolean) =>
     cn(
       "relative flex h-14 flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-xl text-[10px] font-medium transition-colors duration-200",
       active ? "text-amber" : "text-ink/45 hover:text-ink/75",
     );
+
+  const tab = ({ href, label, icon: Icon }: Tab) => {
+    const active = href === "/app" ? pathname === "/app" : pathname.startsWith(href);
+    return (
+      <Link href={href} aria-current={active ? "page" : undefined} className={tabClass(active)}>
+        {active && <span className="absolute top-1 h-0.5 w-7 rounded-full bg-amber" aria-hidden />}
+        <Icon className="h-[18px] w-[18px]" aria-hidden />
+        <span>{label}</span>
+      </Link>
+    );
+  };
 
   return (
     <>
@@ -45,22 +48,23 @@ export function BottomNav() {
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <div className="mx-auto flex h-full max-w-md items-center justify-between px-1">
-          {TABS.map(({ href, label, icon: Icon }) => {
-            const active = href === "/app" ? pathname === "/app" : pathname.startsWith(href);
-            return (
-              <Link key={href} href={href} aria-current={active ? "page" : undefined} className={tabClass(active)}>
-                {active && <span className="absolute top-1 h-0.5 w-7 rounded-full bg-amber" aria-hidden />}
-                <Icon className="h-[18px] w-[18px]" aria-hidden />
-                <span>{label}</span>
-              </Link>
-            );
-          })}
+          {tab(CALENDAR)}
+          {tab(DASHBOARD)}
 
-          <button
-            onClick={() => setMoreOpen(true)}
-            aria-label="More sections"
-            className={tabClass(moreActive)}
-          >
+          {/* Scan a memo (photo -> one expense per item) — the center action. */}
+          <div className="flex flex-1 items-center justify-center">
+            <button
+              onClick={openMemo}
+              aria-label="Scan a memo"
+              className="entry-btn flex h-12 w-12 cursor-pointer items-center justify-center rounded-full text-paper shadow-entry transition-transform duration-200 focus-visible:rounded-full! active:scale-95"
+            >
+              <Plus className="h-6 w-6" aria-hidden strokeWidth={2.5} />
+            </button>
+          </div>
+
+          {tab(LEDGER)}
+
+          <button onClick={() => setMoreOpen(true)} aria-label="More sections" className={tabClass(moreActive)}>
             {moreActive && <span className="absolute top-1 h-0.5 w-7 rounded-full bg-amber" aria-hidden />}
             <MoreHorizontal className="h-[18px] w-[18px]" aria-hidden />
             <span>More</span>

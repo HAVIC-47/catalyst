@@ -6,6 +6,7 @@ import { Plus, Trash2, Coins } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
 import { TAKA, formatCurrency } from "@/lib/utils";
 import { LIMITS } from "@/lib/limits";
+import { AiInsights } from "@/components/ai/ai-insights";
 
 export default function GoalsPage() {
   const { goals, createGoal, editGoal, removeGoal, loading } = useAppData();
@@ -30,6 +31,8 @@ export default function GoalsPage() {
           Saving <span className="serif-italic text-amber/90">targets.</span>
         </h1>
       </div>
+
+      <AiInsights topics={["goals", "savings"]} />
 
       <div className="card mb-6 flex flex-wrap items-center gap-2 p-4">
         <input

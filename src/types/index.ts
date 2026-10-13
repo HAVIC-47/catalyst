@@ -135,6 +135,52 @@ export interface ActivityLog {
   value: string;
 }
 
+/** Jira-style boards: "todo" (tasks) and "shopping" (things to buy) share one UI. */
+export type BoardKind = "todo" | "shopping";
+
+export interface Board {
+  id: string;
+  name: string;
+  kind: BoardKind;
+  sort: number;
+}
+
+/** A board's status column ("To do", "In progress", "Done"…), ordered by sort. */
+export interface BoardColumn {
+  id: string;
+  boardId: string;
+  name: string;
+  sort: number;
+}
+
+export type TicketPriority = "low" | "medium" | "high";
+
+export interface Ticket {
+  id: string;
+  boardId: string;
+  columnId: string;
+  number: number; // per-board, shown as #12
+  title: string;
+  description: string;
+  priority: TicketPriority;
+  dueOn: string | null; // yyyy-mm-dd
+  amount: number | null; // price, for to-buy items
+  sort: number; // order inside the column (float: a move rewrites one row)
+}
+export type NewTicket = Omit<Ticket, "id">;
+
+/** Columns a new board starts with (renamable, and more can be added). */
+export const DEFAULT_BOARD_COLUMNS: Record<BoardKind, string[]> = {
+  todo: ["To do", "In progress", "Done"],
+  shopping: ["To buy", "In cart", "Bought"],
+};
+
+export const TICKET_PRIORITIES: { value: TicketPriority; label: string }[] = [
+  { value: "high", label: "High" },
+  { value: "medium", label: "Medium" },
+  { value: "low", label: "Low" },
+];
+
 /** Default categories seeded for new users (editable in Settings). */
 export const DEFAULT_EXPENSE_CATEGORIES: { name: string; color: string }[] = [
   { name: "Food", color: "#C06A33" },

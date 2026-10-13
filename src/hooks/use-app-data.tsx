@@ -15,6 +15,9 @@ import type {
   Activity,
   ActivityLog,
   Bill,
+  Board,
+  BoardColumn,
+  BoardKind,
   Budget,
   Category,
   Goal,
@@ -28,9 +31,10 @@ import type {
   NewJournalEntry,
   NewMoodLog,
   NewTransaction,
+  Ticket,
   Transaction,
 } from "@/types";
-import { BREAK_SAVING } from "@/types";
+import { BREAK_SAVING, DEFAULT_BOARD_COLUMNS } from "@/types";
 import {
   addCategory,
   deleteCategory,
@@ -52,11 +56,29 @@ import {
   listActivities,
   listActivityLogs,
 } from "@/lib/db/activities";
+import {
+  addBoard,
+  addBoardColumns,
+  addTicket,
+  deleteBoard,
+  deleteBoardColumn,
+  deleteTicket,
+  listBoardColumns,
+  listBoards,
+  listTickets,
+  updateBoard,
+  updateBoardColumn,
+  updateTicket,
+} from "@/lib/db/boards";
 import { loadPrefs, savePrefs } from "@/lib/db/prefs";
 import { parseHiddenSections, type DashboardSectionId } from "@/lib/dashboard-sections";
+import { SORT_STEP, sortBetween } from "@/lib/boards";
 import { toDateKey } from "@/lib/utils";
 
 export type EntryTab = "money" | "mood" | "saving";
+
+/** Ticket fields the editor can change (column moves go through placeTicket). */
+export type TicketFields = Pick<Ticket, "title" | "description" | "priority" | "dueOn" | "amount">;
 
 // Key for the hidden dashboard sections, both in localStorage and user metadata.
 const DASHBOARD_HIDDEN = "dashboardHidden";
@@ -72,6 +94,9 @@ interface AppDataValue {
   journal: JournalEntry[];
   activities: Activity[];
   activityLogs: ActivityLog[];
+  boards: Board[];
+  boardColumns: BoardColumn[];
+  tickets: Ticket[];
 
   // entry modal
   entryOpen: boolean;
@@ -131,6 +156,20 @@ interface AppDataValue {
   createActivity: (a: NewActivity) => Promise<void>;
   removeActivity: (id: string) => Promise<void>;
   toggleActivity: (activityId: string, dateKey: string) => Promise<void>;
+
+  // boards (to-do + to-buy): a new board starts with its kind's default columns
+  createBoard: (name: string, kind: BoardKind) => Promise<Board>;
+  renameBoard: (id: string, name: string) => Promise<void>;
+  removeBoard: (id: string) => Promise<void>;
+  createColumn: (boardId: string, name: string) => Promise<void>;
+  renameColumn: (id: string, name: string) => Promise<void>;
+  moveColumn: (id: string, dir: -1 | 1) => Promise<void>;
+  removeColumn: (id: string) => Promise<void>;
+  createTicket: (columnId: string, fields: Partial<TicketFields> & { title: string }) => Promise<Ticket>;
+  editTicket: (id: string, patch: Partial<TicketFields>) => Promise<void>;
+  /** Put a ticket in `columnId` where it sits in `order` (that column's ids, top to bottom). */
+  placeTicket: (id: string, columnId: string, order: string[]) => Promise<void>;
+  removeTicket: (id: string) => Promise<void>;
 }
 
 const Ctx = createContext<AppDataValue | null>(null);
@@ -146,6 +185,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [journal, setJournal] = useState<JournalEntry[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const [boards, setBoards] = useState<Board[]>([]);
+  const [boardColumns, setBoardColumns] = useState<BoardColumn[]>([]);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
 
   const [entryOpen, setEntryOpen] = useState(false);
   const [entryTab, setEntryTab] = useState<EntryTab>("money");
@@ -229,7 +271,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       }
     };
     (async () => {
-      const [cats, txs, mds, bgs, gls, bls, jnl, acts, alogs] = await Promise.all([
+      const [cats, txs, mds, bgs, gls, bls, jnl, acts, alogs, brds, bcols, tks] = await Promise.all([
         safe(listCategories, [] as Category[], "categories"),
         safe(listTransactions, [] as Transaction[], "transactions"),
         safe(listMoods, [] as MoodLog[], "moods"),
@@ -239,6 +281,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         safe(listJournal, [] as JournalEntry[], "journal"),
         safe(listActivities, [] as Activity[], "activities"),
         safe(listActivityLogs, [] as ActivityLog[], "activityLogs"),
+        safe(listBoards, [] as Board[], "boards"),
+        safe(listBoardColumns, [] as BoardColumn[], "boardColumns"),
+        safe(listTickets, [] as Ticket[], "tickets"),
       ]);
       let finalCats = cats;
       if (cats.length === 0) {
@@ -278,6 +323,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       setJournal(jnl);
       setActivities(acts);
       setActivityLogs(alogs);
+      setBoards(brds);
+      setBoardColumns(bcols);
+      setTickets(tks);
       setLoading(false);
     })();
   }, []);
@@ -403,6 +451,134 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     [activityLogs],
   );
 
+  const createBoard = useCallback(
+    async (name: string, kind: BoardKind) => {
+      const board = await addBoard({ name, kind, sort: boards.length });
+      setBoards((p) => [...p, board]);
+      try {
+        const cols = await addBoardColumns(
+          DEFAULT_BOARD_COLUMNS[kind].map((n, i) => ({ boardId: board.id, name: n, sort: i })),
+        );
+        setBoardColumns((p) => [...p, ...cols]);
+      } catch (err) {
+        // The board still works — its columns can be added by hand.
+        console.warn("[catalyst] could not add the new board's columns", err);
+      }
+      return board;
+    },
+    [boards.length],
+  );
+  const renameBoard = useCallback(async (id: string, name: string) => {
+    await updateBoard(id, { name });
+    setBoards((p) => p.map((b) => (b.id === id ? { ...b, name } : b)));
+  }, []);
+  const removeBoard = useCallback(async (id: string) => {
+    await deleteBoard(id); // the database removes its columns and tickets too
+    setBoards((p) => p.filter((b) => b.id !== id));
+    setBoardColumns((p) => p.filter((c) => c.boardId !== id));
+    setTickets((p) => p.filter((t) => t.boardId !== id));
+  }, []);
+
+  const createColumn = useCallback(
+    async (boardId: string, name: string) => {
+      const last = boardColumns.filter((c) => c.boardId === boardId).reduce((m, c) => Math.max(m, c.sort), -1);
+      const [col] = await addBoardColumns([{ boardId, name, sort: last + 1 }]);
+      setBoardColumns((p) => [...p, col]);
+    },
+    [boardColumns],
+  );
+  const renameColumn = useCallback(async (id: string, name: string) => {
+    await updateBoardColumn(id, { name });
+    setBoardColumns((p) => p.map((c) => (c.id === id ? { ...c, name } : c)));
+  }, []);
+  const moveColumn = useCallback(
+    async (id: string, dir: -1 | 1) => {
+      const col = boardColumns.find((c) => c.id === id);
+      if (!col) return;
+      const cols = boardColumns.filter((c) => c.boardId === col.boardId).sort((a, b) => a.sort - b.sort);
+      const i = cols.findIndex((c) => c.id === id);
+      const j = i + dir;
+      if (j < 0 || j >= cols.length) return;
+      [cols[i], cols[j]] = [cols[j], cols[i]];
+      // Renumber the whole board so equal or gapped sorts can't block the swap.
+      const changes = cols.map((c, k) => ({ id: c.id, sort: k })).filter((u, k) => cols[k].sort !== u.sort);
+      await Promise.all(changes.map((u) => updateBoardColumn(u.id, { sort: u.sort })));
+      setBoardColumns((p) =>
+        p.map((c) => {
+          const u = changes.find((x) => x.id === c.id);
+          return u ? { ...c, sort: u.sort } : c;
+        }),
+      );
+    },
+    [boardColumns],
+  );
+  const removeColumn = useCallback(async (id: string) => {
+    await deleteBoardColumn(id); // the database removes its tickets too
+    setBoardColumns((p) => p.filter((c) => c.id !== id));
+    setTickets((p) => p.filter((t) => t.columnId !== id));
+  }, []);
+
+  const createTicket = useCallback(
+    async (columnId: string, fields: Partial<TicketFields> & { title: string }) => {
+      const col = boardColumns.find((c) => c.id === columnId);
+      if (!col) throw new Error("That column no longer exists.");
+      const inBoard = tickets.filter((t) => t.boardId === col.boardId);
+      const lastSort = inBoard.filter((t) => t.columnId === columnId).reduce((m, t) => Math.max(m, t.sort), 0);
+      const t = await addTicket({
+        boardId: col.boardId,
+        columnId,
+        number: inBoard.reduce((m, x) => Math.max(m, x.number), 0) + 1,
+        title: fields.title,
+        description: fields.description ?? "",
+        priority: fields.priority ?? "medium",
+        dueOn: fields.dueOn ?? null,
+        amount: fields.amount ?? null,
+        sort: lastSort + SORT_STEP, // new tickets join the bottom of the column
+      });
+      setTickets((p) => [...p, t]);
+      return t;
+    },
+    [boardColumns, tickets],
+  );
+  const editTicket = useCallback(async (id: string, patch: Partial<TicketFields>) => {
+    await updateTicket(id, patch);
+    setTickets((p) => p.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+  }, []);
+  const placeTicket = useCallback(
+    async (id: string, columnId: string, order: string[]) => {
+      const i = order.indexOf(id);
+      if (i < 0) return;
+      const sortOf = new Map(tickets.map((t) => [t.id, t.sort]));
+      const between = sortBetween(
+        i > 0 ? sortOf.get(order[i - 1]) : undefined,
+        i < order.length - 1 ? sortOf.get(order[i + 1]) : undefined,
+      );
+      // Usually one row changes; when neighbours are too close, renumber the column.
+      const moves = between === null ? order.map((tid, k) => ({ id: tid, sort: (k + 1) * SORT_STEP })) : [{ id, sort: between }];
+      // Optimistic: the card stays where it was dropped while the write goes out.
+      setTickets((p) =>
+        p.map((t) => {
+          const m = moves.find((x) => x.id === t.id);
+          return m ? { ...t, sort: m.sort, columnId: t.id === id ? columnId : t.columnId } : t;
+        }),
+      );
+      try {
+        await Promise.all(
+          moves.map((m) => updateTicket(m.id, m.id === id ? { sort: m.sort, columnId } : { sort: m.sort })),
+        );
+      } catch (err) {
+        console.warn("[catalyst] could not move the ticket", err);
+        // Put the board back the way the database has it.
+        setTickets(await listTickets().catch(() => tickets));
+      }
+    },
+    [tickets],
+  );
+  const removeTicket = useCallback(async (id: string) => {
+    await deleteTicket(id);
+    setTickets((p) => p.filter((t) => t.id !== id));
+  }, []);
+
   const value = useMemo<AppDataValue>(
     () => ({
       loading,
@@ -415,6 +591,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       journal,
       activities,
       activityLogs,
+      boards,
+      boardColumns,
+      tickets,
       entryOpen,
       entryTab,
       entryDate,
@@ -450,14 +629,27 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       createActivity,
       removeActivity,
       toggleActivity,
+      createBoard,
+      renameBoard,
+      removeBoard,
+      createColumn,
+      renameColumn,
+      moveColumn,
+      removeColumn,
+      createTicket,
+      editTicket,
+      placeTicket,
+      removeTicket,
     }),
     [
       loading, categories, transactions, moods, budgets, goals, bills, journal, activities,
-      activityLogs, entryOpen, entryTab, entryDate, openEntry, closeEntry, memoOpen, openMemo, closeMemo, vaultMode, setVaultMode,
+      activityLogs, boards, boardColumns, tickets, entryOpen, entryTab, entryDate, openEntry, closeEntry, memoOpen,
+      openMemo, closeMemo, vaultMode, setVaultMode,
       dashboardHidden, setDashboardHidden, addMoney, removeMoney,
       saveMood, moodsForDate, avgMoodForDate, createCategory, editCategory, removeCategory, createBudget, editBudget,
       removeBudget, createGoal, editGoal, removeGoal, createBill, editBill, removeBill, createJournal,
-      removeJournal, createActivity, removeActivity, toggleActivity,
+      removeJournal, createActivity, removeActivity, toggleActivity, createBoard, renameBoard, removeBoard,
+      createColumn, renameColumn, moveColumn, removeColumn, createTicket, editTicket, placeTicket, removeTicket,
     ],
   );
 

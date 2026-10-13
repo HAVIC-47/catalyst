@@ -8,6 +8,7 @@ import { MOOD_PRESETS, moodPreset } from "@/types";
 import { cn, toDateKey } from "@/lib/utils";
 import { MoodIcon } from "@/components/ui/mood-icon";
 import { LIMITS } from "@/lib/limits";
+import { AiInsights } from "@/components/ai/ai-insights";
 
 const ACT_COLORS = ["#3D80BC", "#2E8159", "#7A4E86", "#C06A33", "#CB453B", "#8E5B6E", "#3D80BC"];
 
@@ -60,6 +61,8 @@ export default function JournalPage() {
           Daily <span className="serif-italic text-amber/90">log.</span>
         </h1>
       </div>
+
+      <AiInsights topics={["journal", "mood"]} />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         {/* entry composer + history */}

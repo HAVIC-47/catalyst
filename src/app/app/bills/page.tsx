@@ -6,6 +6,7 @@ import { Plus, Trash2, Check, Bell } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
 import { TAKA, cn, formatCurrency, toDateKey } from "@/lib/utils";
 import { LIMITS } from "@/lib/limits";
+import { AiInsights } from "@/components/ai/ai-insights";
 
 const RECURRENCES = ["monthly", "weekly", "yearly", "once"];
 
@@ -37,6 +38,8 @@ export default function BillsPage() {
           <p className="mt-3 font-mono text-sm text-ink/45">{formatCurrency(upcomingTotal)} outstanding</p>
         )}
       </div>
+
+      <AiInsights topics={["bills"]} />
 
       <div className="card mb-6 flex flex-wrap items-center gap-2 p-4">
         <input

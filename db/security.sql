@@ -38,7 +38,8 @@ end $$;
 --    public key.
 revoke all on
   public.categories, public.transactions, public.mood_logs, public.budgets, public.goals,
-  public.bills, public.journal_entries, public.activities, public.activity_logs
+  public.bills, public.journal_entries, public.activities, public.activity_logs,
+  public.boards, public.board_columns, public.tickets, public.ai_insights
 from anon;
 
 -- 4. Size and format limits. RLS stops users touching each other's rows, but
@@ -69,7 +70,13 @@ begin
       ('journal_entries', 'journal_entries_body_len',       'char_length(body) <= 20000'),
       ('activities',      'activities_name_len',            'char_length(name) <= 100'),
       ('activities',      'activities_color_hex',           $c$color ~ '^#[0-9A-Fa-f]{6}$'$c$),
-      ('activity_logs',   'activity_logs_value_len',        'char_length(value) <= 100')
+      ('activity_logs',   'activity_logs_value_len',        'char_length(value) <= 100'),
+      ('boards',          'boards_name_len',                'char_length(name) <= 100'),
+      ('board_columns',   'board_columns_name_len',         'char_length(name) <= 100'),
+      ('tickets',         'tickets_title_len',              'char_length(title) <= 200'),
+      ('tickets',         'tickets_description_len',        'char_length(description) <= 5000'),
+      ('ai_insights',     'ai_insights_hash_len',           'char_length(data_hash) <= 64'),
+      ('ai_insights',     'ai_insights_content_size',       'octet_length(content::text) <= 20000')
     ) as v(tbl, con, expr)
   loop
     if not exists (

@@ -12,6 +12,7 @@ import { MoodDonut } from "@/components/charts/mood-donut";
 import { SavingsDonut } from "@/components/charts/savings-donut";
 import { CategoryBars } from "@/components/charts/category-bars";
 import { MoodTagBars } from "@/components/charts/mood-tag-bars";
+import { AiInsights } from "@/components/ai/ai-insights";
 import { formatCurrency } from "@/lib/utils";
 import { rangeWindow, type Range } from "@/lib/range";
 import type { DashboardSectionId } from "@/lib/dashboard-sections";
@@ -96,7 +97,8 @@ export default function DashboardPage() {
     },
   ];
   const visibleCharts = charts.filter((c) => show(c.id));
-  const nothingShown = dashboardHidden !== null && !show("kpis") && !show("trend") && visibleCharts.length === 0;
+  const nothingShown =
+    dashboardHidden !== null && !show("kpis") && !show("trend") && !show("insights") && visibleCharts.length === 0;
 
   return (
     <div className="px-4 pb-6 pt-4 sm:px-6 lg:px-8 lg:pt-6">
@@ -155,6 +157,9 @@ export default function DashboardPage() {
           </div>
         )
       )}
+
+      {/* AI read of mood, money and savings — its own period selector (week / month / year). */}
+      {show("insights") && <AiInsights topics={["mood", "ledger", "savings"]} className="mb-4 lg:mb-6" />}
 
       {/* Donuts + frequency bars, two per row on desktop; hidden ones close the gap. */}
       {visibleCharts.length > 0 && (

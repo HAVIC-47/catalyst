@@ -8,6 +8,7 @@ import { useDebounce } from "@/hooks/use-debounce";
 import type { Kind, Transaction } from "@/types";
 import { cn, formatCurrency, tintText } from "@/lib/utils";
 import { inRange, rangeWindow, type Range } from "@/lib/range";
+import { AiInsights } from "@/components/ai/ai-insights";
 
 type KindFilter = "all" | Kind;
 type PeriodFilter = "all" | Range | "custom";
@@ -167,6 +168,8 @@ export default function TransactionsPage() {
           + Add
         </button>
       </div>
+
+      <AiInsights topics={["ledger"]} />
 
       {/* Search + filter toggle */}
       <div className="mb-4 flex items-center gap-2">
