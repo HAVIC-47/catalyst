@@ -3,7 +3,7 @@
 // The board: columns side by side (swipe between them on a phone) with tickets
 // you drag within and across columns — mouse, touch (press and hold, so a quick
 // swipe still scrolls) or keyboard (space to pick up, arrows to move, space to
-// drop). Enter or a tap opens a ticket.
+// drop). Enter or a tap opens a ticket. Columns move the same way, by their title.
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -13,18 +13,28 @@ import {
   MeasuringStrategy,
   MouseSensor,
   TouchSensor,
+  closestCenter,
   closestCorners,
   useDndContext,
-  useDroppable,
   useSensor,
   useSensors,
+  type Active,
   type Announcements,
+  type CollisionDetection,
   type DragEndEvent,
   type DragOverEvent,
   type DragStartEvent,
+  type KeyboardCoordinateGetter,
   type UniqueIdentifier,
 } from "@dnd-kit/core";
-import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import {
+  SortableContext,
+  arrayMove,
+  horizontalListSortingStrategy,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { ArrowLeft, ArrowRight, Pencil, Plus, Trash2 } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
@@ -48,8 +58,25 @@ export function boardError(err: unknown): string {
 
 const COLUMN_W = "w-[84vw] max-w-[320px] sm:w-[288px]";
 
+type Typed = { data: { current?: { type?: string } } };
+const isColumn = (x: Typed) => x.data.current?.type === "column";
+
+// A dragged column only lands among columns; a ticket among tickets and columns.
+const collisions: CollisionDetection = (args) =>
+  isColumn(args.active)
+    ? closestCenter({ ...args, droppableContainers: args.droppableContainers.filter(isColumn) })
+    : closestCorners(args);
+
+// Arrow keys move a column to the next column, not into the tickets inside it.
+const keyboardCoordinates: KeyboardCoordinateGetter = (event, args) => {
+  const all = args.context.droppableContainers;
+  if (!args.context.active || !isColumn(args.context.active)) return sortableKeyboardCoordinates(event, args);
+  const columnsOnly = { getEnabled: () => all.getEnabled().filter(isColumn), get: (id: UniqueIdentifier) => all.get(id) } as typeof all;
+  return sortableKeyboardCoordinates(event, { ...args, context: { ...args.context, droppableContainers: columnsOnly } });
+};
+
 export function BoardView({ board, onOpen }: { board: Board; onOpen: (ticketId: string) => void }) {
-  const { boardColumns, tickets, placeTicket } = useAppData();
+  const { boardColumns, tickets, placeTicket, placeColumn } = useAppData();
   const columns = useMemo(
     () => boardColumns.filter((c) => c.boardId === board.id).sort((a, b) => a.sort - b.sort),
     [boardColumns, board.id],
@@ -71,6 +98,8 @@ export function BoardView({ board, onOpen }: { board: Board; onOpen: (ticketId: 
   };
   const lists = dragLists ?? stored;
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
+  const [error, setError] = useState("");
   const droppedAt = useRef(0);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -80,7 +109,7 @@ export function BoardView({ board, onOpen }: { board: Board; onOpen: (ticketId: 
     useSensor(TouchSensor, { activationConstraint: { delay: 220, tolerance: 8 } }),
     // Space picks up and drops; Enter stays free to open the ticket.
     useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
+      coordinateGetter: keyboardCoordinates,
       keyboardCodes: { start: ["Space"], cancel: ["Escape"], end: ["Space"] },
     }),
   );
@@ -91,11 +120,17 @@ export function BoardView({ board, onOpen }: { board: Board; onOpen: (ticketId: 
   };
 
   const onDragStart = ({ active }: DragStartEvent) => {
+    setError("");
+    if (isColumn(active)) {
+      setActiveColumnId(String(active.id));
+      return;
+    }
     setActiveId(String(active.id));
     setDrag(stored);
   };
 
   const onDragOver = ({ active, over }: DragOverEvent) => {
+    if (isColumn(active)) return; // the sortable strategy slides the columns
     const cur = drag.current ?? stored;
     if (!over) return;
     const from = columnOf(active.id, cur);
@@ -112,6 +147,14 @@ export function BoardView({ board, onOpen }: { board: Board; onOpen: (ticketId: 
   };
 
   const onDragEnd = ({ active, over }: DragEndEvent) => {
+    if (isColumn(active)) {
+      setActiveColumnId(null);
+      const from = columns.findIndex((c) => c.id === active.id);
+      const to = over ? columns.findIndex((c) => c.id === over.id) : -1;
+      // placeColumn updates the store right away, so the column stays where it landed.
+      if (from >= 0 && to >= 0 && from !== to) placeColumn(String(active.id), to).catch((err) => setError(boardError(err)));
+      return;
+    }
     const cur = drag.current ?? stored;
     const id = String(active.id);
     const ticket = byId.get(id);
@@ -135,6 +178,7 @@ export function BoardView({ board, onOpen }: { board: Board; onOpen: (ticketId: 
 
   const onDragCancel = () => {
     setActiveId(null);
+    setActiveColumnId(null);
     setDrag(null);
   };
 
@@ -146,21 +190,37 @@ export function BoardView({ board, onOpen }: { board: Board; onOpen: (ticketId: 
   const titleOf = (id: UniqueIdentifier) => byId.get(String(id))?.title ?? "the ticket";
   const placeOf = (id: UniqueIdentifier) =>
     columns.find((c) => c.id === columnOf(id, drag.current ?? stored))?.name ?? "the board";
+  const nameOf = (a: Active) => `the ${columns.find((c) => c.id === a.id)?.name ?? ""} column`;
+  const slotOf = (id: UniqueIdentifier) => `position ${columns.findIndex((c) => c.id === id) + 1} of ${columns.length}`;
   const announcements: Announcements = {
-    onDragStart: ({ active }) => `Picked up ${titleOf(active.id)}.`,
+    onDragStart: ({ active }) => (isColumn(active) ? `Picked up ${nameOf(active)}.` : `Picked up ${titleOf(active.id)}.`),
     onDragOver: ({ active, over }) =>
-      over ? `${titleOf(active.id)} is in ${placeOf(over.id)}.` : `${titleOf(active.id)} is not over a column.`,
+      isColumn(active)
+        ? over
+          ? `${nameOf(active)} is at ${slotOf(over.id)}.`
+          : `${nameOf(active)} is not over a column.`
+        : over
+          ? `${titleOf(active.id)} is in ${placeOf(over.id)}.`
+          : `${titleOf(active.id)} is not over a column.`,
     onDragEnd: ({ active, over }) =>
-      over ? `${titleOf(active.id)} was dropped in ${placeOf(over.id)}.` : `${titleOf(active.id)} was put back.`,
-    onDragCancel: ({ active }) => `Moving ${titleOf(active.id)} was cancelled.`,
+      isColumn(active)
+        ? over
+          ? `${nameOf(active)} was dropped at ${slotOf(over.id)}.`
+          : `${nameOf(active)} was put back.`
+        : over
+          ? `${titleOf(active.id)} was dropped in ${placeOf(over.id)}.`
+          : `${titleOf(active.id)} was put back.`,
+    onDragCancel: ({ active }) =>
+      isColumn(active) ? `Moving ${nameOf(active)} was cancelled.` : `Moving ${titleOf(active.id)} was cancelled.`,
   };
 
   const active = activeId ? byId.get(activeId) : undefined;
+  const activeColumn = activeColumnId ? columns.find((c) => c.id === activeColumnId) : undefined;
 
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={collisions}
       measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
       onDragStart={onDragStart}
       onDragOver={onDragOver}
@@ -170,32 +230,39 @@ export function BoardView({ board, onOpen }: { board: Board; onOpen: (ticketId: 
         announcements,
         screenReaderInstructions: {
           draggable:
-            "To move this ticket, press space, use the arrow keys to move it, then press space to drop it or escape to cancel. Press enter to open it.",
+            "To move it, press space, use the arrow keys, then press space to drop it or escape to cancel. Press enter to open a ticket.",
         },
       }}
     >
       {/* Snapping makes swiping between columns land cleanly; it's off mid-drag so
           auto-scroll at the edges can glide. */}
+      {error && (
+        <p role="alert" className="mb-2 text-xs text-expense">
+          {error}
+        </p>
+      )}
       <div
         className={cn(
           "-mx-4 flex items-stretch gap-3 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8",
-          !activeId && "snap-x snap-mandatory scroll-px-4 sm:snap-none",
+          !activeId && !activeColumnId && "snap-x snap-mandatory scroll-px-4 sm:snap-none",
         )}
       >
-        {columns.map((c, i) => (
-          <ColumnView
-            key={c.id}
-            column={c}
-            ids={lists[c.id] ?? []}
-            byId={byId}
-            kind={board.kind}
-            done={columns.length > 1 && i === columns.length - 1}
-            first={i === 0}
-            last={i === columns.length - 1}
-            onOpen={open}
-            dragging={!!activeId}
-          />
-        ))}
+        <SortableContext id={`columns-${board.id}`} items={columns.map((c) => c.id)} strategy={horizontalListSortingStrategy}>
+          {columns.map((c, i) => (
+            <ColumnView
+              key={c.id}
+              column={c}
+              ids={lists[c.id] ?? []}
+              byId={byId}
+              kind={board.kind}
+              done={columns.length > 1 && i === columns.length - 1}
+              first={i === 0}
+              last={i === columns.length - 1}
+              onOpen={open}
+              dragging={!!activeId}
+            />
+          ))}
+        </SortableContext>
         <AddColumn boardId={board.id} />
       </div>
 
@@ -207,6 +274,14 @@ export function BoardView({ board, onOpen }: { board: Board; onOpen: (ticketId: 
             {active ? (
               <div>
                 <TicketCard ticket={active} kind={board.kind} done={false} lifted />
+              </div>
+            ) : activeColumn ? (
+              <div>
+                <ColumnPreview
+                  column={activeColumn}
+                  items={(lists[activeColumn.id] ?? []).map((id) => byId.get(id)).filter((t): t is Ticket => !!t)}
+                  kind={board.kind}
+                />
               </div>
             ) : null}
           </DragOverlay>,
@@ -238,7 +313,11 @@ function ColumnView({
   dragging: boolean;
 }) {
   const { renameColumn, moveColumn, removeColumn } = useAppData();
-  const { setNodeRef } = useDroppable({ id: column.id });
+  // The whole column is the drop zone for tickets; only its title picks it up.
+  const { setNodeRef, setActivatorNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({
+    id: column.id,
+    data: { type: "column" },
+  });
   const { active } = useDndContext();
   const [renaming, setRenaming] = useState(false);
   const [error, setError] = useState("");
@@ -258,33 +337,47 @@ function ColumnView({
 
   return (
     <section
+      ref={setNodeRef}
       aria-label={column.name}
+      style={{ transform: CSS.Translate.toString(transform), transition }}
       className={cn(
         "flex shrink-0 snap-start flex-col rounded-xl border bg-ink/[0.025] transition-colors duration-150",
         COLUMN_W,
         target ? "border-amber/40" : "border-line",
+        isDragging && "opacity-35",
       )}
     >
       <header className="flex min-h-[46px] items-center gap-2 py-1.5 pl-3 pr-1.5">
         {renaming ? (
-          <NameInput
-            initial={column.name}
-            label="Column name"
-            onDone={(v) => {
-              setRenaming(false);
-              if (v && v !== column.name) run(renameColumn(column.id, v));
-            }}
-            className="font-mono text-[11px] uppercase tracking-[0.16em]"
-          />
+          <>
+            <NameInput
+              initial={column.name}
+              label="Column name"
+              onDone={(v) => {
+                setRenaming(false);
+                if (v && v !== column.name) run(renameColumn(column.id, v));
+              }}
+              className="font-mono text-[11px] uppercase tracking-[0.16em]"
+            />
+            <ColumnStats count={items.length} total={total} />
+          </>
         ) : (
-          <h3 className="min-w-0 truncate font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-ink/70">
-            {column.name}
-          </h3>
+          // The title is the column's handle: drag it with the mouse, press and hold
+          // on touch, or focus it and press space.
+          <div
+            ref={setActivatorNodeRef}
+            {...attributes}
+            {...listeners}
+            aria-label={`${column.name} column`}
+            title="Drag to move this column"
+            className="-my-1 -ml-1 flex min-h-[38px] min-w-0 flex-1 cursor-grab touch-manipulation select-none items-center gap-2 rounded-md pl-1 [-webkit-touch-callout:none] focus-visible:outline-2 focus-visible:outline-offset-2 active:cursor-grabbing"
+          >
+            <h3 className="min-w-0 truncate font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-ink/70">
+              {column.name}
+            </h3>
+            <ColumnStats count={items.length} total={total} />
+          </div>
         )}
-        <span className="shrink-0 rounded-full bg-ink/[0.06] px-1.5 font-mono text-[10px] leading-4 text-ink/55">
-          {items.length}
-        </span>
-        {total > 0 && <span className="shrink-0 font-mono text-[11px] tabular text-ink/55">{formatCurrency(total)}</span>}
         <Menu
           label={`${column.name} column options`}
           className="ml-auto"
@@ -303,7 +396,7 @@ function ColumnView({
       )}
 
       <SortableContext id={column.id} items={ids} strategy={verticalListSortingStrategy}>
-        <ul ref={setNodeRef} className="flex min-h-[72px] flex-1 flex-col gap-2 px-2 pb-1">
+        <ul className="flex min-h-[72px] flex-1 flex-col gap-2 px-2 pb-1">
           {items.map((t) => (
             <SortableTicket key={t.id} ticket={t} kind={kind} done={done} onOpen={onOpen} dragging={dragging} />
           ))}
@@ -333,7 +426,10 @@ function SortableTicket({
   onOpen: (id: string) => void;
   dragging: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: ticket.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: ticket.id,
+    data: { type: "ticket" },
+  });
   return (
     <li
       ref={setNodeRef}
@@ -358,6 +454,43 @@ function SortableTicket({
         <TicketCard ticket={ticket} kind={kind} done={done} />
       </div>
     </li>
+  );
+}
+
+function ColumnStats({ count, total }: { count: number; total: number }) {
+  return (
+    <>
+      <span className="shrink-0 rounded-full bg-ink/[0.06] px-1.5 font-mono text-[10px] leading-4 text-ink/55">{count}</span>
+      {total > 0 && <span className="shrink-0 font-mono text-[11px] tabular text-ink/55">{formatCurrency(total)}</span>}
+    </>
+  );
+}
+
+/** The column under your finger while it's being moved (a still copy, slightly lifted). */
+function ColumnPreview({ column, items, kind }: { column: BoardColumn; items: Ticket[]; kind: BoardKind }) {
+  const total = kind === "shopping" ? items.reduce((s, t) => s + (t.amount ?? 0), 0) : 0;
+  return (
+    <section
+      className={cn(
+        "flex rotate-[1.5deg] cursor-grabbing flex-col rounded-xl border border-amber/40 bg-card shadow-card",
+        COLUMN_W,
+      )}
+    >
+      <header className="flex min-h-[46px] items-center gap-2 py-1.5 pl-3 pr-3">
+        <h3 className="min-w-0 truncate font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-ink/70">
+          {column.name}
+        </h3>
+        <ColumnStats count={items.length} total={total} />
+      </header>
+      <ul className="flex flex-col gap-2 px-2 pb-3">
+        {items.slice(0, 6).map((t) => (
+          <li key={t.id} className="list-none">
+            <TicketCard ticket={t} kind={kind} done={false} />
+          </li>
+        ))}
+        {items.length > 6 && <li className="list-none px-1 text-xs text-ink/45">+{items.length - 6} more</li>}
+      </ul>
+    </section>
   );
 }
 

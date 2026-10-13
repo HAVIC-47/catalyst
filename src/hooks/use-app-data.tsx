@@ -164,6 +164,7 @@ interface AppDataValue {
   createColumn: (boardId: string, name: string) => Promise<void>;
   renameColumn: (id: string, name: string) => Promise<void>;
   moveColumn: (id: string, dir: -1 | 1) => Promise<void>;
+  placeColumn: (id: string, index: number) => Promise<void>;
   removeColumn: (id: string) => Promise<void>;
   createTicket: (columnId: string, fields: Partial<TicketFields> & { title: string }) => Promise<Ticket>;
   editTicket: (id: string, patch: Partial<TicketFields>) => Promise<void>;
@@ -491,26 +492,46 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     await updateBoardColumn(id, { name });
     setBoardColumns((p) => p.map((c) => (c.id === id ? { ...c, name } : c)));
   }, []);
-  const moveColumn = useCallback(
-    async (id: string, dir: -1 | 1) => {
+  /** Puts column [id] at [index] among its board's columns (renumbering them all). */
+  const placeColumn = useCallback(
+    async (id: string, index: number) => {
       const col = boardColumns.find((c) => c.id === id);
       if (!col) return;
       const cols = boardColumns.filter((c) => c.boardId === col.boardId).sort((a, b) => a.sort - b.sort);
-      const i = cols.findIndex((c) => c.id === id);
-      const j = i + dir;
-      if (j < 0 || j >= cols.length) return;
-      [cols[i], cols[j]] = [cols[j], cols[i]];
-      // Renumber the whole board so equal or gapped sorts can't block the swap.
-      const changes = cols.map((c, k) => ({ id: c.id, sort: k })).filter((u, k) => cols[k].sort !== u.sort);
-      await Promise.all(changes.map((u) => updateBoardColumn(u.id, { sort: u.sort })));
+      const from = cols.findIndex((c) => c.id === id);
+      const to = Math.max(0, Math.min(index, cols.length - 1));
+      if (from === to) return;
+      const order = [...cols];
+      order.splice(to, 0, ...order.splice(from, 1));
+      // Renumber the whole board so equal or gapped sorts can't block the move.
+      const changes = order.map((c, k) => ({ id: c.id, sort: k })).filter((u, k) => order[k].sort !== u.sort);
+      // Optimistic: the column stays where it was dropped while the writes go out.
       setBoardColumns((p) =>
         p.map((c) => {
           const u = changes.find((x) => x.id === c.id);
           return u ? { ...c, sort: u.sort } : c;
         }),
       );
+      try {
+        await Promise.all(changes.map((u) => updateBoardColumn(u.id, { sort: u.sort })));
+      } catch (err) {
+        // Put the board back the way the database has it, then let the caller say so.
+        setBoardColumns(await listBoardColumns().catch(() => boardColumns));
+        throw err;
+      }
     },
     [boardColumns],
+  );
+  const moveColumn = useCallback(
+    async (id: string, dir: -1 | 1) => {
+      const col = boardColumns.find((c) => c.id === id);
+      if (!col) return;
+      const cols = boardColumns.filter((c) => c.boardId === col.boardId).sort((a, b) => a.sort - b.sort);
+      const i = cols.findIndex((c) => c.id === id);
+      if (i + dir < 0 || i + dir >= cols.length) return;
+      await placeColumn(id, i + dir);
+    },
+    [boardColumns, placeColumn],
   );
   const removeColumn = useCallback(async (id: string) => {
     await deleteBoardColumn(id); // the database removes its tickets too
@@ -635,6 +656,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       createColumn,
       renameColumn,
       moveColumn,
+      placeColumn,
       removeColumn,
       createTicket,
       editTicket,
@@ -649,7 +671,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       saveMood, moodsForDate, avgMoodForDate, createCategory, editCategory, removeCategory, createBudget, editBudget,
       removeBudget, createGoal, editGoal, removeGoal, createBill, editBill, removeBill, createJournal,
       removeJournal, createActivity, removeActivity, toggleActivity, createBoard, renameBoard, removeBoard,
-      createColumn, renameColumn, moveColumn, removeColumn, createTicket, editTicket, placeTicket, removeTicket,
+      createColumn, renameColumn, moveColumn, placeColumn, removeColumn, createTicket, editTicket, placeTicket, removeTicket,
     ],
   );
 
