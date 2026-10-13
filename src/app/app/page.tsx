@@ -174,14 +174,17 @@ export default function CalendarPage() {
       {/* Header */}
       <div className="mb-3 flex flex-wrap items-end justify-between gap-x-4 gap-y-3 lg:mb-6">
         <div>
-          <div className="label mb-1 lg:mb-2">
-            Calendar · {loading ? "loading…" : `${summary.count} active days`}
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            {/* Scales with screen height (and width) on phones so short screens keep
+                room for the grid and the active-days count still fits beside it. */}
+            <h1 className="font-display text-[length:clamp(1.625rem,min(4.4vh,8.4vw),2.25rem)] font-semibold leading-none tracking-tight text-ink sm:text-5xl">
+              {period.label}
+            </h1>
+            <span className="label">
+              {loading ? "loading…" : `${summary.count} active ${summary.count === 1 ? "day" : "days"}`}
+            </span>
           </div>
-          {/* Scales with screen height on phones so short screens keep room for the grid. */}
-          <h1 className="font-display text-[length:clamp(2rem,5.6vh,3rem)] font-semibold leading-none tracking-tight text-ink sm:text-6xl">
-            {period.label}
-          </h1>
-          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-xs sm:text-sm lg:mt-3">
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-sm sm:text-base lg:mt-3">
             <span className="text-ink/45">
               NET{" "}
               <span className={summary.net >= 0 ? "text-income" : "text-expense"}>
