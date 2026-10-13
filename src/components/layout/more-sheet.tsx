@@ -76,7 +76,7 @@ export function MoreSheet({ open, onClose }: { open: boolean; onClose: () => voi
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18 }}
         >
-          <div className="absolute inset-0 bg-ink/40 backdrop-blur-sm" onClick={onClose} aria-hidden />
+          <div className="absolute inset-0 bg-ink/40 backdrop-blur-xs" onClick={onClose} aria-hidden />
           <motion.div
             role="dialog"
             aria-modal="true"

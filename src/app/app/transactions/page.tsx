@@ -182,7 +182,7 @@ export default function TransactionsPage() {
             onKeyDown={(e) => e.key === "Escape" && setQuery("")}
             placeholder="Search note, category, place, amount, date…"
             aria-label="Search transactions"
-            className="min-h-[42px] w-full rounded-xl border border-line bg-card pl-9 pr-9 text-sm text-ink outline-none placeholder:text-ink/30 focus:border-amber/50 [&::-webkit-search-cancel-button]:hidden"
+            className="min-h-[42px] w-full rounded-xl border border-line bg-card pl-9 pr-9 text-sm text-ink outline-hidden placeholder:text-ink/30 focus:border-amber/50 [&::-webkit-search-cancel-button]:hidden"
           />
           {query && (
             <button
@@ -400,7 +400,7 @@ export default function TransactionsPage() {
                       <button
                         onClick={() => removeMoney(t.id)}
                         aria-label="Delete"
-                        className="cursor-pointer text-ink/0 transition-colors group-hover:text-ink/30 hover:!text-expense"
+                        className="cursor-pointer text-ink/0 transition-colors group-hover:text-ink/30 hover:text-expense!"
                       >
                         <Trash2 className="h-4 w-4" aria-hidden />
                       </button>
@@ -417,7 +417,7 @@ export default function TransactionsPage() {
 }
 
 const fieldCls =
-  "min-h-[38px] rounded-lg border border-line bg-card px-2.5 text-sm text-ink outline-none placeholder:text-ink/30 focus:border-amber/50";
+  "min-h-[38px] rounded-lg border border-line bg-card px-2.5 text-sm text-ink outline-hidden placeholder:text-ink/30 focus:border-amber/50";
 
 function FilterRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (

@@ -6,6 +6,7 @@ import { useAppData } from "@/hooks/use-app-data";
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES, type Kind } from "@/types";
 import { DASHBOARD_SECTIONS } from "@/lib/dashboard-sections";
 import { cn, tintText } from "@/lib/utils";
+import { LIMITS } from "@/lib/limits";
 
 const SWATCHES = [
   "#C06A33", "#2E8159", "#3D80BC", "#7A4E86", "#B59A3C", "#3D80BC",
@@ -109,7 +110,7 @@ function DashboardSections() {
                 >
                   <span
                     className={cn(
-                      "absolute top-0.5 h-4 w-4 rounded-full bg-card shadow-sm transition-all",
+                      "absolute top-0.5 h-4 w-4 rounded-full bg-card shadow-xs transition-all",
                       on ? "left-[18px]" : "left-0.5",
                     )}
                   />
@@ -185,12 +186,13 @@ function CategorySection({ kind }: { kind: Kind }) {
             </span>
             <input
               defaultValue={c.name}
+              maxLength={LIMITS.name}
               onBlur={(e) => {
                 const v = e.target.value.trim();
                 if (v && v !== c.name) editCategory(c.id, { name: v });
               }}
               aria-label={`Rename ${c.name}`}
-              className="w-0 min-w-0 flex-1 bg-transparent text-sm text-ink/85 outline-none focus:text-ink"
+              className="w-0 min-w-0 flex-1 bg-transparent text-sm text-ink/85 outline-hidden focus:text-ink"
             />
             <div className="flex items-center gap-1">
               {SWATCHES.slice(0, 6).map((s) => (
@@ -222,8 +224,9 @@ function CategorySection({ kind }: { kind: Kind }) {
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && add()}
             placeholder={`New ${kind} category`}
+            maxLength={LIMITS.name}
             aria-label={`New ${kind} category name`}
-            className="min-h-[40px] w-0 min-w-0 flex-1 rounded-lg border border-line bg-ink/[0.02] px-3 text-sm text-ink outline-none focus:border-amber/50"
+            className="min-h-[40px] w-0 min-w-0 flex-1 rounded-lg border border-line bg-ink/[0.02] px-3 text-sm text-ink outline-hidden focus:border-amber/50"
           />
           <button
             onClick={add}

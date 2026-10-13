@@ -8,19 +8,19 @@ const display = Newsreader({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
   style: ["normal", "italic"],
-  variable: "--font-display",
+  variable: "--font-newsreader",
 });
 // Humanist grotesque for body copy — clean, characterful, not Inter.
 const body = Hanken_Grotesk({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
-  variable: "--font-body",
+  variable: "--font-hanken",
 });
 // Typewriter-leaning mono for ledger numbers.
 const mono = IBM_Plex_Mono({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
-  variable: "--font-mono",
+  variable: "--font-plex-mono",
 });
 
 export const metadata: Metadata = {

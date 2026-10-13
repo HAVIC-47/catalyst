@@ -4,7 +4,7 @@ import { Topbar } from "@/components/layout/topbar";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { EntryModal } from "@/components/entry/entry-modal";
 
-// Authenticated area. Guarded by middleware (redirects to /login if no session).
+// Authenticated area. Guarded by src/proxy.ts (no session → back to the landing page).
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <AppDataProvider>

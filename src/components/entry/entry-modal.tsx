@@ -9,6 +9,7 @@ import { useAppData, type EntryTab } from "@/hooks/use-app-data";
 import { MOOD_PRESETS, MOOD_TAGS, type Category, type Kind } from "@/types";
 import { TAKA, cn, tintText } from "@/lib/utils";
 import { MoodIcon } from "@/components/ui/mood-icon";
+import { LIMITS } from "@/lib/limits";
 
 // Combine a yyyy-mm-dd date with an HH:mm time into a local ISO timestamp.
 function combineDateTime(dateKey: string, time: string): string {
@@ -28,7 +29,7 @@ function TimeField({ value, onChange }: { value: string; onChange: (v: string) =
         value={value}
         onChange={(e) => onChange(e.target.value)}
         aria-label="Time"
-        className="min-h-[44px] rounded-xl border border-line bg-ink/[0.02] px-3 text-sm text-ink/80 outline-none focus:border-amber/50"
+        className="min-h-[44px] rounded-xl border border-line bg-ink/[0.02] px-3 text-sm text-ink/80 outline-hidden focus:border-amber/50"
       />
     </div>
   );
@@ -58,7 +59,7 @@ export function EntryModal() {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.16 }}
         >
-          <div className="absolute inset-0 bg-ink/40 backdrop-blur-sm" onClick={closeEntry} aria-hidden />
+          <div className="absolute inset-0 bg-ink/40 backdrop-blur-xs" onClick={closeEntry} aria-hidden />
           <motion.div
             role="dialog"
             aria-modal="true"
@@ -248,7 +249,7 @@ function MoneyForm({ dateKey }: { dateKey: string }) {
             onChange={(e) => set({ amount: e.target.value.replace(/[^0-9.]/g, "") })}
             placeholder="0"
             aria-label="Amount"
-            className="w-full bg-transparent font-mono text-3xl font-semibold tabular text-ink outline-none"
+            className="w-full bg-transparent font-mono text-3xl font-semibold tabular text-ink outline-hidden"
           />
         </div>
       </div>
@@ -289,8 +290,9 @@ function MoneyForm({ dateKey }: { dateKey: string }) {
             value={f.place}
             onChange={(e) => set({ place: e.target.value })}
             placeholder="Star Kabab, Aarong, Pathao…"
+            maxLength={LIMITS.place}
             aria-label="Place"
-            className="min-h-[44px] w-full rounded-xl border border-line bg-ink/[0.02] pl-10 pr-3 text-sm text-ink outline-none focus:border-amber/50"
+            className="min-h-[44px] w-full rounded-xl border border-line bg-ink/[0.02] pl-10 pr-3 text-sm text-ink outline-hidden focus:border-amber/50"
           />
         </div>
       </div>
@@ -302,8 +304,9 @@ function MoneyForm({ dateKey }: { dateKey: string }) {
           value={f.note}
           onChange={(e) => set({ note: e.target.value })}
           placeholder="What was it for?"
+          maxLength={LIMITS.note}
           aria-label="Note"
-          className="min-h-[44px] w-full rounded-xl border border-line bg-ink/[0.02] px-3 text-sm text-ink outline-none focus:border-amber/50"
+          className="min-h-[44px] w-full rounded-xl border border-line bg-ink/[0.02] px-3 text-sm text-ink outline-hidden focus:border-amber/50"
         />
       </div>
 
@@ -465,8 +468,9 @@ function MoodForm({ dateKey }: { dateKey: string }) {
           onChange={(e) => setNote(e.target.value)}
           rows={3}
           placeholder="What shaped the mood right now?"
+          maxLength={LIMITS.note}
           aria-label="Mood note"
-          className="w-full resize-none rounded-xl border border-line bg-ink/[0.02] p-3 text-sm text-ink outline-none focus:border-amber/50"
+          className="w-full resize-none rounded-xl border border-line bg-ink/[0.02] p-3 text-sm text-ink outline-hidden focus:border-amber/50"
         />
       </div>
 
@@ -596,7 +600,7 @@ function SavingForm({ dateKey }: { dateKey: string }) {
             onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
             placeholder="0"
             aria-label="Saving amount"
-            className="w-full bg-transparent font-mono text-3xl font-semibold tabular text-ink outline-none"
+            className="w-full bg-transparent font-mono text-3xl font-semibold tabular text-ink outline-hidden"
           />
         </div>
       </div>
@@ -609,8 +613,9 @@ function SavingForm({ dateKey }: { dateKey: string }) {
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="What is this saving for?"
+          maxLength={LIMITS.note}
           aria-label="Saving note"
-          className="min-h-[44px] w-full rounded-xl border border-line bg-ink/[0.02] px-3 text-sm text-ink outline-none focus:border-saving/50"
+          className="min-h-[44px] w-full rounded-xl border border-line bg-ink/[0.02] px-3 text-sm text-ink outline-hidden focus:border-saving/50"
         />
       </div>
 

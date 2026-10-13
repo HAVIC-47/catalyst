@@ -89,14 +89,14 @@ export function Hero() {
             Mood × Money
           </div>
 
-          <h1 className="font-display text-5xl font-semibold leading-[1.02] tracking-tight text-ink sm:text-6xl md:text-7xl">
+          <h1 className="font-display text-5xl font-semibold leading-[1.02] tracking-tight text-ink sm:text-6xl sm:leading-none md:text-7xl">
             <span className="hero-line block">Money meets</span>
             <span className="hero-line block">
               <span className="serif-italic text-amber/95">mood.</span>
             </span>
           </h1>
 
-          <p className="hero-sub mt-6 max-w-xl text-base leading-relaxed text-ink/55 sm:text-lg">
+          <p className="hero-sub mt-6 max-w-xl text-base leading-relaxed text-ink/55 sm:text-lg sm:leading-7">
             Catalyst maps every taka against how you actually felt that day. Spot the days they
             collide — and stop letting low moods drain your wallet.
           </p>
@@ -154,7 +154,7 @@ export function Hero() {
               {[10, 30, 18, 44, 24, 60, 42].map((h, i) => (
                 <div
                   key={i}
-                  className="flex-1 rounded-sm"
+                  className="flex-1 rounded-xs"
                   style={{
                     height: `${h * 1.6}px`,
                     background: i % 2 ? "#2E8159" : "#CB453B",
@@ -169,7 +169,7 @@ export function Hero() {
             </div>
           </div>
           {/* Decorative card behind */}
-          <div className="hero-card pointer-events-none absolute -right-6 top-12 -z-10 h-40 w-40 rotate-6 rounded-3xl border border-ink/5 bg-gradient-to-br from-amber/20 to-saving/20 blur-2xl" />
+          <div className="hero-card pointer-events-none absolute -right-6 top-12 -z-10 h-40 w-40 [transform:rotate(6deg)] rounded-3xl border border-ink/5 bg-linear-to-br from-amber/20 to-saving/20 blur-2xl" />
         </div>
       </div>
     </section>

@@ -130,7 +130,7 @@ export function Features() {
       <div className="mx-auto max-w-6xl">
         <div className="features-heading mb-12 max-w-2xl">
           <div className="label mb-3">Features</div>
-          <h2 className="font-display text-4xl font-semibold leading-tight tracking-tight text-ink sm:text-5xl">
+          <h2 className="font-display text-4xl font-semibold leading-tight tracking-tight text-ink sm:text-5xl sm:leading-none">
             Built to make money <span className="serif-italic text-amber/90">feel honest.</span>
           </h2>
           <p className="mt-4 text-base text-ink/55">

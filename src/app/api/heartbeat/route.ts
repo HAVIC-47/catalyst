@@ -10,7 +10,7 @@ export const revalidate = 0;
 
 export async function GET() {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     await supabase.rpc("keepalive_ping");
   } catch {
     // A failed ping is not worth surfacing — the next hour tries again.

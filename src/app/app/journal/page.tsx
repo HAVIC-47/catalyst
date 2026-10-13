@@ -7,6 +7,7 @@ import { useAppData } from "@/hooks/use-app-data";
 import { MOOD_PRESETS, moodPreset } from "@/types";
 import { cn, toDateKey } from "@/lib/utils";
 import { MoodIcon } from "@/components/ui/mood-icon";
+import { LIMITS } from "@/lib/limits";
 
 const ACT_COLORS = ["#3D80BC", "#2E8159", "#7A4E86", "#C06A33", "#CB453B", "#8E5B6E", "#3D80BC"];
 
@@ -69,16 +70,18 @@ export default function JournalPage() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Title"
+              maxLength={LIMITS.title}
               aria-label="Entry title"
-              className="mb-2 w-full rounded-xl border border-line bg-ink/[0.02] px-3 py-2.5 text-sm text-ink outline-none focus:border-amber/50"
+              className="mb-2 w-full rounded-xl border border-line bg-ink/[0.02] px-3 py-2.5 text-sm text-ink outline-hidden focus:border-amber/50"
             />
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
               rows={4}
               placeholder="How did the day go? What happened?"
+              maxLength={LIMITS.body}
               aria-label="Entry body"
-              className="w-full resize-none rounded-xl border border-line bg-ink/[0.02] p-3 text-sm text-ink outline-none focus:border-amber/50"
+              className="w-full resize-none rounded-xl border border-line bg-ink/[0.02] p-3 text-sm text-ink outline-hidden focus:border-amber/50"
             />
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-1.5">
@@ -145,7 +148,7 @@ export default function JournalPage() {
                       <button
                         onClick={() => removeJournal(j.id)}
                         aria-label="Delete entry"
-                        className="cursor-pointer text-ink/0 transition-colors group-hover:text-ink/30 hover:!text-expense"
+                        className="cursor-pointer text-ink/0 transition-colors group-hover:text-ink/30 hover:text-expense!"
                       >
                         <Trash2 className="h-4 w-4" aria-hidden />
                       </button>
@@ -192,7 +195,7 @@ export default function JournalPage() {
                   <button
                     onClick={() => removeActivity(a.id)}
                     aria-label={`Remove ${a.name}`}
-                    className="cursor-pointer text-ink/0 transition-colors group-hover:text-ink/30 hover:!text-expense"
+                    className="cursor-pointer text-ink/0 transition-colors group-hover:text-ink/30 hover:text-expense!"
                   >
                     <X className="h-4 w-4" aria-hidden />
                   </button>
@@ -210,8 +213,9 @@ export default function JournalPage() {
               onChange={(e) => setActName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addActivity()}
               placeholder="e.g. Workout, Read, Sleep 8h"
+              maxLength={LIMITS.name}
               aria-label="New activity"
-              className="min-h-[40px] flex-1 rounded-lg border border-line bg-ink/[0.02] px-3 text-sm text-ink outline-none focus:border-amber/50"
+              className="min-h-[40px] flex-1 rounded-lg border border-line bg-ink/[0.02] px-3 text-sm text-ink outline-hidden focus:border-amber/50"
             />
             <button
               onClick={addActivity}

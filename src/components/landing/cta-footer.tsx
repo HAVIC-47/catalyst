@@ -12,7 +12,7 @@ export function CtaFooter() {
           <h2 className="relative font-display text-3xl font-semibold tracking-tight text-ink sm:text-5xl">
             Start the <span className="serif-italic text-amber/90">honest</span> ledger.
           </h2>
-          <p className="relative mx-auto mt-4 max-w-md text-sm leading-relaxed text-ink/55 sm:text-base">
+          <p className="relative mx-auto mt-4 max-w-md text-sm leading-relaxed text-ink/55 sm:text-base sm:leading-6">
             Free. Private. ৳ from day one. Sign up in under thirty seconds.
           </p>
           <div className="relative mt-7 flex flex-wrap items-center justify-center gap-3">

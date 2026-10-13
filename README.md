@@ -4,17 +4,18 @@ Correlate daily cash flow against daily mood for predictive personal analytics. 
 
 ## Stack
 
-Next.js 14 (App Router, TS) · Tailwind · Recharts · Framer Motion · lucide-react · IndexedDB (idb) · date-fns
+Next.js 16 (App Router, TS) · React 19 · Tailwind CSS 4 · Recharts · Framer Motion · GSAP · lucide-react · date-fns
 
-Multi-user: email + password auth via **Supabase**, data in **Supabase Postgres** (row-level-secured per user). Currency is **Taka (৳)**; moods are 5 emojis.
+Multi-user: email + password auth via **Supabase**, data in **Supabase Postgres** (row-level-secured per user). Currency is **Taka (৳)**; moods are 5 levels, each with its own icon.
 
 ## Setup (Supabase)
 
 1. Create a free project at [supabase.com](https://supabase.com). New project → pick a region → wait for it to provision.
-2. **SQL** → New query → paste [db/supabase.sql](db/supabase.sql) → Run. Creates the `entries` table + RLS policies.
+2. **SQL** → New query → paste [db/supabase.sql](db/supabase.sql) → Run. Creates the tables + row-level-security policies.
+   Then run [db/keepalive.sql](db/keepalive.sql) (keeps a free project from pausing) and [db/security.sql](db/security.sql) (locks down anything left without RLS, removes anonymous table access, adds size limits). All three are safe to re-run.
 3. **Project Settings → API** → copy the **Project URL** and **anon public** key.
 4. Copy `.env.local.example` → `.env.local` and paste both values.
-5. (Optional, for instant signup in testing) **Authentication → Providers → Email** → turn **Confirm email** OFF. Otherwise new users must click a confirmation link before logging in.
+5. **Authentication → Providers → Email**: keep **Confirm email** ON for a public deployment (new users click a link before their first login), and set the minimum password length to 8. **Authentication → URL Configuration**: set the Site URL to your deployed URL so confirmation links land on it.
 
 ## Run
 
@@ -50,11 +51,11 @@ Anyone can then sign up with email at your `*.vercel.app` URL; each user gets pr
 
 ## Architecture
 
-- **Auth.** Supabase Auth (email+password), cookie sessions via `@supabase/ssr`. [src/middleware.ts](src/middleware.ts) refreshes the session and guards routes — unauthenticated → `/login`.
-- **Data.** Supabase Postgres `entries` table ([db/supabase.sql](db/supabase.sql)), one row per logged entry, RLS-scoped to `auth.uid()`. Data layer: [src/lib/store.ts](src/lib/store.ts) (Supabase queries; same function signatures as before).
-- **Routes.** `(auth)` group = `/login`, `/signup`. `(app)` group = the guarded dashboard at `/`.
+- **Auth.** Supabase Auth (email+password), cookie sessions via `@supabase/ssr`. [src/proxy.ts](src/proxy.ts) refreshes the session and guards routes — unauthenticated visitors to `/app/*` go to the landing page.
+- **Data.** Supabase Postgres tables ([db/supabase.sql](db/supabase.sql)), each RLS-scoped to `auth.uid()`. Data layer: [src/lib/db/](src/lib/db/).
+- **Routes.** `/` landing, `(auth)` group = `/login`, `/signup`, and the guarded app under `/app/*`.
 - Analytics math is client-side: [src/lib/analytics.ts](src/lib/analytics.ts), [src/lib/math.ts](src/lib/math.ts).
-- [db/schema.sql](db/schema.sql) is the fuller normalized reference design (transactions / mood_logs / tags); the app uses the simpler denormalized `entries` table in [db/supabase.sql](db/supabase.sql).
+- **Security.** Strict response headers (CSP, HSTS, frame-ancestors none, nosniff, referrer and permissions policies) are set in [next.config.js](next.config.js); database hardening lives in [db/security.sql](db/security.sql).
 
 ## Deferred (next pass)
 

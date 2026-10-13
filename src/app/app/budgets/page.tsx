@@ -60,7 +60,7 @@ export default function BudgetsPage() {
           <select
             value={newCatId}
             onChange={(e) => setNewCatId(e.target.value)}
-            className="min-h-[44px] w-full cursor-pointer rounded-xl border border-line bg-card px-3 text-sm text-ink/80 outline-none focus:border-amber/50"
+            className="min-h-[44px] w-full cursor-pointer rounded-xl border border-line bg-card px-3 text-sm text-ink/80 outline-hidden focus:border-amber/50"
           >
             {available.length === 0 ? (
               <option value="">All categories budgeted</option>
@@ -83,7 +83,7 @@ export default function BudgetsPage() {
               onChange={(e) => setNewAmt(e.target.value.replace(/[^0-9.]/g, ""))}
               onKeyDown={(e) => e.key === "Enter" && add()}
               placeholder="0"
-              className="min-h-[44px] w-full min-w-0 bg-transparent font-mono text-sm text-ink outline-none"
+              className="min-h-[44px] w-full min-w-0 bg-transparent font-mono text-sm text-ink outline-hidden"
             />
           </span>
         </label>
@@ -151,7 +151,7 @@ export default function BudgetsPage() {
                     }}
                     inputMode="decimal"
                     aria-label="Edit limit"
-                    className="w-16 rounded border border-transparent bg-transparent text-right text-ink/70 outline-none hover:border-line focus:border-amber/50"
+                    className="w-16 rounded-sm border border-transparent bg-transparent text-right text-ink/70 outline-hidden hover:border-line focus:border-amber/50"
                   />
                 </span>
               </div>

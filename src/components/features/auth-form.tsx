@@ -16,8 +16,8 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
   const isSignup = mode === "signup";
 
-  // Middleware has already enforced "must come from landing". Once we land here,
-  // strip the ?from=landing query so a manual refresh has no param and middleware
+  // The proxy has already enforced "must come from landing". Once we land here,
+  // strip the ?from=landing query so a manual refresh has no param and the proxy
   // sends them back to the landing page.
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -85,7 +85,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@email.com"
-              className="min-h-[44px] w-full rounded-xl border border-ink/10 bg-ink/[0.03] pl-10 pr-3 text-sm text-ink outline-none focus:border-neon-cyan/50"
+              className="min-h-[44px] w-full rounded-xl border border-ink/10 bg-ink/[0.03] pl-10 pr-3 text-sm text-ink outline-hidden focus:border-neon-cyan/50"
             />
           </div>
         </label>
@@ -97,11 +97,11 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
               type="password"
               autoComplete={isSignup ? "new-password" : "current-password"}
               required
-              minLength={6}
+              minLength={isSignup ? 8 : undefined}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder={isSignup ? "Create a password (min 6)" : "Password"}
-              className="min-h-[44px] w-full rounded-xl border border-ink/10 bg-ink/[0.03] pl-10 pr-3 text-sm text-ink outline-none focus:border-neon-cyan/50"
+              placeholder={isSignup ? "Create a password (min 8)" : "Password"}
+              className="min-h-[44px] w-full rounded-xl border border-ink/10 bg-ink/[0.03] pl-10 pr-3 text-sm text-ink outline-hidden focus:border-neon-cyan/50"
             />
           </div>
         </label>

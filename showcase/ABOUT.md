@@ -46,7 +46,7 @@ who lives in ৳ and thinks in the Bangladeshi calendar of income and expenses.
 ## 3. How it's made
 
 ### Tech stack
-- **Next.js 14** (App Router) + **TypeScript** + **Tailwind CSS**
+- **Next.js 16** (App Router) + **React 19** + **TypeScript** + **Tailwind CSS 4**
 - **Supabase** — serverless Postgres + email auth, **Row-Level Security** (each row scoped to `auth.uid()`)
 - **Recharts** — charts · **Framer Motion** — UI motion · **GSAP** — landing hero animation · **lucide-react** — icons
 - **Vercel** — hosting (free Hobby tier), auto-deploy on every `git push`
@@ -91,7 +91,8 @@ src/
     utils.ts / math.ts    formatting, Pearson correlation
 db/
   supabase.sql            schema + RLS (run once in Supabase)
-  schema.sql              fuller normalized reference design
+  keepalive.sql           hourly ping target so a free project never pauses
+  security.sql            hardening: RLS everywhere, no anon grants, size limits
 ```
 
 ### Data model (Postgres, RLS on every table)
@@ -132,7 +133,7 @@ npm install
 ```
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. **SQL Editor** → run [`db/supabase.sql`](db/supabase.sql) (tables + RLS).
+2. **SQL Editor** → run [`db/supabase.sql`](db/supabase.sql) (tables + RLS), then [`db/keepalive.sql`](db/keepalive.sql) and [`db/security.sql`](db/security.sql).
 3. **Settings → API** → copy the Project URL + anon key.
 4. Copy `.env.local.example` → `.env.local` and paste both:
    ```

@@ -5,6 +5,7 @@ import { format, parseISO } from "date-fns";
 import { Plus, Trash2, Coins } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
 import { TAKA, formatCurrency } from "@/lib/utils";
+import { LIMITS } from "@/lib/limits";
 
 export default function GoalsPage() {
   const { goals, createGoal, editGoal, removeGoal, loading } = useAppData();
@@ -35,8 +36,9 @@ export default function GoalsPage() {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Goal (e.g. New laptop)"
+          maxLength={LIMITS.title}
           aria-label="Goal title"
-          className="min-h-[44px] flex-1 rounded-xl border border-line bg-ink/[0.02] px-3 text-sm text-ink outline-none focus:border-amber/50"
+          className="min-h-[44px] flex-1 rounded-xl border border-line bg-ink/[0.02] px-3 text-sm text-ink outline-hidden focus:border-amber/50"
         />
         <div className="flex items-center gap-2 rounded-xl border border-line bg-ink/[0.02] px-3 focus-within:border-amber/50">
           <span className="font-mono text-ink/40">{TAKA}</span>
@@ -46,7 +48,7 @@ export default function GoalsPage() {
             onChange={(e) => setTarget(e.target.value.replace(/[^0-9.]/g, ""))}
             placeholder="Target"
             aria-label="Target amount"
-            className="min-h-[44px] w-28 bg-transparent font-mono text-sm text-ink outline-none"
+            className="min-h-[44px] w-28 bg-transparent font-mono text-sm text-ink outline-hidden"
           />
         </div>
         <input
@@ -54,7 +56,7 @@ export default function GoalsPage() {
           value={due}
           onChange={(e) => setDue(e.target.value)}
           aria-label="Due date"
-          className="min-h-[44px] rounded-xl border border-line bg-ink/[0.02] px-3 text-sm text-ink/70 outline-none focus:border-amber/50"
+          className="min-h-[44px] rounded-xl border border-line bg-ink/[0.02] px-3 text-sm text-ink/70 outline-hidden focus:border-amber/50"
         />
         <button
           onClick={add}
@@ -128,7 +130,7 @@ function AddSaving({ onAdd }: { onAdd: (amt: number) => void }) {
           onChange={(e) => setV(e.target.value.replace(/[^0-9.-]/g, ""))}
           placeholder="+ add"
           aria-label="Add savings"
-          className="min-h-[36px] w-20 bg-transparent font-mono text-xs text-ink outline-none"
+          className="min-h-[36px] w-20 bg-transparent font-mono text-xs text-ink outline-hidden"
         />
       </div>
       <button

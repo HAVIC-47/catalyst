@@ -247,16 +247,16 @@ export default function CalendarPage() {
       <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[10px] uppercase tracking-widest text-ink/40 sm:gap-x-5 lg:mb-4">
         <div className="flex items-center gap-2">
           <span className="text-ink/55">Mood</span>
-          <div className="h-2.5 w-14 rounded-full bg-gradient-to-r from-[#A8322A] via-[#B59A3C] to-[#2E8159] sm:w-28" />
+          <div className="h-2.5 w-14 rounded-full bg-linear-to-r from-[#A8322A] via-[#B59A3C] to-[#2E8159] sm:w-28" />
         </div>
         <div className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: "rgb(var(--tint-spend))" }} />
+          <span className="h-2.5 w-2.5 rounded-xs" style={{ backgroundColor: "rgb(var(--tint-spend))" }} />
           <span>
             <span className="hidden sm:inline">Heavier </span>spend
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: "rgb(var(--tint-income))" }} />
+          <span className="h-2.5 w-2.5 rounded-xs" style={{ backgroundColor: "rgb(var(--tint-income))" }} />
           <span>
             <span className="hidden sm:inline">Heavier </span>income
           </span>
@@ -326,7 +326,7 @@ function MonthGrid({
               onClick={() => openEntry({ date: key, tab: "money" })}
               style={dayCellStyle(data, maxFlow)}
               className={cn(
-                "cal-cell group relative flex cursor-pointer flex-col overflow-hidden border-b border-r border-line p-1 text-left transition-colors duration-150 hover:!bg-ink/[0.06] sm:p-2 lg:min-h-[110px]",
+                "cal-cell group relative flex cursor-pointer flex-col overflow-hidden border-b border-r border-line p-1 text-left transition-colors duration-150 hover:bg-ink/[0.06]! sm:p-2 lg:min-h-[110px]",
                 !inMonth && "opacity-35",
                 (i + 1) % 7 === 0 && "border-r-0",
               )}
@@ -409,7 +409,7 @@ function WeekView({
               onClick={() => openEntry({ date: key, tab: "money" })}
               style={dayCellStyle(data, maxFlow)}
               className={cn(
-                "group flex cursor-pointer flex-col overflow-hidden border-r border-line p-1.5 text-left transition-colors duration-150 hover:!bg-ink/[0.06] sm:p-3 lg:min-h-[200px]",
+                "group flex cursor-pointer flex-col overflow-hidden border-r border-line p-1.5 text-left transition-colors duration-150 hover:bg-ink/[0.06]! sm:p-3 lg:min-h-[200px]",
                 i === 6 && "border-r-0",
               )}
             >

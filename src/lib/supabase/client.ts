@@ -2,6 +2,7 @@
 
 // Browser-side Supabase client (cookie-based auth via @supabase/ssr).
 import { createBrowserClient } from "@supabase/ssr";
+import { SESSION_COOKIE_OPTIONS } from "@/lib/supabase/cookie-options";
 
 export function createClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -11,5 +12,5 @@ export function createClient() {
       "Missing Supabase env vars. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local (see .env.local.example).",
     );
   }
-  return createBrowserClient(url, key);
+  return createBrowserClient(url, key, { cookieOptions: SESSION_COOKIE_OPTIONS });
 }

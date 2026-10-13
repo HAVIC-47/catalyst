@@ -5,6 +5,7 @@ import { differenceInCalendarDays, format, parseISO } from "date-fns";
 import { Plus, Trash2, Check, Bell } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
 import { TAKA, cn, formatCurrency, toDateKey } from "@/lib/utils";
+import { LIMITS } from "@/lib/limits";
 
 const RECURRENCES = ["monthly", "weekly", "yearly", "once"];
 
@@ -42,8 +43,9 @@ export default function BillsPage() {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Bill (e.g. Internet)"
+          maxLength={LIMITS.name}
           aria-label="Bill name"
-          className="min-h-[44px] flex-1 rounded-xl border border-line bg-ink/[0.02] px-3 text-sm text-ink outline-none focus:border-amber/50"
+          className="min-h-[44px] flex-1 rounded-xl border border-line bg-ink/[0.02] px-3 text-sm text-ink outline-hidden focus:border-amber/50"
         />
         <div className="flex items-center gap-2 rounded-xl border border-line bg-ink/[0.02] px-3 focus-within:border-amber/50">
           <span className="font-mono text-ink/40">{TAKA}</span>
@@ -53,7 +55,7 @@ export default function BillsPage() {
             onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
             placeholder="Amount"
             aria-label="Amount"
-            className="min-h-[44px] w-24 bg-transparent font-mono text-sm text-ink outline-none"
+            className="min-h-[44px] w-24 bg-transparent font-mono text-sm text-ink outline-hidden"
           />
         </div>
         <input
@@ -61,13 +63,13 @@ export default function BillsPage() {
           value={due}
           onChange={(e) => setDue(e.target.value)}
           aria-label="Due date"
-          className="min-h-[44px] rounded-xl border border-line bg-ink/[0.02] px-3 text-sm text-ink/70 outline-none focus:border-amber/50"
+          className="min-h-[44px] rounded-xl border border-line bg-ink/[0.02] px-3 text-sm text-ink/70 outline-hidden focus:border-amber/50"
         />
         <select
           value={recurrence}
           onChange={(e) => setRecurrence(e.target.value)}
           aria-label="Recurrence"
-          className="min-h-[44px] cursor-pointer rounded-xl border border-line bg-card px-3 text-sm capitalize text-ink/80 outline-none focus:border-amber/50"
+          className="min-h-[44px] cursor-pointer rounded-xl border border-line bg-card px-3 text-sm capitalize text-ink/80 outline-hidden focus:border-amber/50"
         >
           {RECURRENCES.map((r) => (
             <option key={r} value={r} className="bg-card">

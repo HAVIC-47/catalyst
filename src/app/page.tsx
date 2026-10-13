@@ -4,7 +4,7 @@ import { Features } from "@/components/landing/features";
 import { Why } from "@/components/landing/why";
 import { CtaFooter } from "@/components/landing/cta-footer";
 
-// Public landing — middleware allows this for anyone, authenticated or not.
+// Public landing — the proxy allows this for anyone, authenticated or not.
 export default function LandingPage() {
   return (
     <div className="relative">

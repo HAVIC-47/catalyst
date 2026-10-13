@@ -1,6 +1,69 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+/* Class-based dark mode: the `dark` class on <html> (set before first paint). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Design tokens -> Tailwind theme. Each color reads a --c-* channel defined below,
+   so every utility (and its /alpha modifier) flips with the theme automatically. */
+@theme {
+  --color-paper: rgb(var(--c-paper));
+  --color-panel: rgb(var(--c-panel));
+  --color-card: rgb(var(--c-card));
+  --color-ink: rgb(var(--c-ink));
+  --color-line: var(--c-line);
+  /* `amber` == primary accent everywhere (terracotta on white, clay on black). */
+  --color-amber: rgb(var(--c-accent));
+  --color-amber-soft: rgb(var(--c-accent));
+  --color-accent: rgb(var(--c-accent));
+  /* Data tones: same hues in both themes, a shade deeper on white for contrast. */
+  --color-income: rgb(var(--c-income));
+  --color-expense: rgb(var(--c-expense));
+  --color-saving: rgb(var(--c-saving));
+  --color-neon-cyan: rgb(var(--c-saving));
+  --color-neon-purple: #9268a0;
+  --color-neon-rose: rgb(var(--c-expense));
+
+  /* next/font exposes the families as --font-newsreader / -hanken / -plex-mono. */
+  --font-display: var(--font-newsreader), Georgia, serif;
+  --font-sans: var(--font-hanken), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  /* Light: white cards lifted off the paper (dark mode overrides both below). */
+  --shadow-card: 0 1px 2px rgb(24 21 18 / 0.05), 0 8px 24px -14px rgb(24 21 18 / 0.16);
+  --shadow-entry: inset 0 1px 0 rgb(255 255 255 / 0.18), 0 6px 16px -8px rgb(var(--c-accent) / 0.6);
+
+  --animate-fade-up: fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  @keyframes fade-up {
+    0% {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* Tailwind v4 changed a few preflight defaults; keep the v3 behavior this UI was
+   designed with: hairline-colored borders, grey placeholders, pointer buttons. */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--c-line);
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: #9ca3af;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
 
 /* Palette as RGB channels so Tailwind alpha modifiers work, flipped on .dark.
    Light = fresh newsprint: soft warm-white paper, white cards and sidebar, warm
@@ -164,7 +227,7 @@ body {
     border-color 0.2s ease,
     box-shadow 0.2s ease;
 }
-/* Interactive day cells / tiles inside cards already use hover:!bg-ink — leave them. */
+/* Interactive day cells / tiles inside cards already use hover:bg-ink…! — leave them. */
 
 /* Accent-lit primary button in the dark. */
 .dark .entry-btn {
@@ -194,44 +257,47 @@ body {
 
 /* Light mode contrast. The muted ink alphas used across the app are tuned for
    white-on-black; the same alphas on white sit at 2–3:1. Lift each step so
-   muted text clears WCAG AA (≥4.5:1 from /35 up) on paper and cards. The
-   :where() prefix keeps specificity equal to the utility, so hover/responsive
-   variants (emitted later) still win. */
-:where(:root:not(.dark)) .text-ink\/25 { color: rgb(var(--c-ink) / 0.5); }
-:where(:root:not(.dark)) .text-ink\/30 { color: rgb(var(--c-ink) / 0.6); }
-:where(:root:not(.dark)) .text-ink\/35 { color: rgb(var(--c-ink) / 0.6); }
-:where(:root:not(.dark)) .text-ink\/40 { color: rgb(var(--c-ink) / 0.62); }
-:where(:root:not(.dark)) .text-ink\/45 { color: rgb(var(--c-ink) / 0.65); }
-:where(:root:not(.dark)) .text-ink\/50 { color: rgb(var(--c-ink) / 0.68); }
-:where(:root:not(.dark)) .text-ink\/55 { color: rgb(var(--c-ink) / 0.7); }
-:where(:root:not(.dark)) .text-ink\/60 { color: rgb(var(--c-ink) / 0.72); }
-:where(:root:not(.dark)) .text-ink\/65 { color: rgb(var(--c-ink) / 0.75); }
-:where(:root:not(.dark)) .text-ink\/70 { color: rgb(var(--c-ink) / 0.78); }
-:where(:root:not(.dark)) input::placeholder,
-:where(:root:not(.dark)) textarea::placeholder {
-  color: rgb(var(--c-ink) / 0.46);
+   muted text clears WCAG AA (≥4.5:1 from /35 up) on paper and cards. These live
+   in the utilities layer after Tailwind's own rules; :where() keeps specificity
+   equal to the utility, so hover/responsive variants still win. */
+@layer base {
+  :where(:root:not(.dark)) input::placeholder,
+  :where(:root:not(.dark)) textarea::placeholder {
+    color: rgb(var(--c-ink) / 0.46);
+  }
 }
-:root:not(.dark) .placeholder\:text-ink\/30::placeholder {
-  color: rgb(var(--c-ink) / 0.46);
+@layer utilities {
+  :where(:root:not(.dark)) .text-ink\/25 { color: rgb(var(--c-ink) / 0.5); }
+  :where(:root:not(.dark)) .text-ink\/30 { color: rgb(var(--c-ink) / 0.6); }
+  :where(:root:not(.dark)) .text-ink\/35 { color: rgb(var(--c-ink) / 0.6); }
+  :where(:root:not(.dark)) .text-ink\/40 { color: rgb(var(--c-ink) / 0.62); }
+  :where(:root:not(.dark)) .text-ink\/45 { color: rgb(var(--c-ink) / 0.65); }
+  :where(:root:not(.dark)) .text-ink\/50 { color: rgb(var(--c-ink) / 0.68); }
+  :where(:root:not(.dark)) .text-ink\/55 { color: rgb(var(--c-ink) / 0.7); }
+  :where(:root:not(.dark)) .text-ink\/60 { color: rgb(var(--c-ink) / 0.72); }
+  :where(:root:not(.dark)) .text-ink\/65 { color: rgb(var(--c-ink) / 0.75); }
+  :where(:root:not(.dark)) .text-ink\/70 { color: rgb(var(--c-ink) / 0.78); }
+  :where(:root:not(.dark)) .placeholder\:text-ink\/30::placeholder {
+    color: rgb(var(--c-ink) / 0.46);
 }
 /* Accent text at reduced alpha (brand tags, small links) gets the same lift. */
 :where(:root:not(.dark)) .text-amber\/70 { color: rgb(var(--c-accent) / 0.94); }
 :where(:root:not(.dark)) .text-amber\/80 { color: rgb(var(--c-accent) / 0.97); }
+}
 
-@layer utilities {
-  .tabular {
-    font-variant-numeric: tabular-nums;
-  }
-  /* Display serif looks best italic for the editorial accent phrases. */
-  .serif-italic {
-    font-family: var(--font-display), Georgia, serif;
-    font-style: italic;
-    font-weight: 500;
-  }
-  /* Hairline rule used as a section divider. */
-  .rule {
-    @apply border-t border-line;
-  }
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+/* Display serif looks best italic for the editorial accent phrases. */
+@utility serif-italic {
+  font-family: var(--font-newsreader), Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+}
+/* Hairline rule used as a section divider. */
+@utility rule {
+  border-top-width: 1px;
+  border-color: var(--c-line);
 }
 
 /* Below lg (bottom-nav layouts) the calendar fills exactly the visible space

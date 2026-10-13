@@ -1,12 +1,14 @@
-// Refreshes the Supabase session cookie on every request and guards routes.
+// Next.js proxy (formerly middleware): refreshes the Supabase session cookie on
+// every request and guards routes.
 // Public: /, /login, /signup. Protected: /app and everything under it.
 // Authenticated users hitting /login or /signup are sent to /app.
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { SESSION_COOKIE_OPTIONS } from "@/lib/supabase/cookie-options";
 
 const AUTH_PATHS = ["/login", "/signup"];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -15,6 +17,7 @@ export async function middleware(request: NextRequest) {
   if (!url || !key) return response;
 
   const supabase = createServerClient(url, key, {
+    cookieOptions: SESSION_COOKIE_OPTIONS,
     cookies: {
       getAll() {
         return request.cookies.getAll();

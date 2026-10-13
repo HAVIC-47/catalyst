@@ -24,7 +24,7 @@ export function Why() {
       <div className="mx-auto max-w-5xl">
         <div className="mb-12 text-center">
           <div className="label mb-3">Why Catalyst</div>
-          <h2 className="font-display text-4xl font-semibold leading-tight tracking-tight text-ink sm:text-5xl">
+          <h2 className="font-display text-4xl font-semibold leading-tight tracking-tight text-ink sm:text-5xl sm:leading-none">
             Most trackers count taka. <br className="hidden sm:block" />
             <span className="serif-italic text-amber/90">Catalyst counts you.</span>
           </h2>
