@@ -61,11 +61,33 @@ const COLUMN_W = "w-[84vw] max-w-[320px] sm:w-[288px]";
 type Typed = { data: { current?: { type?: string } } };
 const isColumn = (x: Typed) => x.data.current?.type === "column";
 
-// A dragged column only lands among columns; a ticket among tickets and columns.
+// A ticket goes to the column it's held over sideways — columns are only as tall
+// as their cards, so this still works below a short column's last card — and then
+// lands among that column's cards.
+const ticketCollisions: CollisionDetection = (args) => {
+  const { droppableContainers, droppableRects, pointerCoordinates, collisionRect } = args;
+  const x = pointerCoordinates?.x ?? collisionRect.left + collisionRect.width / 2;
+  let column: UniqueIdentifier | null = null;
+  let nearest = Infinity;
+  for (const c of droppableContainers) {
+    const r = isColumn(c) ? droppableRects.get(c.id) : undefined;
+    if (!r) continue;
+    const off = x < r.left ? r.left - x : x > r.right ? x - r.right : 0;
+    if (off < nearest) {
+      nearest = off;
+      column = c.id;
+    }
+  }
+  if (column === null) return closestCorners(args);
+  const inside = droppableContainers.filter((c) => c.id === column || c.data.current?.sortable?.containerId === column);
+  return closestCorners({ ...args, droppableContainers: inside });
+};
+
+// A dragged column only lands among columns; a ticket among its column's cards.
 const collisions: CollisionDetection = (args) =>
   isColumn(args.active)
     ? closestCenter({ ...args, droppableContainers: args.droppableContainers.filter(isColumn) })
-    : closestCorners(args);
+    : ticketCollisions(args);
 
 // Arrow keys move a column to the next column, not into the tickets inside it.
 const keyboardCoordinates: KeyboardCoordinateGetter = (event, args) => {
@@ -243,7 +265,9 @@ export function BoardView({ board, onOpen }: { board: Board; onOpen: (ticketId: 
       )}
       <div
         className={cn(
-          "-mx-4 flex items-stretch gap-3 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8",
+          // items-start: each column is only as tall as its own cards, so a short
+          // column's "Add" stays right under its last card.
+          "-mx-4 flex items-start gap-3 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8",
           !activeId && !activeColumnId && "snap-x snap-mandatory scroll-px-4 sm:snap-none",
         )}
       >
