@@ -127,9 +127,9 @@ create table if not exists public.activity_logs (
   created_at  timestamptz not null default now()
 );
 
--- MEMO SCANS (one row per photo sent to the memo reader, /api/scan-memo) -------
--- Only used to cap how many memos each account can scan per day with the server's
--- Gemini key. Holds no photo and no memo content.
+-- MEMO SCANS (one row per photo read by /api/scan-memo or /api/scan-list) -------
+-- Only used to cap how many photos (memos, notes, lists) each account can have
+-- read per day with the server's Gemini key. Holds no photo and no content.
 create table if not exists public.memo_scans (
   id         bigint generated always as identity primary key,
   user_id    uuid not null default auth.uid() references auth.users(id) on delete cascade,
@@ -179,7 +179,7 @@ create table if not exists public.tickets (
 create table if not exists public.ai_insights (
   id         uuid primary key default gen_random_uuid(),
   user_id    uuid not null default auth.uid() references auth.users(id) on delete cascade,
-  topic      text not null check (topic in ('journal','ledger','goals','savings','bills','mood')),
+  topic      text not null check (topic in ('journal','ledger','goals','savings','bills','mood','todo','shopping')),
   period     text not null check (period in ('week','month','year')),
   start_on   date not null,
   data_hash  text not null default '',
@@ -187,6 +187,10 @@ create table if not exists public.ai_insights (
   created_at timestamptz not null default now(),
   unique (user_id, topic, period, start_on)
 );
+-- Topics added after the table was first created (to-do and to-buy boards).
+alter table public.ai_insights drop constraint if exists ai_insights_topic_check;
+alter table public.ai_insights add constraint ai_insights_topic_check
+  check (topic in ('journal','ledger','goals','savings','bills','mood','todo','shopping'));
 
 -- AI REQUESTS (one row per summary written with the server's Gemini key) -------
 -- Like memo_scans: holds no content, only caps summaries per account per day.

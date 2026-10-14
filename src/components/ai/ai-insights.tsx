@@ -22,6 +22,8 @@ const PITCH: Record<InsightTopic, string> = {
   bills: "What's due, what's overdue, and how to keep your bills under control.",
   journal: "What your entries were about, how the days felt, and small things that might help.",
   mood: "How your mood moved, what lifted or lowered it, and gentle ways to feel better.",
+  todo: "What's done, what's overdue or due soon, and what to tackle first.",
+  shopping: "What's still to buy, what it'll cost, and ways to shop smarter.",
 };
 
 const SUGGESTIONS: Record<InsightTopic, string> = {
@@ -31,6 +33,8 @@ const SUGGESTIONS: Record<InsightTopic, string> = {
   bills: "To stay on top of bills",
   journal: "Small things to try",
   mood: "To feel better",
+  todo: "To get through it",
+  shopping: "To shop smarter",
 };
 
 type Load = { key: string; status: "loading" | "ready" | "error"; data?: InsightResponse; error?: string };
@@ -47,7 +51,15 @@ async function request(body: Record<string, unknown>, signal?: AbortSignal): Pro
   return data as InsightResponse;
 }
 
-export function AiInsights({ topics, className }: { topics: InsightTopic[]; className?: string }) {
+export function AiInsights({
+  topics,
+  className,
+  defaultOpen = true,
+}: {
+  topics: InsightTopic[];
+  className?: string;
+  defaultOpen?: boolean; // the boards start it folded, so the board stays near the top
+}) {
   const app = useAppData();
   const [topic, setTopic] = useState<InsightTopic>(topics[0]);
   const [period, setPeriod] = useState<InsightPeriod>("week");
@@ -57,10 +69,11 @@ export function AiInsights({ topics, className }: { topics: InsightTopic[]; clas
 
   // Collapsed or open, remembered per card (this browser only).
   const storageKey = `ai-open:${topics.join("+")}`;
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(defaultOpen);
   useEffect(() => {
     try {
-      if (localStorage.getItem(storageKey) === "0") setOpen(false);
+      const saved = localStorage.getItem(storageKey);
+      if (saved) setOpen(saved === "1");
     } catch {
       /* ignore */
     }
@@ -88,6 +101,8 @@ export function AiInsights({ topics, className }: { topics: InsightTopic[]; clas
     bills: [app.bills, app.transactions],
     journal: [app.journal, app.activities, app.activityLogs],
     mood: [app.moods, app.transactions, app.journal, app.activityLogs],
+    todo: [app.boards, app.boardColumns, app.tickets],
+    shopping: [app.boards, app.boardColumns, app.tickets, app.transactions],
   };
   const signature = sources[topic].map(idOf).join(".");
 

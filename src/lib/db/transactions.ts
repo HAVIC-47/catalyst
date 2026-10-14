@@ -3,7 +3,7 @@ import type { NewTransaction, Transaction } from "@/types";
 
 interface Row {
   id: string;
-  kind: "expense" | "income";
+  kind: "expense" | "income" | "saving";
   amount: number | string;
   category_id: string | null;
   category_name: string;
@@ -37,22 +37,28 @@ export async function listTransactions(): Promise<Transaction[]> {
   return (data as Row[]).map(toTx);
 }
 
+const toRow = (input: NewTransaction) => ({
+  kind: input.kind,
+  amount: input.amount,
+  category_id: input.categoryId,
+  category_name: input.categoryName,
+  place: input.place,
+  note: input.note,
+  occurred_on: input.occurredOn,
+  occurred_at: input.occurredAt,
+});
+
 export async function addTransaction(input: NewTransaction): Promise<Transaction> {
   const supabase = createClient();
-  const { data, error } = await supabase
-    .from("transactions")
-    .insert({
-      kind: input.kind,
-      amount: input.amount,
-      category_id: input.categoryId,
-      category_name: input.categoryName,
-      place: input.place,
-      note: input.note,
-      occurred_on: input.occurredOn,
-      occurred_at: input.occurredAt,
-    })
-    .select("*")
-    .single();
+  const { data, error } = await supabase.from("transactions").insert(toRow(input)).select("*").single();
+  if (error) throw error;
+  return toTx(data as Row);
+}
+
+/** Replaces every editable field of a transaction (the ledger's edit button). */
+export async function updateTransaction(id: string, input: NewTransaction): Promise<Transaction> {
+  const supabase = createClient();
+  const { data, error } = await supabase.from("transactions").update(toRow(input)).eq("id", id).select("*").single();
   if (error) throw error;
   return toTx(data as Row);
 }

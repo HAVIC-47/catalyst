@@ -11,7 +11,7 @@ import { TAKA, cn, combineDateTime, nowTime, tintText } from "@/lib/utils";
 import { MoodIcon } from "@/components/ui/mood-icon";
 import { LIMITS } from "@/lib/limits";
 
-function TimeField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+export function TimeField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <div>
       <div className="label mb-2">Time</div>
@@ -318,7 +318,7 @@ function MoneyForm({ dateKey }: { dateKey: string }) {
   );
 }
 
-function CategoryTile({
+export function CategoryTile({
   cat,
   active,
   onClick,

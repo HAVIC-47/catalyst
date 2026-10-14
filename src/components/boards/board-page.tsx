@@ -2,8 +2,8 @@
 
 // One page for both board kinds: To-do (tasks) and To buy (shopping lists). Same
 // Jira-style UI — boards, status columns, tickets you drag across.
-import { useEffect, useState, type FormEvent } from "react";
-import { ListTodo, Pencil, Plus, ShoppingCart, Trash2, type LucideIcon } from "lucide-react";
+import { useState, type FormEvent } from "react";
+import { ListTodo, Pencil, Plus, ScanText, ShoppingCart, Trash2, type LucideIcon } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
 import { DEFAULT_BOARD_COLUMNS, type BoardKind } from "@/types";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -11,8 +11,9 @@ import { LIMITS } from "@/lib/limits";
 import { Menu } from "@/components/ui/menu";
 import { BoardView, NameInput, boardError, ticketNoun } from "@/components/boards/board-view";
 import { TicketModal } from "@/components/boards/ticket-modal";
+import { AiInsights } from "@/components/ai/ai-insights";
 
-const COPY: Record<
+export const BOARD_COPY: Record<
   BoardKind,
   { kicker: string; title: string; accent: string; icon: LucideIcon; board: string; intro: string; placeholder: string; suggested: string }
 > = {
@@ -39,29 +40,15 @@ const COPY: Record<
 };
 
 export function BoardPage({ kind }: { kind: BoardKind }) {
-  const { boards, boardColumns, tickets, loading, renameBoard, removeBoard } = useAppData();
-  const copy = COPY[kind];
+  const { boards, boardColumns, tickets, loading, renameBoard, removeBoard, selectedBoards, selectBoard, openListScan } =
+    useAppData();
+  const copy = BOARD_COPY[kind];
   const mine = boards.filter((b) => b.kind === kind);
 
-  // The board you last opened, per kind (this browser only).
-  const storageKey = `board:${kind}`;
-  const [selected, setSelected] = useState<string | null>(null);
-  useEffect(() => {
-    try {
-      setSelected(localStorage.getItem(storageKey));
-    } catch {
-      /* ignore */
-    }
-  }, [storageKey]);
-  const choose = (id: string) => {
-    setSelected(id);
-    try {
-      localStorage.setItem(storageKey, id);
-    } catch {
-      /* ignore */
-    }
-  };
-  const board = mine.find((b) => b.id === selected) ?? mine[0] ?? null;
+  // The board you last opened, per kind (this browser only) — the list scanner
+  // adds to the same one.
+  const choose = (id: string) => selectBoard(kind, id);
+  const board = mine.find((b) => b.id === selectedBoards[kind]) ?? mine[0] ?? null;
 
   const [openTicket, setOpenTicket] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -99,6 +86,8 @@ export function BoardPage({ kind }: { kind: BoardKind }) {
           {copy.title} <span className="serif-italic text-amber/90">{copy.accent}</span>
         </h1>
       </div>
+
+      <AiInsights topics={[kind]} defaultOpen={false} className="mb-4" />
 
       {/* Board switcher */}
       {mine.length > 0 && (
@@ -159,15 +148,29 @@ export function BoardPage({ kind }: { kind: BoardKind }) {
               <h2 className="min-w-0 truncate font-display text-2xl font-semibold text-ink">{board.name}</h2>
             )}
             <span className="shrink-0 font-mono text-xs text-ink/45">{stats}</span>
-            <Menu
-              label={`${board.name} options`}
-              className="ml-auto"
-              items={[
-                { label: `Rename ${copy.board}`, icon: Pencil, onSelect: () => setRenaming(true) },
-                { label: `Delete ${copy.board}`, icon: Trash2, onSelect: remove, danger: true },
-              ]}
-            />
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              {/* Computers: add from a screenshot here. Phones use the + in the bottom bar. */}
+              <button
+                type="button"
+                onClick={() => openListScan(kind)}
+                className="hairline hidden min-h-[36px] cursor-pointer items-center gap-2 rounded-xl px-3 text-sm font-medium text-ink/75 transition-colors hover:bg-ink/[0.04] hover:text-ink lg:inline-flex"
+              >
+                <ScanText className="h-4 w-4" aria-hidden />
+                Scan a list
+              </button>
+              <Menu
+                label={`${board.name} options`}
+                items={[
+                  { label: `Rename ${copy.board}`, icon: Pencil, onSelect: () => setRenaming(true) },
+                  { label: `Delete ${copy.board}`, icon: Trash2, onSelect: remove, danger: true },
+                ]}
+              />
+            </div>
           </div>
+          <p className="-mt-1 mb-3 text-xs text-ink/45 lg:hidden">
+            Tip: tap <span className="font-semibold text-ink/70">+</span> below to add {ticketNoun(kind, 2)} from a screenshot of
+            your notes.
+          </p>
           {error && (
             <p role="alert" className="mb-3 text-sm text-expense">
               {error}
@@ -185,8 +188,8 @@ export function BoardPage({ kind }: { kind: BoardKind }) {
 }
 
 function NewBoard({ kind, first, onDone }: { kind: BoardKind; first: boolean; onDone: (boardId: string | null) => void }) {
-  const { createBoard } = useAppData();
-  const copy = COPY[kind];
+  const { createBoard, openListScan } = useAppData();
+  const copy = BOARD_COPY[kind];
   const Icon = copy.icon;
   const [name, setName] = useState(first ? copy.suggested : "");
   const [busy, setBusy] = useState(false);
@@ -199,8 +202,8 @@ function NewBoard({ kind, first, onDone }: { kind: BoardKind; first: boolean; on
     setBusy(true);
     setError("");
     try {
-      const b = await createBoard(n, kind);
-      onDone(b.id);
+      const { board } = await createBoard(n, kind);
+      onDone(board.id);
     } catch (err) {
       setError(boardError(err));
       setBusy(false);
@@ -251,6 +254,16 @@ function NewBoard({ kind, first, onDone }: { kind: BoardKind; first: boolean; on
       <p className="mt-2 text-xs text-ink/40">
         Starts with {DEFAULT_BOARD_COLUMNS[kind].join(" · ")} — rename them or add more any time.
       </p>
+      {first && (
+        <button
+          type="button"
+          onClick={() => openListScan(kind)}
+          className="mt-4 inline-flex min-h-[40px] cursor-pointer items-center gap-2 text-sm font-medium text-amber/90 transition-colors hover:text-amber"
+        >
+          <ScanText className="h-4 w-4" aria-hidden />
+          Or start from a screenshot of your list
+        </button>
+      )}
       {error && (
         <p role="alert" className="mt-2 text-xs text-expense">
           {error}

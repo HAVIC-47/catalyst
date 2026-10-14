@@ -136,6 +136,14 @@ export async function addTicket(input: NewTicket): Promise<Ticket> {
   return toTicket(data as TRow);
 }
 
+/** Several tickets in one request (a scanned list); returned in the order given. */
+export async function addTickets(inputs: NewTicket[]): Promise<Ticket[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase.from("tickets").insert(inputs.map(ticketRow)).select("*");
+  if (error) throw error;
+  return (data as TRow[]).map(toTicket).sort((a, b) => a.number - b.number);
+}
+
 /** `undefined` leaves a field alone; `null` clears dueOn / amount. */
 export async function updateTicket(id: string, patch: Partial<NewTicket>): Promise<void> {
   const supabase = createClient();
@@ -146,5 +154,11 @@ export async function updateTicket(id: string, patch: Partial<NewTicket>): Promi
 export async function deleteTicket(id: string): Promise<void> {
   const supabase = createClient();
   const { error } = await supabase.from("tickets").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteTickets(ids: string[]): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase.from("tickets").delete().in("id", ids);
   if (error) throw error;
 }

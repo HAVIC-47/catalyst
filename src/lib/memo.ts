@@ -1,4 +1,5 @@
-// Shared shape of a scanned memo (receipt), as returned by /api/scan-memo.
+// Shared shapes of what /api/scan-memo reads: a memo (receipt), or — for clients
+// that ask for it — a note listing expenses and income.
 export interface MemoLine {
   name: string;
   amount: number;
@@ -19,6 +20,31 @@ export interface ScannedMemo {
   extras: MemoExtra[];
   discount: number; // positive
   total: number; // grand total printed on the memo, 0 if unreadable
+}
+
+/** One money line from a note (Notepad / notes-app screenshot, handwritten list, chat…). */
+export interface NoteEntry {
+  type: "expense" | "income";
+  name: string;
+  amount: number;
+  category: string; // the user's existing category, or a new one the note names
+  newCategory: boolean; // not one of the user's categories of this type yet
+  date: string; // yyyy-mm-dd, "" when the note doesn't say
+}
+
+export interface ScannedNotes {
+  date: string; // a date for the whole note, "" if none
+  entries: NoteEntry[];
+}
+
+/** One item read from a screenshot of a to-do or shopping list (/api/scan-list). */
+export interface ListItem {
+  title: string;
+  notes: string;
+  done: boolean; // ticked or crossed out
+  priority: "low" | "medium" | "high";
+  due: string; // yyyy-mm-dd or ""
+  price: number; // 0 when none (to-buy lists)
 }
 
 /** Discount share for each line, proportional to its amount, rounded so the shares add up exactly. */

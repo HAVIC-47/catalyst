@@ -2,7 +2,7 @@
 // year, plus suggestions. Shared by the API route and the web card; the Android
 // app mirrors these shapes in lib/data/insights.dart.
 
-export const INSIGHT_TOPICS = ["journal", "ledger", "goals", "savings", "bills", "mood"] as const;
+export const INSIGHT_TOPICS = ["journal", "ledger", "goals", "savings", "bills", "mood", "todo", "shopping"] as const;
 export type InsightTopic = (typeof INSIGHT_TOPICS)[number];
 
 export const INSIGHT_PERIODS = ["week", "month", "year"] as const;
@@ -16,6 +16,8 @@ export const INSIGHT_LABELS: Record<InsightTopic, string> = {
   savings: "Savings",
   bills: "Bills",
   mood: "Mood",
+  todo: "To-do",
+  shopping: "To-buy",
 };
 
 export interface Insight {

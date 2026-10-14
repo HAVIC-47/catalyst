@@ -30,6 +30,7 @@ import type {
   NewGoal,
   NewJournalEntry,
   NewMoodLog,
+  NewTicket,
   NewTransaction,
   Ticket,
   Transaction,
@@ -42,7 +43,7 @@ import {
   seedDefaultCategories,
   updateCategory,
 } from "@/lib/db/categories";
-import { addTransaction, deleteTransaction, listTransactions } from "@/lib/db/transactions";
+import { addTransaction, deleteTransaction, listTransactions, updateTransaction } from "@/lib/db/transactions";
 import { addMood, listMoods } from "@/lib/db/moods";
 import { addBudget, deleteBudget, listBudgets, updateBudget } from "@/lib/db/budgets";
 import { addGoal, deleteGoal, listGoals, updateGoal } from "@/lib/db/goals";
@@ -60,9 +61,11 @@ import {
   addBoard,
   addBoardColumns,
   addTicket,
+  addTickets as insertTickets,
   deleteBoard,
   deleteBoardColumn,
   deleteTicket,
+  deleteTickets as deleteTicketRows,
   listBoardColumns,
   listBoards,
   listTickets,
@@ -106,10 +109,19 @@ interface AppDataValue {
   closeEntry: () => void;
   setEntryTab: (t: EntryTab) => void;
 
-  // memo scanner: photo of a memo (receipt) -> one expense per item
+  // memo scanner: photo of a memo (receipt) -> one expense per item, or a
+  // screenshot of notes -> its expenses and income
   memoOpen: boolean;
   openMemo: () => void;
   closeMemo: () => void;
+
+  // list scanner: screenshot of a list -> tickets on the selected board of a kind
+  listScan: BoardKind | null;
+  openListScan: (kind: BoardKind) => void;
+  closeListScan: () => void;
+  /** The board last opened per kind (this browser), shared by the board page and the list scanner. */
+  selectedBoards: Record<BoardKind, string | null>;
+  selectBoard: (kind: BoardKind, id: string) => void;
 
   // Vault Mode: when on, every income also adds to the savings pool and every
   // expense draws from it, so savings reflect true net flow.
@@ -123,13 +135,15 @@ interface AppDataValue {
 
   // money / mood
   addMoney: (t: NewTransaction) => Promise<void>;
+  /** Saves new values for a transaction; everything computed from the ledger follows. */
+  editMoney: (id: string, t: NewTransaction) => Promise<void>;
   removeMoney: (id: string) => Promise<void>;
   saveMood: (m: NewMoodLog) => Promise<void>;
   moodsForDate: (k: string) => MoodLog[];
   avgMoodForDate: (k: string) => number | null;
 
   // categories
-  createCategory: (c: NewCategory) => Promise<void>;
+  createCategory: (c: NewCategory) => Promise<Category>;
   editCategory: (id: string, p: Partial<NewCategory>) => Promise<void>;
   removeCategory: (id: string) => Promise<void>;
 
@@ -158,7 +172,7 @@ interface AppDataValue {
   toggleActivity: (activityId: string, dateKey: string) => Promise<void>;
 
   // boards (to-do + to-buy): a new board starts with its kind's default columns
-  createBoard: (name: string, kind: BoardKind) => Promise<Board>;
+  createBoard: (name: string, kind: BoardKind) => Promise<{ board: Board; columns: BoardColumn[] }>;
   renameBoard: (id: string, name: string) => Promise<void>;
   removeBoard: (id: string) => Promise<void>;
   createColumn: (boardId: string, name: string) => Promise<void>;
@@ -171,6 +185,9 @@ interface AppDataValue {
   /** Put a ticket in `columnId` where it sits in `order` (that column's ids, top to bottom). */
   placeTicket: (id: string, columnId: string, order: string[]) => Promise<void>;
   removeTicket: (id: string) => Promise<void>;
+  /** Several tickets at once (a scanned list), each to the bottom of its column, numbered in order. */
+  addTickets: (boardId: string, items: { columnId: string; fields: Partial<TicketFields> & { title: string } }[]) => Promise<Ticket[]>;
+  removeTickets: (ids: string[]) => Promise<void>;
 }
 
 const Ctx = createContext<AppDataValue | null>(null);
@@ -194,6 +211,23 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [entryTab, setEntryTab] = useState<EntryTab>("money");
   const [entryDate, setEntryDate] = useState<string>(toDateKey(new Date()));
   const [memoOpen, setMemoOpen] = useState(false);
+  const [listScan, setListScan] = useState<BoardKind | null>(null);
+  const [selectedBoards, setSelectedBoards] = useState<Record<BoardKind, string | null>>({ todo: null, shopping: null });
+  useEffect(() => {
+    try {
+      setSelectedBoards({ todo: localStorage.getItem("board:todo"), shopping: localStorage.getItem("board:shopping") });
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  const selectBoard = useCallback((kind: BoardKind, id: string) => {
+    setSelectedBoards((p) => ({ ...p, [kind]: id }));
+    try {
+      localStorage.setItem(`board:${kind}`, id);
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const [vaultMode, setVaultModeState] = useState(false);
   useEffect(() => {
@@ -342,10 +376,25 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setMemoOpen(true);
   }, []);
   const closeMemo = useCallback(() => setMemoOpen(false), []);
+  const openListScan = useCallback((kind: BoardKind) => {
+    setEntryOpen(false);
+    setMemoOpen(false);
+    setListScan(kind);
+  }, []);
+  const closeListScan = useCallback(() => setListScan(null), []);
 
   const addMoney = useCallback(async (t: NewTransaction) => {
     const c = await addTransaction(t);
     setTransactions((p) => [c, ...p].sort((a, b) => b.occurredOn.localeCompare(a.occurredOn)));
+  }, []);
+  const editMoney = useCallback(async (id: string, t: NewTransaction) => {
+    const c = await updateTransaction(id, t);
+    // Same order as the database list: newest day first, then newest added.
+    setTransactions((p) =>
+      p
+        .map((x) => (x.id === id ? c : x))
+        .sort((a, b) => b.occurredOn.localeCompare(a.occurredOn) || b.createdAt.localeCompare(a.createdAt)),
+    );
   }, []);
   const removeMoney = useCallback(async (id: string) => {
     await deleteTransaction(id);
@@ -371,6 +420,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const createCategory = useCallback(async (c: NewCategory) => {
     const x = await addCategory(c);
     setCategories((p) => [...p, x]);
+    return x;
   }, []);
   const editCategory = useCallback(async (id: string, patch: Partial<NewCategory>) => {
     await updateCategory(id, patch);
@@ -456,16 +506,17 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     async (name: string, kind: BoardKind) => {
       const board = await addBoard({ name, kind, sort: boards.length });
       setBoards((p) => [...p, board]);
+      let columns: BoardColumn[] = [];
       try {
-        const cols = await addBoardColumns(
+        columns = await addBoardColumns(
           DEFAULT_BOARD_COLUMNS[kind].map((n, i) => ({ boardId: board.id, name: n, sort: i })),
         );
-        setBoardColumns((p) => [...p, ...cols]);
+        setBoardColumns((p) => [...p, ...columns]);
       } catch (err) {
         // The board still works — its columns can be added by hand.
         console.warn("[catalyst] could not add the new board's columns", err);
       }
-      return board;
+      return { board, columns };
     },
     [boards.length],
   );
@@ -599,6 +650,42 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     await deleteTicket(id);
     setTickets((p) => p.filter((t) => t.id !== id));
   }, []);
+  const addTickets = useCallback(
+    async (boardId: string, items: { columnId: string; fields: Partial<TicketFields> & { title: string } }[]) => {
+      if (!items.length) return [];
+      // Numbers continue the board's; each ticket joins the bottom of its column.
+      let number = tickets.filter((t) => t.boardId === boardId).reduce((m, t) => Math.max(m, t.number), 0);
+      const lastSort = new Map<string, number>();
+      for (const t of tickets) {
+        if (t.boardId === boardId) lastSort.set(t.columnId, Math.max(lastSort.get(t.columnId) ?? 0, t.sort));
+      }
+      const rows: NewTicket[] = items.map(({ columnId, fields }) => {
+        const sort = (lastSort.get(columnId) ?? 0) + SORT_STEP;
+        lastSort.set(columnId, sort);
+        return {
+          boardId,
+          columnId,
+          number: ++number,
+          title: fields.title,
+          description: fields.description ?? "",
+          priority: fields.priority ?? "medium",
+          dueOn: fields.dueOn ?? null,
+          amount: fields.amount ?? null,
+          sort,
+        };
+      });
+      const created = await insertTickets(rows);
+      setTickets((p) => [...p, ...created]);
+      return created;
+    },
+    [tickets],
+  );
+  const removeTickets = useCallback(async (ids: string[]) => {
+    if (!ids.length) return;
+    await deleteTicketRows(ids);
+    const gone = new Set(ids);
+    setTickets((p) => p.filter((t) => !gone.has(t.id)));
+  }, []);
 
   const value = useMemo<AppDataValue>(
     () => ({
@@ -624,11 +711,17 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       memoOpen,
       openMemo,
       closeMemo,
+      listScan,
+      openListScan,
+      closeListScan,
+      selectedBoards,
+      selectBoard,
       vaultMode,
       setVaultMode,
       dashboardHidden,
       setDashboardHidden,
       addMoney,
+      editMoney,
       removeMoney,
       saveMood,
       moodsForDate,
@@ -662,16 +755,19 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       editTicket,
       placeTicket,
       removeTicket,
+      addTickets,
+      removeTickets,
     }),
     [
       loading, categories, transactions, moods, budgets, goals, bills, journal, activities,
       activityLogs, boards, boardColumns, tickets, entryOpen, entryTab, entryDate, openEntry, closeEntry, memoOpen,
-      openMemo, closeMemo, vaultMode, setVaultMode,
-      dashboardHidden, setDashboardHidden, addMoney, removeMoney,
+      openMemo, closeMemo, listScan, openListScan, closeListScan, selectedBoards, selectBoard, vaultMode, setVaultMode,
+      dashboardHidden, setDashboardHidden, addMoney, editMoney, removeMoney,
       saveMood, moodsForDate, avgMoodForDate, createCategory, editCategory, removeCategory, createBudget, editBudget,
       removeBudget, createGoal, editGoal, removeGoal, createBill, editBill, removeBill, createJournal,
       removeJournal, createActivity, removeActivity, toggleActivity, createBoard, renameBoard, removeBoard,
       createColumn, renameColumn, moveColumn, placeColumn, removeColumn, createTicket, editTicket, placeTicket, removeTicket,
+      addTickets, removeTickets,
     ],
   );
 

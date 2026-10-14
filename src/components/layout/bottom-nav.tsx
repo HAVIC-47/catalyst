@@ -8,8 +8,9 @@ import { cn } from "@/lib/utils";
 import { useAppData } from "@/hooks/use-app-data";
 import { MORE_NAV, MoreSheet } from "@/components/layout/more-sheet";
 
-// Mobile bottom bar: Calendar · Dashboard · + · Ledger · More. The center + takes
-// a photo of a memo; Journal, boards, the rest of the sections, new entry, theme
+// Mobile bottom bar: Calendar · Dashboard · + · Ledger · More. The center + scans
+// a memo or notes — or, on the To-do / To buy pages, a screenshot of a list that
+// becomes tickets. Journal, boards, the rest of the sections, new entry, theme
 // and Vault Mode live in the More sheet.
 type Tab = { href: string; label: string; icon: LucideIcon };
 const CALENDAR: Tab = { href: "/app", label: "Calendar", icon: CalendarDays };
@@ -18,8 +19,9 @@ const LEDGER: Tab = { href: "/app/transactions", label: "Ledger", icon: Receipt 
 
 export function BottomNav() {
   const pathname = usePathname();
-  const { openMemo } = useAppData();
+  const { openMemo, openListScan } = useAppData();
   const [moreOpen, setMoreOpen] = useState(false);
+  const boardKind = pathname.startsWith("/app/todo") ? "todo" : pathname.startsWith("/app/shopping") ? "shopping" : null;
 
   const moreActive = MORE_NAV.some(({ href }) => pathname.startsWith(href));
 
@@ -51,11 +53,11 @@ export function BottomNav() {
           {tab(CALENDAR)}
           {tab(DASHBOARD)}
 
-          {/* Scan a memo (photo -> one expense per item) — the center action. */}
+          {/* The center action: scan a memo or notes, or a list on the board pages. */}
           <div className="flex flex-1 items-center justify-center">
             <button
-              onClick={openMemo}
-              aria-label="Scan a memo"
+              onClick={() => (boardKind ? openListScan(boardKind) : openMemo())}
+              aria-label={boardKind ? "Add from a screenshot of your list" : "Scan a memo or notes"}
               className="entry-btn flex h-12 w-12 cursor-pointer items-center justify-center rounded-full text-paper shadow-entry transition-transform duration-200 focus-visible:rounded-full! active:scale-95"
             >
               <Plus className="h-6 w-6" aria-hidden strokeWidth={2.5} />

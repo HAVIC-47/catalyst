@@ -19,11 +19,12 @@ export function Topbar() {
       </div>
 
       {/* Desktop actions. Phones and tablets have them in the bottom bar (+ scans a
-          memo) and the More sheet. */}
+          memo or notes, or a list on the boards) and the More sheet. */}
       <div className="ml-auto hidden items-center gap-3 lg:flex">
         <VaultModeToggle />
         <button
           onClick={openMemo}
+          title="Scan a memo, a receipt or a screenshot of your notes"
           className="hairline inline-flex min-h-[42px] cursor-pointer items-center gap-2 rounded-xl px-4 text-sm font-semibold text-ink/80 transition-colors hover:bg-ink/[0.04] hover:text-ink"
         >
           <Camera className="h-4 w-4" aria-hidden />

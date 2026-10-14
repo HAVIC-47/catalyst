@@ -1,14 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
-import { ArrowUpRight, ArrowDownLeft, Trash2, MapPin, Search, SlidersHorizontal, X } from "lucide-react";
+import { ArrowUpRight, ArrowDownLeft, Pencil, Trash2, MapPin, Search, SlidersHorizontal, X } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
 import { useDebounce } from "@/hooks/use-debounce";
 import type { Kind, Transaction } from "@/types";
 import { cn, formatCurrency, tintText } from "@/lib/utils";
 import { inRange, rangeWindow, type Range } from "@/lib/range";
 import { AiInsights } from "@/components/ai/ai-insights";
+import { TransactionEditor } from "@/components/entry/transaction-editor";
 
 type KindFilter = "all" | Kind;
 type PeriodFilter = "all" | Range | "custom";
@@ -40,6 +41,10 @@ export default function TransactionsPage() {
     () => new Map(categories.map((c) => [c.name, c.color])),
     [categories],
   );
+
+  // The transaction open in the editor (its pen button).
+  const [editing, setEditing] = useState<Transaction | null>(null);
+  const closeEditor = useCallback(() => setEditing(null), []);
 
   // search + filters
   const [query, setQuery] = useState("");
@@ -401,6 +406,14 @@ export default function TransactionsPage() {
                         {formatCurrency(t.kind === "income" ? t.amount : -t.amount, { sign: true })}
                       </span>
                       <button
+                        onClick={() => setEditing(t)}
+                        aria-label={`Edit ${t.note || t.categoryName}`}
+                        title="Edit"
+                        className="-mr-1 cursor-pointer rounded-lg p-1 text-ink/35 transition-colors hover:bg-ink/5 hover:text-amber"
+                      >
+                        <Pencil className="h-4 w-4" aria-hidden />
+                      </button>
+                      <button
                         onClick={() => removeMoney(t.id)}
                         aria-label="Delete"
                         className="cursor-pointer text-ink/0 transition-colors group-hover:text-ink/30 hover:text-expense!"
@@ -415,6 +428,8 @@ export default function TransactionsPage() {
           );
         })}
       </div>
+
+      <TransactionEditor tx={editing} onClose={closeEditor} />
     </div>
   );
 }

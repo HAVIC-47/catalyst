@@ -175,6 +175,27 @@ interface ActivityLogRow {
   activity_id: string;
   logged_on: string;
 }
+interface BoardRow {
+  id: string;
+  name: string;
+}
+interface ColumnRow {
+  id: string;
+  board_id: string;
+  name: string;
+  sort: number;
+}
+interface TicketRow {
+  id: string;
+  board_id: string;
+  column_id: string;
+  title: string;
+  description: string;
+  priority: string;
+  due_on: string | null;
+  amount: number | string | null;
+  created_at: string;
+}
 
 /** Every row of a query, 1000 at a time (the API's page size). */
 async function all<T>(page: (from: number, to: number) => PromiseLike<{ data: unknown; error: unknown }>): Promise<T[]> {
@@ -228,6 +249,14 @@ const billsAll = (db: SupabaseClient) =>
   all<BillRow>((a, b) => db.from("bills").select("id,name,amount,due_on,recurrence,is_paid").order("due_on").order("id").range(a, b));
 const budgetsAll = (db: SupabaseClient) =>
   all<BudgetRow>((a, b) => db.from("budgets").select("id,category_name,amount").order("id").range(a, b));
+const boardsOfKind = (db: SupabaseClient, kind: "todo" | "shopping") =>
+  all<BoardRow>((a, b) => db.from("boards").select("id,name").eq("kind", kind).order("sort").order("id").range(a, b));
+const columnsAll = (db: SupabaseClient) =>
+  all<ColumnRow>((a, b) => db.from("board_columns").select("id,board_id,name,sort").order("sort").order("id").range(a, b));
+const ticketsAll = (db: SupabaseClient) =>
+  all<TicketRow>((a, b) =>
+    db.from("tickets").select("id,board_id,column_id,title,description,priority,due_on,amount,created_at").order("id").range(a, b),
+  );
 
 const txKey = (t: TxRow) => [t.id, t.kind, num(t.amount), t.category_name, t.occurred_on, t.note, t.place];
 
@@ -743,6 +772,105 @@ async function mood(db: SupabaseClient, w: InsightWindow, today: string): Promis
   };
 }
 
+// ------------------------------------------------------------------ to-do + to-buy boards
+// Boards keep their current state, not a history: the digest is what's open,
+// done (in a board's last column), overdue and due soon now, plus what was added
+// during the period.
+const SHOPPING_CATEGORIES = new Set(["groceries", "shopping"]);
+
+function boardsDigest(kind: "todo" | "shopping") {
+  return async (db: SupabaseClient, w: InsightWindow, today: string): Promise<Digest> => {
+    const shopping = kind === "shopping";
+    const [boards, columns, allTickets, rows] = await Promise.all([
+      boardsOfKind(db, kind),
+      columnsAll(db),
+      ticketsAll(db),
+      shopping ? txBetween(db, w.start, w.end) : Promise.resolve([] as TxRow[]),
+    ]);
+    const boardIds = new Set(boards.map((b) => b.id));
+    const tickets = allTickets.filter((t) => boardIds.has(t.board_id));
+    const cols = columns.filter((c) => boardIds.has(c.board_id));
+    const colsOf = (id: string) => cols.filter((c) => c.board_id === id).sort((a, b) => a.sort - b.sort);
+    const doneColumn = new Map(
+      boards.map((b) => {
+        const cs = colsOf(b.id);
+        return [b.id, cs.length > 1 ? cs[cs.length - 1].id : null] as const;
+      }),
+    );
+    const columnName = new Map(cols.map((c) => [c.id, c.name]));
+    const boardName = new Map(boards.map((b) => [b.id, b.name]));
+    const isDone = (t: TicketRow) => doneColumn.get(t.board_id) === t.column_id;
+    const open = tickets.filter((t) => !isDone(t));
+    const done = tickets.filter(isDone);
+    const added = tickets.filter((t) => t.created_at.slice(0, 10) >= w.start && t.created_at.slice(0, 10) <= w.end);
+    const overdue = open.filter((t) => t.due_on && t.due_on < today);
+    const soon = addDays(today, 7);
+    const dueSoon = open.filter((t) => t.due_on && t.due_on >= today && t.due_on <= soon);
+    const urgent = open.filter((t) => t.priority === "high");
+    const price = (t: TicketRow) => (t.amount === null ? 0 : num(t.amount));
+    const item = (t: TicketRow) => ({
+      [shopping ? "item" : "task"]: clip(t.title, 120),
+      ...(boards.length > 1 ? { [shopping ? "list" : "board"]: boardName.get(t.board_id) } : {}),
+      status: columnName.get(t.column_id) ?? "",
+      ...(t.priority !== "medium" ? { priority: t.priority } : {}),
+      ...(t.due_on ? { due: dateLabel(t.due_on) } : {}),
+      ...(shopping && t.amount !== null ? { price: tk(price(t)) } : {}),
+    });
+
+    let money: Record<string, unknown> = {};
+    if (shopping) {
+      const priced = open.filter((t) => t.amount !== null);
+      const spends = rows.filter((t) => t.kind === "expense");
+      money = {
+        cost: {
+          stillToBuy: tk(priced.reduce((s, t) => s + price(t), 0)),
+          pricedItemsToBuy: priced.length,
+          unpricedItemsToBuy: open.length - priced.length,
+          inLastColumn: tk(done.reduce((s, t) => s + price(t), 0)),
+        },
+        ...(priced.length ? { biggestItems: [...priced].sort((a, b) => price(b) - price(a)).slice(0, 5).map(item) } : {}),
+        spendingThisPeriod: {
+          total: tk(spends.reduce((s, t) => s + num(t.amount), 0)),
+          byCategory: groupSum(
+            spends.filter((t) => SHOPPING_CATEGORIES.has(t.category_name.toLowerCase())),
+            (t) => t.category_name,
+            (t) => num(t.amount),
+          ).map((c) => ({ category: c.key, spent: tk(c.sum) })),
+        },
+      };
+    }
+
+    return {
+      empty: tickets.length === 0,
+      source: [boards, cols, tickets.map((t) => [t.id, t.column_id, t.title, t.priority, t.due_on, t.amount, t.description.length]), rows.map(txKey)],
+      facts: {
+        period: w.label,
+        status: progress(w, today).text,
+        today: longDate(today),
+        [shopping ? "lists" : "boards"]: boards.map((b) => ({
+          name: b.name,
+          columns: colsOf(b.id).map((c) => ({ column: c.name, count: tickets.filter((t) => t.column_id === c.id).length })),
+        })),
+        totals: {
+          open: open.length,
+          inLastColumn: done.length,
+          addedThisPeriod: added.length,
+          overdue: overdue.length,
+          dueInNextWeek: dueSoon.length,
+          highPriorityOpen: urgent.length,
+        },
+        ...(overdue.length ? { overdue: overdue.slice(0, 8).map(item) } : {}),
+        ...(dueSoon.length ? { dueSoon: dueSoon.slice(0, 8).map(item) } : {}),
+        ...(urgent.length ? { highPriority: urgent.slice(0, 8).map(item) } : {}),
+        ...(added.length ? { addedThisPeriod: added.slice(0, 15).map(item) } : {}),
+        stillOpen: open.slice(0, 25).map(item),
+        ...(done.length ? { inLastColumn: done.slice(0, 10).map(item) } : {}),
+        ...money,
+      },
+    };
+  };
+}
+
 // ------------------------------------------------------------------ entry point
 const BUILDERS: Record<InsightTopic, (db: SupabaseClient, w: InsightWindow, today: string) => Promise<Digest>> = {
   ledger,
@@ -751,6 +879,8 @@ const BUILDERS: Record<InsightTopic, (db: SupabaseClient, w: InsightWindow, toda
   bills,
   journal,
   mood,
+  todo: boardsDigest("todo"),
+  shopping: boardsDigest("shopping"),
 };
 
 export async function buildDigest(db: SupabaseClient, topic: InsightTopic, w: InsightWindow, today: string) {
@@ -790,6 +920,10 @@ const FOCUS: Record<InsightTopic, string> = {
     "Topic: the journal — what the entries were about, recurring themes, how the days felt and which habits were kept. Summarise themes; don't quote long passages or private details. Suggestions are small, kind habits for wellbeing that build on what the entries show helps.",
   mood:
     "Topic: mood — how it moved and what went with better or worse days (context tags, habits, spending, weekdays). Suggestions are gentle, concrete ways to feel better, based on what the data shows helps. If most logs are Low or Awful, include one suggestion to talk to someone they trust or a professional, calmly and without alarm.",
+  todo:
+    "Topic: to-do boards — open tasks, tasks in each board's last column (done), what's overdue or due soon, what's high priority, and what was added during the period. The boards show their current state only: don't say when tasks were finished. Suggestions are practical ways to get through the list — what to do first, splitting big tasks, scheduling, clearing or rescheduling overdue ones.",
+  shopping:
+    "Topic: to-buy lists — what's still to buy, what the priced items add up to, what's already in the last column (bought), and this period's spending on groceries and shopping. The lists show their current state only: don't say when things were bought. Suggestions are about shopping smarter — one trip for several items, pricing unpriced items, a budget for the list, dropping what isn't needed.",
 };
 
 export const systemPrompt = (topic: InsightTopic) => `${BASE}\n\n${FOCUS[topic]}`;
