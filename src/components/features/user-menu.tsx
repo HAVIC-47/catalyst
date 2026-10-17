@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LogOut, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { tr } from "@/lib/i18n";
 
 export function UserMenu() {
   const router = useRouter();
@@ -33,8 +34,8 @@ export function UserMenu() {
       <button
         onClick={signOut}
         disabled={signingOut}
-        aria-label="Sign out"
-        title="Sign out"
+        aria-label={tr("Sign out")}
+        title={tr("Sign out")}
         className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-xl border border-ink/10 bg-ink/[0.03] text-ink/50 transition-colors duration-200 hover:border-neon-rose/40 hover:text-neon-rose disabled:opacity-50"
       >
         {signingOut ? (

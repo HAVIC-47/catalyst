@@ -39,7 +39,8 @@ end $$;
 revoke all on
   public.categories, public.transactions, public.mood_logs, public.budgets, public.goals,
   public.bills, public.journal_entries, public.activities, public.activity_logs,
-  public.boards, public.board_columns, public.tickets, public.ai_insights
+  public.boards, public.board_columns, public.tickets, public.ai_insights,
+  public.wallets, public.transfers, public.debts, public.debt_payments, public.push_subscriptions
 from anon;
 
 -- 4. Size and format limits. RLS stops users touching each other's rows, but
@@ -76,7 +77,16 @@ begin
       ('tickets',         'tickets_title_len',              'char_length(title) <= 200'),
       ('tickets',         'tickets_description_len',        'char_length(description) <= 5000'),
       ('ai_insights',     'ai_insights_hash_len',           'char_length(data_hash) <= 64'),
-      ('ai_insights',     'ai_insights_content_size',       'octet_length(content::text) <= 20000')
+      ('ai_insights',     'ai_insights_content_size',       'octet_length(content::text) <= 20000'),
+      ('wallets',         'wallets_name_len',               'char_length(name) <= 100'),
+      ('wallets',         'wallets_color_hex',              $c$color ~ '^#[0-9A-Fa-f]{6}$'$c$),
+      ('transfers',       'transfers_note_len',             'char_length(note) <= 1000'),
+      ('debts',           'debts_person_len',               'char_length(person) <= 100'),
+      ('debts',           'debts_note_len',                 'char_length(note) <= 1000'),
+      ('debt_payments',   'debt_payments_note_len',         'char_length(note) <= 1000'),
+      ('push_subscriptions', 'push_endpoint_len',           'char_length(endpoint) <= 1000'),
+      ('push_subscriptions', 'push_keys_len',               'char_length(p256dh) <= 200 and char_length(auth) <= 100'),
+      ('push_subscriptions', 'push_tz_len',                 'char_length(tz) <= 64')
     ) as v(tbl, con, expr)
   loop
     if not exists (

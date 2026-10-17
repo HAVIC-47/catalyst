@@ -8,6 +8,9 @@ interface Row {
   due_on: string;
   recurrence: string;
   is_paid: boolean;
+  category_id?: string | null;
+  wallet_id?: string | null;
+  last_paid_txn?: string | null;
 }
 const toBill = (r: Row): Bill => ({
   id: r.id,
@@ -16,6 +19,9 @@ const toBill = (r: Row): Bill => ({
   dueOn: r.due_on,
   recurrence: r.recurrence,
   isPaid: r.is_paid,
+  categoryId: r.category_id ?? null,
+  walletId: r.wallet_id ?? null,
+  lastPaidTxn: r.last_paid_txn ?? null,
 });
 
 export async function listBills(): Promise<Bill[]> {
@@ -38,6 +44,9 @@ export async function addBill(input: NewBill): Promise<Bill> {
       due_on: input.dueOn,
       recurrence: input.recurrence,
       is_paid: input.isPaid,
+      // Newer columns only when set, so bills still save before the wallets update.
+      ...(input.categoryId ? { category_id: input.categoryId } : {}),
+      ...(input.walletId ? { wallet_id: input.walletId } : {}),
     })
     .select("*")
     .single();
@@ -53,6 +62,9 @@ export async function updateBill(id: string, patch: Partial<NewBill>): Promise<v
   if (patch.dueOn !== undefined) row.due_on = patch.dueOn;
   if (patch.recurrence !== undefined) row.recurrence = patch.recurrence;
   if (patch.isPaid !== undefined) row.is_paid = patch.isPaid;
+  if (patch.categoryId !== undefined) row.category_id = patch.categoryId;
+  if (patch.walletId !== undefined) row.wallet_id = patch.walletId;
+  if (patch.lastPaidTxn !== undefined) row.last_paid_txn = patch.lastPaidTxn;
   const { error } = await supabase.from("bills").update(row).eq("id", id);
   if (error) throw error;
 }

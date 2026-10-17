@@ -7,13 +7,16 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { format, parseISO } from "date-fns";
+import { parseISO } from "date-fns";
 import { ArrowDownLeft, ArrowUpRight, LoaderCircle, MapPin, PiggyBank, Trash2, X } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
 import type { Category, Kind, NewTransaction, Transaction } from "@/types";
-import { TAKA, cn, combineDateTime } from "@/lib/utils";
+import { currencySymbol, cn, combineDateTime, fmt } from "@/lib/utils";
 import { LIMITS } from "@/lib/limits";
 import { CategoryTile, TimeField } from "@/components/entry/entry-modal";
+import { WalletSelect } from "@/components/entry/wallet-select";
+import { defaultWallet } from "@/lib/money";
+import { tr } from "@/lib/i18n";
 
 export function TransactionEditor({ tx, onClose }: { tx: Transaction | null; onClose: () => void }) {
   const [mounted, setMounted] = useState(false);
@@ -42,7 +45,7 @@ export function TransactionEditor({ tx, onClose }: { tx: Transaction | null; onC
           <motion.div
             role="dialog"
             aria-modal="true"
-            aria-label="Edit transaction"
+            aria-label={tr("Edit transaction")}
             initial={{ opacity: 0, y: -10, scale: 0.99 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.99 }}
@@ -51,12 +54,12 @@ export function TransactionEditor({ tx, onClose }: { tx: Transaction | null; onC
           >
             <div className="flex items-start justify-between border-b border-line p-6 pb-5">
               <div>
-                <div className="label">{format(parseISO(tx.occurredOn), "EEE · MMM d, yyyy")}</div>
-                <h2 className="mt-1 font-display text-3xl font-semibold text-ink">Edit transaction</h2>
+                <div className="label">{fmt(parseISO(tx.occurredOn), "EEE · MMM d, yyyy")}</div>
+                <h2 className="mt-1 font-display text-3xl font-semibold text-ink">{tr("Edit transaction")}</h2>
               </div>
               <button
                 onClick={onClose}
-                aria-label="Close"
+                aria-label={tr("Close")}
                 className="cursor-pointer rounded-lg p-1 text-ink/40 transition-colors hover:bg-ink/5 hover:text-ink"
               >
                 <X className="h-5 w-5" aria-hidden />
@@ -90,7 +93,8 @@ function localTime(iso: string): string {
 }
 
 function EditForm({ tx, onClose }: { tx: Transaction; onClose: () => void }) {
-  const { categories, editMoney, removeMoney } = useAppData();
+  const { categories, wallets, editMoney, removeMoney } = useAppData();
+  const [walletId, setWalletId] = useState<string | null>(tx.walletId); // null = the default wallet
   const [kind, setKind] = useState<Kind>(tx.kind);
   const [amount, setAmount] = useState(String(tx.amount));
   const [pick, setPick] = useState<string | null>(null); // category id chosen here; null = the entry's own
@@ -135,6 +139,7 @@ function EditForm({ tx, onClose }: { tx: Transaction; onClose: () => void }) {
           occurredOn: date,
           // Untouched, the original timestamp stays exactly as it was.
           occurredAt: touchedWhen ? combineDateTime(date, time) : tx.occurredAt,
+          walletId,
         }
       : null;
   const changed =
@@ -146,7 +151,8 @@ function EditForm({ tx, onClose }: { tx: Transaction; onClose: () => void }) {
       next.place !== tx.place ||
       next.note !== tx.note ||
       next.occurredOn !== tx.occurredOn ||
-      next.occurredAt !== tx.occurredAt);
+      next.occurredAt !== tx.occurredAt ||
+      (walletId ?? null) !== (tx.walletId ?? null));
 
   const save = async () => {
     if (!next || !changed || busy) return;
@@ -156,20 +162,20 @@ function EditForm({ tx, onClose }: { tx: Transaction; onClose: () => void }) {
       await editMoney(tx.id, next);
       onClose();
     } catch (err) {
-      setError(message(err, "Couldn't save — check your connection."));
+      setError(message(err, tr("Couldn't save — check your connection.")));
       setBusy(null);
     }
   };
 
   const remove = async () => {
-    if (busy || !window.confirm("Delete this transaction? This can't be undone.")) return;
+    if (busy || !window.confirm(tr("Delete this transaction? This can't be undone."))) return;
     setBusy("delete");
     setError(null);
     try {
       await removeMoney(tx.id);
       onClose();
     } catch (err) {
-      setError(message(err, "Couldn't delete — check your connection."));
+      setError(message(err, tr("Couldn't delete — check your connection.")));
       setBusy(null);
     }
   };
@@ -181,7 +187,7 @@ function EditForm({ tx, onClose }: { tx: Transaction; onClose: () => void }) {
   return (
     <>
       <div className="max-h-[62vh] space-y-6 overflow-y-auto p-6">
-        <div role="radiogroup" aria-label="Type" className="grid grid-cols-3 gap-2 rounded-xl border border-line bg-ink/[0.02] p-1">
+        <div role="radiogroup" aria-label={tr("Type")} className="grid grid-cols-3 gap-2 rounded-xl border border-line bg-ink/[0.02] p-1">
           {KINDS.map(({ k, label, Icon, on }) => (
             <button
               key={k}
@@ -198,22 +204,22 @@ function EditForm({ tx, onClose }: { tx: Transaction; onClose: () => void }) {
               )}
             >
               <Icon className="h-4 w-4" aria-hidden />
-              {label}
+              {tr(label)}
             </button>
           ))}
         </div>
 
         <div>
-          <div className="label mb-2">Amount</div>
+          <div className="label mb-2">{tr("Amount")}</div>
           <div className="flex items-center gap-3 rounded-xl border border-line bg-ink/[0.02] px-4 py-3 focus-within:border-amber/50">
-            <span className="font-mono text-2xl text-ink/40">{TAKA}</span>
+            <span className="font-mono text-2xl text-ink/40">{currencySymbol()}</span>
             <input
               autoFocus
               inputMode="decimal"
               value={amount}
               onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
               placeholder="0"
-              aria-label="Amount"
+              aria-label={tr("Amount")}
               className="w-full bg-transparent font-mono text-3xl font-semibold tabular text-ink outline-hidden"
             />
           </div>
@@ -221,15 +227,13 @@ function EditForm({ tx, onClose }: { tx: Transaction; onClose: () => void }) {
 
         {kind === "saving" ? (
           <p className="rounded-xl border border-line bg-ink/[0.02] px-3 py-2 text-xs text-ink/50">
-            Savings go into your savings pool — they don&apos;t have a category.
+            {tr("Savings go into your savings pool — they don't have a category.")}
           </p>
         ) : (
           <div>
-            <div className="label mb-2">Category</div>
+            <div className="label mb-2">{tr("Category")}</div>
             {list.length === 0 && !kept ? (
-              <div className="rounded-xl border border-dashed border-line p-4 text-center text-xs text-ink/45">
-                No {kind} categories yet — add them in Settings.
-              </div>
+              <div className="rounded-xl border border-dashed border-line p-4 text-center text-xs text-ink/45">{tr("No {name} categories yet — add them in Settings.", { name: tr(kind) })}</div>
             ) : (
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                 {kept && <CategoryTile cat={keptTile} active={!picked} onClick={() => setPick(null)} />}
@@ -241,14 +245,22 @@ function EditForm({ tx, onClose }: { tx: Transaction; onClose: () => void }) {
           </div>
         )}
 
+        {kind !== "saving" && (
+          <WalletSelect
+            value={walletId ?? defaultWallet(wallets)?.id ?? null}
+            onChange={setWalletId}
+            label={kind === "income" ? tr("Received in") : tr("Paid from")}
+          />
+        )}
+
         <div className="flex flex-wrap items-end gap-4">
           <div>
-            <div className="label mb-2">Date</div>
+            <div className="label mb-2">{tr("Date")}</div>
             <input
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              aria-label="Date"
+              aria-label={tr("Date")}
               className="min-h-[44px] rounded-xl border border-line bg-ink/[0.02] px-3 text-sm text-ink/80 outline-hidden focus:border-amber/50"
             />
           </div>
@@ -257,15 +269,15 @@ function EditForm({ tx, onClose }: { tx: Transaction; onClose: () => void }) {
 
         {kind !== "saving" && (
           <div>
-            <div className="label mb-2">Place</div>
+            <div className="label mb-2">{tr("Place")}</div>
             <div className="relative">
               <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/35" aria-hidden />
               <input
                 value={place}
                 onChange={(e) => setPlace(e.target.value)}
-                placeholder="Star Kabab, Aarong, Pathao…"
+                placeholder={tr("Star Kabab, Aarong, Pathao…")}
                 maxLength={LIMITS.place}
-                aria-label="Place"
+                aria-label={tr("Place")}
                 className={cn(field, "pl-10")}
               />
             </div>
@@ -273,13 +285,13 @@ function EditForm({ tx, onClose }: { tx: Transaction; onClose: () => void }) {
         )}
 
         <div>
-          <div className="label mb-2">Note · optional</div>
+          <div className="label mb-2">{tr("Note · optional")}</div>
           <input
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="What was it for?"
+            placeholder={tr("What was it for?")}
             maxLength={LIMITS.note}
-            aria-label="Note"
+            aria-label={tr("Note")}
             className={field}
           />
         </div>
@@ -299,7 +311,7 @@ function EditForm({ tx, onClose }: { tx: Transaction; onClose: () => void }) {
           className="hairline inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl px-4 text-sm text-ink/70 transition-colors hover:border-expense/40 hover:bg-expense/10 hover:text-expense disabled:opacity-40"
         >
           {busy === "delete" ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : <Trash2 className="h-4 w-4" aria-hidden />}
-          Delete
+          {tr("Delete")}
         </button>
         <button
           type="button"
@@ -308,7 +320,7 @@ function EditForm({ tx, onClose }: { tx: Transaction; onClose: () => void }) {
           className="entry-btn inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl px-5 text-sm font-semibold text-paper shadow-entry transition-transform duration-200 hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
         >
           {busy === "save" && <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />}
-          {busy === "save" ? "Saving…" : "Save changes"}
+          {busy === "save" ? tr("Saving…") : tr("Save changes")}
         </button>
       </div>
     </>

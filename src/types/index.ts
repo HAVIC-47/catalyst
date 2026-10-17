@@ -1,4 +1,5 @@
 // Catalyst v2 domain types — money (transactions) and mood are separate logs.
+import { tr } from "@/lib/i18n";
 
 export type Kind = "expense" | "income" | "saving";
 
@@ -26,9 +27,10 @@ export interface Transaction {
   occurredOn: string; // yyyy-mm-dd (date bucket)
   occurredAt: string; // ISO timestamp (intraday)
   createdAt: string;
+  walletId: string | null; // null = the default wallet
 }
 
-export type NewTransaction = Omit<Transaction, "id" | "createdAt">;
+export type NewTransaction = Omit<Transaction, "id" | "createdAt" | "walletId"> & { walletId?: string | null };
 
 export interface MoodLog {
   id: string;
@@ -75,6 +77,11 @@ export const MOOD_PRESETS: MoodPreset[] = [
   { value: 5, label: "Great", color: "#2E8159" }, // forest
 ];
 
+/** A mood's name in the app's language (stored and sent in English). */
+export function moodName(m: MoodPreset): string {
+  return tr(`${m.label}|mood`);
+}
+
 export function moodPreset(value: number): MoodPreset {
   return (
     MOOD_PRESETS.find((m) => m.value === value) ??
@@ -107,8 +114,83 @@ export interface Bill {
   dueOn: string; // yyyy-mm-dd
   recurrence: string; // 'monthly' | 'weekly' | 'yearly' | 'once'
   isPaid: boolean;
+  categoryId: string | null; // what paying it is logged under (null = matched by name)
+  walletId: string | null; // paid from (null = the default wallet)
+  lastPaidTxn: string | null; // the expense its last payment logged
 }
-export type NewBill = Omit<Bill, "id">;
+export type NewBill = Omit<Bill, "id" | "categoryId" | "walletId" | "lastPaidTxn"> &
+  Partial<Pick<Bill, "categoryId" | "walletId" | "lastPaidTxn">>;
+
+/** Where money sits. A balance is the opening balance plus the entries, transfers and dhar in it. */
+export type WalletKind = "cash" | "mobile" | "bank" | "card" | "other";
+
+export interface Wallet {
+  id: string;
+  name: string;
+  kind: WalletKind;
+  color: string;
+  openingBalance: number;
+  sort: number;
+  archived: boolean;
+}
+export type NewWallet = Omit<Wallet, "id">;
+
+/** Money moved between two wallets — never spending or income. */
+export interface Transfer {
+  id: string;
+  fromWallet: string;
+  toWallet: string;
+  amount: number;
+  note: string;
+  occurredOn: string; // yyyy-mm-dd
+  occurredAt: string;
+  createdAt: string;
+}
+export type NewTransfer = Omit<Transfer, "id" | "createdAt">;
+
+/** Dhar / baki. lent = they owe you; borrowed = you owe them. */
+export type DebtDirection = "lent" | "borrowed";
+
+export interface Debt {
+  id: string;
+  person: string;
+  direction: DebtDirection;
+  amount: number;
+  note: string;
+  walletId: string | null; // the money left / came into this wallet
+  occurredOn: string;
+  dueOn: string | null;
+  closed: boolean; // settled or written off
+  createdAt: string;
+}
+export type NewDebt = Omit<Debt, "id" | "createdAt">;
+
+export interface DebtPayment {
+  id: string;
+  debtId: string;
+  amount: number;
+  walletId: string | null;
+  paidOn: string;
+  note: string;
+  createdAt: string;
+}
+export type NewDebtPayment = Omit<DebtPayment, "id" | "createdAt">;
+
+export const WALLET_KINDS: { value: WalletKind; label: string }[] = [
+  { value: "cash", label: "Cash" },
+  { value: "mobile", label: "Mobile money" },
+  { value: "bank", label: "Bank" },
+  { value: "card", label: "Card" },
+  { value: "other", label: "Other" },
+];
+
+/** Wallets a new account starts with (renamable, more can be added, any can be archived). */
+export const DEFAULT_WALLETS: { name: string; kind: WalletKind; color: string }[] = [
+  { name: "Cash", kind: "cash", color: "#2E8159" },
+  { name: "bKash", kind: "mobile", color: "#E2136E" },
+  { name: "Nagad", kind: "mobile", color: "#F26522" },
+  { name: "Bank", kind: "bank", color: "#3D80BC" },
+];
 
 export interface JournalEntry {
   id: string;

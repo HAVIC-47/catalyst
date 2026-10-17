@@ -5,6 +5,8 @@ import { BottomNav } from "@/components/layout/bottom-nav";
 import { EntryModal } from "@/components/entry/entry-modal";
 import { MemoScanner } from "@/components/memo/memo-scanner";
 import { ListScanner } from "@/components/boards/list-scanner";
+import { Toasts } from "@/components/layout/toasts";
+import { RemindersBar } from "@/components/layout/reminders-bar";
 
 // Authenticated area. Guarded by src/proxy.ts (no session → back to the landing page).
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -15,13 +17,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="flex min-w-0 flex-1 flex-col">
           <Topbar />
           {/* Bottom-nav padding so content doesn't hide under it on mobile. */}
-          <main className="flex-1 pb-[var(--bottomnav-h)] lg:pb-0">{children}</main>
+          <main className="flex-1 pb-[var(--bottomnav-h)] lg:pb-0">
+            <RemindersBar />
+            {children}
+          </main>
         </div>
       </div>
       <BottomNav />
       <EntryModal />
       <MemoScanner />
       <ListScanner />
+      <Toasts />
     </AppDataProvider>
   );
 }

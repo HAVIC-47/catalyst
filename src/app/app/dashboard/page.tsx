@@ -13,9 +13,11 @@ import { SavingsDonut } from "@/components/charts/savings-donut";
 import { CategoryBars } from "@/components/charts/category-bars";
 import { MoodTagBars } from "@/components/charts/mood-tag-bars";
 import { AiInsights } from "@/components/ai/ai-insights";
-import { formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
+import { walletBalances } from "@/lib/money";
 import { rangeWindow, type Range } from "@/lib/range";
 import type { DashboardSectionId } from "@/lib/dashboard-sections";
+import { tr, digits } from "@/lib/i18n";
 
 export default function DashboardPage() {
   const { transactions, moods, categories, loading, dashboardHidden } = useAppData();
@@ -42,16 +44,16 @@ export default function DashboardPage() {
   }, [moods]);
 
   const tiles = [
-    { label: "Spent", value: formatCurrency(spent), icon: ArrowUpRight, tint: "#CB453B" },
-    { label: "Earned", value: formatCurrency(earned), icon: ArrowDownLeft, tint: "#2E8159" },
+    { label: tr("Spent"), value: formatCurrency(spent), icon: ArrowUpRight, tint: "#CB453B" },
+    { label: tr("Earned"), value: formatCurrency(earned), icon: ArrowDownLeft, tint: "#2E8159" },
     {
-      label: "Saved",
+      label: tr("Saved"),
       value: formatCurrency(saved),
-      sub: `${savedRate}% rate`,
+      sub: tr("{savedRate}% rate", { savedRate }),
       icon: Wallet,
       tint: saved >= 0 ? "#3D80BC" : "#CB453B",
     },
-    { label: "Avg mood", value: avgMood ? `${avgMood} / 5` : "—", icon: Smile, tint: "#7A4E86" },
+    { label: tr("Avg mood"), value: avgMood ? digits(`${avgMood} / 5`) : "—", icon: Smile, tint: "#7A4E86" },
   ];
 
   // Sections hidden in Settings are simply not rendered. Nothing renders until the
@@ -61,60 +63,68 @@ export default function DashboardPage() {
   const charts: { id: DashboardSectionId; title: string; accent: string; body: React.ReactNode }[] = [
     {
       id: "spent",
-      title: "Spent",
-      accent: "by category",
+      title: tr("Spent"),
+      accent: tr("by category"),
       body: <CategoryDonut transactions={transactions} categories={categories} kind="expense" range={range} offset={offset} />,
     },
     {
       id: "earned",
-      title: "Earned",
-      accent: "by category",
+      title: tr("Earned"),
+      accent: tr("by category"),
       body: <CategoryDonut transactions={transactions} categories={categories} kind="income" range={range} offset={offset} />,
     },
     {
       id: "mood",
-      title: "Mood",
-      accent: "distribution",
+      title: tr("Mood"),
+      accent: tr("distribution"),
       body: <MoodDonut moods={moods} range={range} offset={offset} />,
     },
     {
       id: "savings",
-      title: "Savings",
-      accent: "added vs broken",
+      title: tr("Savings"),
+      accent: tr("added vs broken"),
       body: <SavingsDonut transactions={transactions} range={range} offset={offset} />,
     },
     {
       id: "moodTags",
-      title: "Mood was about",
-      accent: "frequency",
+      title: tr("Mood was about"),
+      accent: tr("frequency"),
       body: <MoodTagBars moods={moods} range={range} offset={offset} />,
     },
     {
       id: "categories",
-      title: "Category",
-      accent: "frequency",
+      title: tr("Category"),
+      accent: tr("frequency"),
       body: <CategoryBars transactions={transactions} categories={categories} range={range} offset={offset} />,
     },
   ];
   const visibleCharts = charts.filter((c) => show(c.id));
   const nothingShown =
-    dashboardHidden !== null && !show("kpis") && !show("trend") && !show("insights") && visibleCharts.length === 0;
+    dashboardHidden !== null &&
+    !show("kpis") &&
+    !show("trend") &&
+    !show("insights") &&
+    !show("recap") &&
+    !show("wallets") &&
+    visibleCharts.length === 0;
+  // The recap opens on last month during the first week of a month.
+  const recapOffset = now.getDate() <= 7 ? -1 : 0;
 
   return (
     <div className="px-4 pb-6 pt-4 sm:px-6 lg:px-8 lg:pt-6">
       <div className="mb-4 lg:mb-6">
         <div className="mb-1 flex items-center justify-between gap-3 lg:mb-2">
-          <span className="label">Dashboard · this month</span>
+          <span className="label">{tr("Dashboard · this month")}</span>
           <Link
             href="/app/settings#dashboard"
             className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-ink/40 transition-colors hover:text-amber"
           >
             <SlidersHorizontal className="h-3 w-3" aria-hidden />
-            Customize
+            {tr("Customize")}
           </Link>
         </div>
         <h1 className="font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl lg:text-5xl">
-          The month <span className="serif-italic text-amber/90">so far.</span>
+          {tr("The month")}{" "}<span className="serif-italic text-amber/90">{tr("so far.")}</span>
         </h1>
       </div>
 
@@ -152,10 +162,17 @@ export default function DashboardPage() {
         visibleCharts.length > 0 && (
           // Trend hidden: the period selector still needs a home.
           <div className="card mb-4 p-3 sm:p-4 lg:mb-6">
-            <div className="label mb-2">Period · {rangeWindow(range, offset).label}</div>
+            <div className="label mb-2">{tr("Period · {x}", { x: rangeWindow(range, offset).label })}</div>
             <RangeControls range={range} setRange={setRange} offset={offset} setOffset={setOffset} />
           </div>
         )
+      )}
+
+      {show("wallets") && <WalletStrip />}
+
+      {/* The month (or year) in one AI read, with what to do differently next time. */}
+      {show("recap") && (
+        <AiInsights topics={["recap"]} periods={["month", "year"]} defaultPeriod="month" defaultOffset={recapOffset} className="mb-4 lg:mb-6" />
       )}
 
       {/* AI read of mood, money and savings — its own period selector (week / month / year). */}
@@ -174,16 +191,49 @@ export default function DashboardPage() {
 
       {nothingShown && (
         <div className="card px-6 py-12 text-center text-sm text-ink/40">
-          Every dashboard section is hidden.{" "}
+          {tr("Every dashboard section is hidden.")}{" "}
           <Link href="/app/settings#dashboard" className="text-amber hover:underline">
-            Choose what to show
+            {tr("Choose what to show")}
           </Link>{" "}
-          — your data is all still there.
+          {tr("— your data is all still there.")}
         </div>
       )}
 
-      {loading && <p className="mt-4 text-center font-mono text-xs text-ink/30">Loading…</p>}
+      {loading && <p className="mt-4 text-center font-mono text-xs text-ink/30">{tr("Loading…")}</p>}
     </div>
+  );
+}
+
+/** What's in each wallet right now. */
+function WalletStrip() {
+  const { wallets, transactions, transfers, debts, debtPayments, walletsReady } = useAppData();
+  const live = wallets.filter((w) => !w.archived);
+  const balances = useMemo(
+    () => walletBalances(wallets, transactions, transfers, debts, debtPayments),
+    [wallets, transactions, transfers, debts, debtPayments],
+  );
+  if (!walletsReady || live.length === 0) return null;
+  return (
+    <Link
+      href="/app/wallets"
+      aria-label={tr("Wallet balances")}
+      className="card mb-4 flex gap-px overflow-x-auto p-0 transition-colors hover:border-ink/20 lg:mb-6"
+    >
+      {live.map((w) => {
+        const b = balances.get(w.id) ?? 0;
+        return (
+          <div key={w.id} className="min-w-[132px] flex-1 px-4 py-3">
+            <div className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: w.color }} aria-hidden />
+              <span className="label truncate text-[10px]">{tr(w.name)}</span>
+            </div>
+            <div className={cn("mt-1 whitespace-nowrap font-mono text-base font-semibold tabular", b < 0 ? "text-expense" : "text-ink")}>
+              {formatCurrency(b)}
+            </div>
+          </div>
+        );
+      })}
+    </Link>
   );
 }
 

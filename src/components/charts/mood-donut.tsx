@@ -2,9 +2,10 @@
 
 import { useMemo } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
-import { MOOD_PRESETS, type MoodLog } from "@/types";
+import { MOOD_PRESETS, type MoodLog, moodName } from "@/types";
 import { rangeWindow, type Range } from "@/lib/range";
 import { MoodIcon } from "@/components/ui/mood-icon";
+import { tr, trn, digits } from "@/lib/i18n";
 
 export function MoodDonut({ moods, range, offset }: { moods: MoodLog[]; range: Range; offset: number }) {
   const { startKey, endKey } = useMemo(() => rangeWindow(range, offset), [range, offset]);
@@ -16,7 +17,7 @@ export function MoodDonut({ moods, range, offset }: { moods: MoodLog[]; range: R
       counts.set(m.mood, (counts.get(m.mood) ?? 0) + 1);
     }
     return MOOD_PRESETS.filter((p) => (counts.get(p.value) ?? 0) > 0).map((p) => ({
-      name: p.label,
+      name: moodName(p),
       mood: p.value,
       value: counts.get(p.value) ?? 0,
       color: p.color,
@@ -29,7 +30,7 @@ export function MoodDonut({ moods, range, offset }: { moods: MoodLog[]; range: R
     <div>
 
       {slices.length === 0 ? (
-        <p className="py-12 text-center text-sm text-ink/35">No moods logged this period.</p>
+        <p className="py-12 text-center text-sm text-ink/35">{tr("No moods logged this period.")}</p>
       ) : (
         <div className="mt-4 flex flex-col items-center gap-5">
           <div className="relative h-44 w-44">
@@ -51,8 +52,8 @@ export function MoodDonut({ moods, range, offset }: { moods: MoodLog[]; range: R
               </PieChart>
             </ResponsiveContainer>
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-              <span className="label">Logs</span>
-              <span className="font-mono text-lg font-semibold tabular text-ink">{total}</span>
+              <span className="label">{tr("Logs")}</span>
+              <span className="font-mono text-lg font-semibold tabular text-ink">{digits(String(total))}</span>
             </div>
           </div>
 
@@ -62,7 +63,7 @@ export function MoodDonut({ moods, range, offset }: { moods: MoodLog[]; range: R
                 <MoodIcon mood={s.mood} className="h-4 w-4 shrink-0" strokeWidth={1.75} />
                 <span className="text-ink/65">{s.name}</span>
                 <span className="ml-auto font-mono tabular text-ink/50">
-                  {s.value} {s.value === 1 ? "log" : "logs"}
+                  {trn(s.value, "{n} log", "{n} logs")}
                 </span>
               </li>
             ))}

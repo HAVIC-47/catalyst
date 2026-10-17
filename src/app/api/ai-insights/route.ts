@@ -1,10 +1,11 @@
 // AI summaries + suggestions for one topic (journal, ledger, goals, savings, bills,
-// mood) and one period (a week, month or year). The server reads the user's own
+// mood, the boards, or the whole-period recap) and one period (a week, month or
+// year), written in the account's currency and the app's language. The server reads the user's own
 // rows — as that user, so RLS still applies — and boils them down to a digest
 // (src/lib/server/insights.ts) that Gemini writes the summary from. The client
 // never sends free text to the model, so the key can't be used for anything else.
 //
-//   POST { topic, period, start: "yyyy-mm-dd", today, mode }
+//   POST { topic, period, start: "yyyy-mm-dd", today, mode, lang?: "en" | "bn" }
 //   mode "cached":   the saved summary for that period, if any, and whether newer
 //                    data has been logged since. No AI call.
 //   mode "generate": a fresh summary (counts toward a daily limit), saved to
@@ -13,7 +14,8 @@
 // Same sign-in as /api/scan-memo: session cookie on the web, Bearer token from
 // the Android app.
 import { NextResponse, type NextRequest } from "next/server";
-import { INSIGHT_PERIODS, INSIGHT_TOPICS, type InsightPeriod, type InsightResponse, type InsightTopic } from "@/lib/insights";
+import { currencyOf } from "@/lib/currency";
+import { INSIGHT_PERIODS, INSIGHT_TOPICS, type InsightLang, type InsightPeriod, type InsightResponse, type InsightTopic } from "@/lib/insights";
 import { geminiJson } from "@/lib/server/gemini";
 import { INSIGHT_SCHEMA, buildDigest, cleanInsight, insightWindow, systemPrompt, userPrompt } from "@/lib/server/insights";
 import { signedIn } from "@/lib/server/session";
@@ -36,9 +38,11 @@ export async function POST(request: NextRequest) {
 
   const session = await signedIn(request);
   if (!session) return fail(401, "Log in to use AI summaries.");
-  const { supabase, userId } = session;
+  const { supabase, userId, meta } = session;
+  // Amounts in the account's currency; the summary in the language the app shows.
+  const currency = currencyOf(meta.currency);
 
-  let body: { topic?: unknown; period?: unknown; start?: unknown; today?: unknown; mode?: unknown };
+  let body: { topic?: unknown; period?: unknown; start?: unknown; today?: unknown; mode?: unknown; lang?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -47,6 +51,7 @@ export async function POST(request: NextRequest) {
   const topic = INSIGHT_TOPICS.find((t) => t === body.topic) as InsightTopic | undefined;
   const period = INSIGHT_PERIODS.find((p) => p === body.period) as InsightPeriod | undefined;
   const mode = body.mode === "generate" ? "generate" : "cached";
+  const lang: InsightLang = body.lang === "bn" || (body.lang === undefined && meta.lang === "bn") ? "bn" : "en";
   const window = topic && period && typeof body.start === "string" ? insightWindow(period, body.start) : null;
   if (!topic || !period || !window) return fail(400, "Unknown topic or period.");
   // The user's local date (their phone/browser), else Bangladesh time.
@@ -60,7 +65,7 @@ export async function POST(request: NextRequest) {
 
   let digest: Awaited<ReturnType<typeof buildDigest>>;
   try {
-    digest = await buildDigest(supabase, topic, window, today);
+    digest = await buildDigest(supabase, topic, window, today, currency);
   } catch (err) {
     console.error("[ai-insights] could not read data", topic, err);
     return fail(503, "Couldn't read your data just now — try again.");
@@ -112,7 +117,7 @@ export async function POST(request: NextRequest) {
 
   const result = await geminiJson({
     key: key!,
-    system: systemPrompt(topic),
+    system: systemPrompt(topic, { currency, lang }),
     parts: [{ text: userPrompt(digest.facts) }],
     schema: INSIGHT_SCHEMA,
     temperature: 0.4,

@@ -1,16 +1,23 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Trash2, Check } from "lucide-react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Plus, Trash2, Check, BellRing, Loader2, ChevronRight } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES, type Kind } from "@/types";
 import { DASHBOARD_SECTIONS } from "@/lib/dashboard-sections";
-import { cn, tintText } from "@/lib/utils";
+import { CURRENCIES } from "@/lib/currency";
+import { disablePush, enablePush, pushEnabled, pushSupported } from "@/lib/push";
+import { createClient } from "@/lib/supabase/client";
+import { cn, formatCurrency, tintText } from "@/lib/utils";
 import { LIMITS } from "@/lib/limits";
+import { tr } from "@/lib/i18n";
+import { Logo } from "@/components/ui/logo";
 
 const SWATCHES = [
-  "#C06A33", "#2E8159", "#3D80BC", "#7A4E86", "#B59A3C", "#3D80BC",
-  "#CB453B", "#4C5B82", "#8E5B6E", "#A6694A", "#2F6F6B", "#7A4E86", "#7A746A",
+  "#C06A33", "#2E8159", "#3D80BC", "#7A4E86", "#B59A3C", "#CB453B",
+  "#4C5B82", "#8E5B6E", "#A6694A", "#2F6F6B", "#7A746A",
 ];
 
 export default function SettingsPage() {
@@ -18,21 +25,26 @@ export default function SettingsPage() {
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
       <div className="mb-6">
-        <div className="label mb-2">Settings</div>
+        <div className="label mb-2">{tr("Settings")}</div>
         <h1 className="font-display text-5xl font-semibold tracking-tight text-ink sm:text-6xl">
-          Make it <span className="serif-italic text-amber/90">yours.</span>
+          {tr("Make it")}{" "}<span className="serif-italic text-amber/90">{tr("yours.")}</span>
         </h1>
+      </div>
+
+      <div className="mb-6 grid gap-6 lg:grid-cols-2">
+        <LanguageSection />
+        <CurrencySection />
+        <RemindersSection />
       </div>
 
       <DashboardSections />
 
       <div className="mb-4 mt-10">
         <h2 className="font-display text-2xl font-semibold text-ink">
-          Your <span className="serif-italic text-amber/90">categories.</span>
+          {tr("Your")}{" "}<span className="serif-italic text-amber/90">{tr("categories.")}</span>
         </h2>
         <p className="mt-1 max-w-lg text-sm text-ink/45">
-          Add, rename, recolor, or remove categories for expenses and income. Deleting one keeps
-          past transactions labeled.
+          {tr("Add, rename, recolor, or remove categories for expenses and income. Deleting one keeps past transactions labeled.")}
         </p>
       </div>
 
@@ -42,11 +54,307 @@ export default function SettingsPage() {
       </div>
 
       {categories.length === 0 && (
-        <p className="mt-4 font-mono text-xs text-ink/30">Loading categories…</p>
+        <p className="mt-4 font-mono text-xs text-ink/30">{tr("Loading categories…")}</p>
       )}
+
+      <div className="mt-10 space-y-6">
+        <AboutLink />
+        <AccountSection />
+      </div>
     </div>
   );
 }
+
+// ---------------------------------------------------------------- language
+function LanguageSection() {
+  const { lang, setLanguage } = useAppData();
+  return (
+    <section id="language" className="card scroll-mt-20 p-5 sm:p-6">
+      <h2 className="font-display text-xl font-semibold text-ink">
+        {tr("Language")} <span className="serif-italic text-amber/90">{tr("& words")}</span>
+      </h2>
+      <p className="mb-4 mt-1 max-w-lg text-sm text-ink/45">{tr("The app, the web and your AI summaries follow this.")}</p>
+      <div className="inline-flex gap-1 rounded-xl border border-line bg-ink/[0.02] p-1" role="radiogroup" aria-label={tr("Language")}>
+        {(["en", "bn"] as const).map((l) => (
+          <button
+            key={l}
+            type="button"
+            role="radio"
+            aria-checked={lang === l}
+            lang={l}
+            onClick={() => setLanguage(l)}
+            className={cn(
+              "min-h-[40px] cursor-pointer rounded-lg px-4 text-sm font-medium transition-colors duration-200",
+              lang === l ? "bg-ink/[0.06] text-ink" : "text-ink/50 hover:text-ink/80",
+            )}
+          >
+            {l === "bn" ? "বাংলা" : "English"}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------- currency
+function CurrencySection() {
+  const { currency, setCurrencyCode } = useAppData();
+  return (
+    <section id="currency" className="card scroll-mt-20 p-5 sm:p-6">
+      <h2 className="font-display text-xl font-semibold text-ink">
+        {tr("Currency")}{" "}<span className="serif-italic text-amber/90">{tr("& money")}</span>
+      </h2>
+      <p className="mb-4 mt-1 max-w-lg text-sm text-ink/45">
+        {tr("How amounts are written everywhere — here and in the Android app. It doesn't convert anything: your entries keep their numbers.")}
+      </p>
+      <select
+        value={currency}
+        onChange={(e) => setCurrencyCode(e.target.value)}
+        aria-label={tr("Currency")}
+        className="min-h-[44px] w-full max-w-sm cursor-pointer rounded-xl border border-line bg-card px-3 text-sm text-ink outline-hidden focus:border-amber/50"
+      >
+        {CURRENCIES.map((c) => (
+          <option key={c.code} value={c.code} className="bg-card">
+            {c.symbol.trim()} · {tr(c.name)} ({c.code})
+          </option>
+        ))}
+      </select>
+      <p className="mt-2 font-mono text-xs text-ink/40">{tr("Example: {amount}", { amount: formatCurrency(125000.5) })}</p>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------- reminders
+function Toggle({ on, onChange, label, hint }: { on: boolean; onChange: (v: boolean) => void; label: string; hint: string }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      onClick={() => onChange(!on)}
+      className="flex min-h-[56px] w-full cursor-pointer items-center gap-3 rounded-xl border border-line bg-ink/[0.02] px-3 py-2.5 text-left transition-colors hover:bg-ink/[0.04]"
+    >
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm text-ink/85">{label}</span>
+        <span className="block text-[11px] text-ink/40">{hint}</span>
+      </span>
+      <span aria-hidden className={cn("relative h-5 w-9 shrink-0 rounded-full transition-colors", on ? "bg-amber/70" : "bg-ink/20")}>
+        <span className={cn("absolute top-0.5 h-4 w-4 rounded-full bg-card shadow-xs transition-all", on ? "left-[18px]" : "left-0.5")} />
+      </span>
+    </button>
+  );
+}
+
+function RemindersSection() {
+  const { reminders, setReminders } = useAppData();
+  const set = (patch: Partial<typeof reminders>) => setReminders({ ...reminders, ...patch });
+  const [push, setPush] = useState<"unsupported" | "off" | "on" | "busy">("off");
+  const [pushError, setPushError] = useState("");
+
+  useEffect(() => {
+    if (!pushSupported()) return setPush("unsupported");
+    pushEnabled()
+      .then((on) => setPush(on ? "on" : "off"))
+      .catch(() => setPush("off"));
+  }, []);
+
+  const togglePush = async () => {
+    setPushError("");
+    const was = push;
+    setPush("busy");
+    try {
+      if (was === "on") {
+        await disablePush();
+        setPush("off");
+      } else {
+        await enablePush();
+        setPush("on");
+      }
+    } catch (err) {
+      setPushError(err instanceof Error ? err.message : tr("Couldn't change notifications."));
+      setPush(was);
+    }
+  };
+
+  return (
+    <section id="reminders" className="card scroll-mt-20 p-5 sm:p-6">
+      <h2 className="font-display text-xl font-semibold text-ink">
+        {tr("Reminders")}{" "}<span className="serif-italic text-amber/90">{tr("that help")}</span>
+      </h2>
+      <p className="mb-4 mt-1 max-w-lg text-sm text-ink/45">
+        {tr("Shown at the top of the app here, and as notifications on your phone (Android app) and — if you turn them on below — in this browser.")}
+      </p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <Toggle on={reminders.checkin} onChange={(v) => set({ checkin: v })} label={tr("Evening check-in")} hint={tr("“How was today?” if no mood is logged")} />
+        <div className={cn("flex min-h-[56px] items-center gap-3 rounded-xl border border-line px-3", !reminders.checkin && "opacity-50")}>
+          <span className="flex-1 text-sm text-ink/70">{tr("Check-in time")}</span>
+          <input
+            type="time"
+            value={reminders.checkinTime}
+            disabled={!reminders.checkin}
+            onChange={(e) => e.target.value && set({ checkinTime: e.target.value })}
+            aria-label={tr("Check-in time")}
+            className="min-h-[40px] rounded-lg border border-line bg-card px-2 text-sm text-ink outline-hidden focus:border-amber/50"
+          />
+        </div>
+        <Toggle on={reminders.bills} onChange={(v) => set({ bills: v })} label={tr("Bills")} hint={tr("The day before a bill is due, and when it's late")} />
+        <Toggle on={reminders.budgets} onChange={(v) => set({ budgets: v })} label={tr("Budgets")} hint={tr("When a category reaches 80% and 100%")} />
+        <Toggle on={reminders.dhar} onChange={(v) => set({ dhar: v })} label={tr("Dhar")} hint={tr("The day before money lent or borrowed is due back")} />
+      </div>
+      <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-line pt-4">
+        <span className="min-w-0 flex-1 text-sm text-ink/70">
+          {tr("Notifications in this browser")}
+          <span className="block text-[11px] text-ink/40">
+            {push === "unsupported"
+              ? tr("Not available here (or not set up on the server yet).")
+              : push === "on"
+                ? tr("On — you'll get the evening reminder here.")
+                : tr("Off — reminders only show inside the app.")}
+          </span>
+        </span>
+        {push !== "unsupported" && (
+          <button
+            type="button"
+            onClick={() => void togglePush()}
+            disabled={push === "busy"}
+            className={cn(
+              "inline-flex min-h-[40px] cursor-pointer items-center gap-2 rounded-xl px-4 text-sm font-semibold disabled:opacity-50",
+              push === "on" ? "border border-line text-ink/75 hover:bg-ink/[0.04]" : "entry-btn text-paper",
+            )}
+          >
+            <BellRing className="h-4 w-4" aria-hidden />
+            {push === "on" ? tr("Turn off") : tr("Turn on")}
+          </button>
+        )}
+      </div>
+      {pushError && (
+        <p className="mt-2 text-xs text-expense" role="alert">
+          {pushError}
+        </p>
+      )}
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------- about
+function AboutLink() {
+  return (
+    <Link
+      href="/app/settings/about"
+      className="card group flex cursor-pointer items-center gap-4 p-5 transition-colors hover:border-amber/30 sm:p-6"
+    >
+      <Logo size={44} />
+      <span className="min-w-0 flex-1">
+        <span className="block font-display text-xl font-semibold text-ink">{tr("About the app")}</span>
+        <span className="mt-0.5 block text-sm text-ink/45">{tr("Everything Catalyst does on the web, in one place.")}</span>
+      </span>
+      <ChevronRight className="h-5 w-5 shrink-0 text-ink/30 transition-transform group-hover:translate-x-0.5" aria-hidden />
+    </Link>
+  );
+}
+
+// ---------------------------------------------------------------- account
+function AccountSection() {
+  const router = useRouter();
+  const [email, setEmail] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState("");
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    createClient()
+      .auth.getUser()
+      .then(({ data }) => setEmail(data.user?.email ?? null));
+  }, []);
+
+  const remove = async () => {
+    if (confirm !== "DELETE" || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/account/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirm }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || tr("Couldn't delete the account."));
+      await createClient().auth.signOut();
+      router.push("/");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : tr("Couldn't delete the account."));
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section id="account" className="card scroll-mt-20 p-5 sm:p-6">
+      <h2 className="font-display text-xl font-semibold text-ink">
+        {tr("Your")}{" "}<span className="serif-italic text-amber/90">{tr("account")}</span>
+      </h2>
+      <p className="mt-1 text-sm text-ink/45">
+        {tr("Signed in as {email}. To change your password, sign out and use “Forgot password?” on the login page.", { email: email ?? "…" })}
+      </p>
+      <div className="mt-5 rounded-xl border border-expense/30 bg-expense/[0.04] p-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="min-w-0 flex-1 text-sm text-ink/75">
+            {tr("Delete account")}
+            <span className="block text-[11px] text-ink/45">
+              {tr("Permanently removes your account and everything in it — entries, moods, boards, wallets, dhar. This can't be undone.")}
+            </span>
+          </span>
+          {!open && (
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              className="inline-flex min-h-[40px] cursor-pointer items-center gap-2 rounded-xl border border-expense/40 px-4 text-sm font-semibold text-expense transition-colors hover:bg-expense/10"
+            >
+              <Trash2 className="h-4 w-4" aria-hidden />{" "}{tr("Delete…")}
+            </button>
+          )}
+        </div>
+        {open && (
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <input
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              placeholder={tr("Type DELETE")}
+              aria-label={tr("Type DELETE to confirm")}
+              className="min-h-[40px] w-40 rounded-lg border border-line bg-card px-3 font-mono text-sm text-ink outline-hidden focus:border-expense/50"
+            />
+            <button
+              type="button"
+              onClick={() => void remove()}
+              disabled={confirm !== "DELETE" || busy}
+              className="inline-flex min-h-[40px] cursor-pointer items-center gap-2 rounded-xl bg-expense px-4 text-sm font-semibold text-paper disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {busy && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
+              {tr("Delete my account")}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                setConfirm("");
+              }}
+              className="min-h-[40px] cursor-pointer rounded-xl px-3 text-sm text-ink/60 hover:bg-ink/[0.04]"
+            >
+              {tr("Cancel")}
+            </button>
+          </div>
+        )}
+        {error && (
+          <p className="mt-2 text-xs text-expense" role="alert">
+            {error}
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
 
 // Show / hide each of the dashboard's sections. Hiding never touches data.
 function DashboardSections() {
@@ -58,7 +366,7 @@ function DashboardSections() {
     <section id="dashboard" className="card scroll-mt-20 p-5 sm:p-6">
       <div className="mb-1 flex items-center justify-between gap-3">
         <h2 className="font-display text-xl font-semibold text-ink">
-          Dashboard <span className="serif-italic text-amber/90">sections</span>
+          {tr("Dashboard")}{" "}<span className="serif-italic text-amber/90">{tr("sections")}</span>
         </h2>
         <div className="flex items-center gap-3">
           {hidden.length > 0 && (
@@ -66,7 +374,7 @@ function DashboardSections() {
               onClick={() => setDashboardHidden([])}
               className="cursor-pointer font-mono text-[11px] uppercase tracking-widest text-amber/80 transition-colors hover:text-amber"
             >
-              Show all
+              {tr("Show all")}
             </button>
           )}
           <span className="label">
@@ -75,8 +383,7 @@ function DashboardSections() {
         </div>
       </div>
       <p className="mb-4 max-w-lg text-sm text-ink/45">
-        Choose what the dashboard shows. Hidden sections keep all their data — it&apos;s still
-        recorded and comes back the moment you turn the section on.
+        {tr("Choose what the dashboard shows. Hidden sections keep all their data — it's still recorded and comes back the moment you turn the section on.")}
       </p>
 
       <ul className="grid gap-2 sm:grid-cols-2">
@@ -98,8 +405,8 @@ function DashboardSections() {
                 )}
               >
                 <span className="min-w-0 flex-1">
-                  <span className={cn("block text-sm", on ? "text-ink/85" : "text-ink/45")}>{s.label}</span>
-                  <span className="block truncate text-[11px] text-ink/35">{s.hint}</span>
+                  <span className={cn("block text-sm", on ? "text-ink/85" : "text-ink/45")}>{tr(s.label)}</span>
+                  <span className="block truncate text-[11px] text-ink/35">{tr(s.hint)}</span>
                 </span>
                 <span
                   aria-hidden
@@ -169,7 +476,7 @@ function CategorySection({ kind }: { kind: Kind }) {
             disabled={adding}
             className="cursor-pointer font-mono text-[11px] uppercase tracking-widest text-amber/80 transition-colors hover:text-amber disabled:opacity-40"
           >
-            Restore defaults
+            {tr("Restore defaults")}
           </button>
           <span className="label">{list.length}</span>
         </div>
@@ -191,7 +498,7 @@ function CategorySection({ kind }: { kind: Kind }) {
                 const v = e.target.value.trim();
                 if (v && v !== c.name) editCategory(c.id, { name: v });
               }}
-              aria-label={`Rename ${c.name}`}
+              aria-label={tr("Rename {name}", { name: c.name })}
               className="w-0 min-w-0 flex-1 bg-transparent text-sm text-ink/85 outline-hidden focus:text-ink"
             />
             <div className="flex items-center gap-1">
@@ -199,7 +506,7 @@ function CategorySection({ kind }: { kind: Kind }) {
                 <button
                   key={s}
                   onClick={() => editCategory(c.id, { color: s })}
-                  aria-label={`Set color ${s}`}
+                  aria-label={tr("Set color {s}", { s })}
                   className="h-4 w-4 cursor-pointer rounded-full ring-offset-1 ring-offset-card transition-transform hover:scale-125"
                   style={{ backgroundColor: s, boxShadow: c.color === s ? `0 0 0 2px ${s}` : undefined }}
                 />
@@ -207,7 +514,7 @@ function CategorySection({ kind }: { kind: Kind }) {
             </div>
             <button
               onClick={() => removeCategory(c.id)}
-              aria-label={`Delete ${c.name}`}
+              aria-label={tr("Delete {name}", { name: c.name })}
               className="cursor-pointer rounded-lg p-1.5 text-ink/30 transition-colors hover:bg-ink/5 hover:text-expense"
             >
               <Trash2 className="h-4 w-4" aria-hidden />
@@ -223,15 +530,15 @@ function CategorySection({ kind }: { kind: Kind }) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && add()}
-            placeholder={`New ${kind} category`}
+            placeholder={tr("New {kind} category", { kind })}
             maxLength={LIMITS.name}
-            aria-label={`New ${kind} category name`}
+            aria-label={tr("New {kind} category name", { kind })}
             className="min-h-[40px] w-0 min-w-0 flex-1 rounded-lg border border-line bg-ink/[0.02] px-3 text-sm text-ink outline-hidden focus:border-amber/50"
           />
           <button
             onClick={add}
             disabled={!name.trim() || adding}
-            aria-label="Add category"
+            aria-label={tr("Add category")}
             className="entry-btn flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg text-paper disabled:opacity-40"
           >
             <Plus className="h-4 w-4" aria-hidden strokeWidth={2.5} />
@@ -242,7 +549,7 @@ function CategorySection({ kind }: { kind: Kind }) {
             <button
               key={s}
               onClick={() => setColor(s)}
-              aria-label={`Pick color ${s}`}
+              aria-label={tr("Pick color {s}", { s })}
               className={cn(
                 "flex h-6 w-6 cursor-pointer items-center justify-center rounded-full transition-transform hover:scale-110",
               )}

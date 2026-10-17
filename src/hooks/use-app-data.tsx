@@ -2,6 +2,7 @@
 
 // Central client store for the authenticated app.
 import {
+  Fragment,
   createContext,
   useCallback,
   useContext,
@@ -20,6 +21,8 @@ import type {
   BoardKind,
   Budget,
   Category,
+  Debt,
+  DebtPayment,
   Goal,
   JournalEntry,
   MoodLog,
@@ -27,13 +30,19 @@ import type {
   NewBill,
   NewBudget,
   NewCategory,
+  NewDebt,
+  NewDebtPayment,
   NewGoal,
   NewJournalEntry,
   NewMoodLog,
   NewTicket,
   NewTransaction,
+  NewTransfer,
+  NewWallet,
   Ticket,
   Transaction,
+  Transfer,
+  Wallet,
 } from "@/types";
 import { BREAK_SAVING, DEFAULT_BOARD_COLUMNS } from "@/types";
 import {
@@ -73,10 +82,33 @@ import {
   updateBoardColumn,
   updateTicket,
 } from "@/lib/db/boards";
+import {
+  addTransfer,
+  addWallet,
+  deleteTransfer,
+  deleteWallet,
+  listTransfers,
+  listWallets,
+  seedDefaultWallets,
+  updateWallet,
+} from "@/lib/db/wallets";
+import {
+  addDebt,
+  addDebtPayment,
+  deleteDebt,
+  deleteDebtPayment,
+  listDebtPayments,
+  listDebts,
+  updateDebt,
+} from "@/lib/db/debts";
 import { loadPrefs, savePrefs } from "@/lib/db/prefs";
 import { parseHiddenSections, type DashboardSectionId } from "@/lib/dashboard-sections";
 import { SORT_STEP, sortBetween } from "@/lib/boards";
-import { toDateKey } from "@/lib/utils";
+import { setCurrency } from "@/lib/currency";
+import { DEFAULT_REMINDERS, parseReminders, type ReminderPrefs } from "@/lib/reminders";
+import { billCategory, budgetUse, debtRemaining, defaultWallet, nextDue } from "@/lib/money";
+import { formatCurrency, nowTime, toDateKey, combineDateTime } from "@/lib/utils";
+import { asLang, rememberLang, setLang, storedLang, type Lang } from "@/lib/i18n";
 
 export type EntryTab = "money" | "mood" | "saving";
 
@@ -85,6 +117,23 @@ export type TicketFields = Pick<Ticket, "title" | "description" | "priority" | "
 
 // Key for the hidden dashboard sections, both in localStorage and user metadata.
 const DASHBOARD_HIDDEN = "dashboardHidden";
+
+export type { ReminderPrefs } from "@/lib/reminders";
+
+/** A short notice at the bottom of the screen (budget alerts, "Paid — Undo"). */
+export interface Toast {
+  id: number;
+  message: string;
+  tone?: "info" | "warn";
+  action?: { label: string; run: () => void | Promise<void> };
+}
+
+/** What paying a bill changed, so Undo can put it back. */
+export interface BillPayment {
+  billId: string;
+  txnId: string;
+  before: { dueOn: string; isPaid: boolean; lastPaidTxn: string | null };
+}
 
 interface AppDataValue {
   loading: boolean;
@@ -100,6 +149,12 @@ interface AppDataValue {
   boards: Board[];
   boardColumns: BoardColumn[];
   tickets: Ticket[];
+  wallets: Wallet[];
+  transfers: Transfer[];
+  debts: Debt[];
+  debtPayments: DebtPayment[];
+  /** False until the database has the wallets update (db/supabase.sql). */
+  walletsReady: boolean;
 
   // entry modal
   entryOpen: boolean;
@@ -133,8 +188,23 @@ interface AppDataValue {
   dashboardHidden: DashboardSectionId[] | null;
   setDashboardHidden: (ids: DashboardSectionId[]) => void;
 
+  // The interface language (English or Bangla — shared with the Android app).
+  lang: Lang;
+  setLanguage: (l: Lang) => void;
+
+  // The account's currency (BDT unless changed in Settings) and reminder settings.
+  currency: string;
+  setCurrencyCode: (code: string) => void;
+  reminders: ReminderPrefs;
+  setReminders: (r: ReminderPrefs) => void;
+
+  // short notices at the bottom of the screen
+  toasts: Toast[];
+  pushToast: (t: Omit<Toast, "id">) => void;
+  dismissToast: (id: number) => void;
+
   // money / mood
-  addMoney: (t: NewTransaction) => Promise<void>;
+  addMoney: (t: NewTransaction) => Promise<Transaction>;
   /** Saves new values for a transaction; everything computed from the ledger follows. */
   editMoney: (id: string, t: NewTransaction) => Promise<void>;
   removeMoney: (id: string) => Promise<void>;
@@ -161,6 +231,28 @@ interface AppDataValue {
   createBill: (b: NewBill) => Promise<void>;
   editBill: (id: string, p: Partial<NewBill>) => Promise<void>;
   removeBill: (id: string) => Promise<void>;
+  /** Logs the bill as an expense and moves a repeating bill to its next due date. */
+  payBill: (id: string) => Promise<BillPayment>;
+  /** Takes a payment back: removes its expense and restores the bill. */
+  undoBillPayment: (p: BillPayment) => Promise<void>;
+  /** A paid one-off bill back to unpaid, optionally removing the expense it logged. */
+  unpayBill: (id: string, removeExpense: boolean) => Promise<void>;
+
+  // wallets + transfers
+  createWallet: (w: NewWallet) => Promise<Wallet>;
+  editWallet: (id: string, p: Partial<NewWallet>) => Promise<void>;
+  removeWallet: (id: string) => Promise<void>;
+  /** A transfer between two wallets; a fee (bKash cash-out etc.) is logged as an expense. */
+  createTransfer: (t: NewTransfer, fee?: number) => Promise<void>;
+  removeTransfer: (id: string) => Promise<void>;
+
+  // dhar / baki
+  createDebt: (d: NewDebt) => Promise<Debt>;
+  editDebt: (id: string, p: Partial<NewDebt>) => Promise<void>;
+  removeDebt: (id: string) => Promise<void>;
+  /** A part (or full) payment; a debt that's paid off closes itself. */
+  recordDebtPayment: (p: NewDebtPayment) => Promise<void>;
+  removeDebtPayment: (id: string) => Promise<void>;
 
   // journal
   createJournal: (j: NewJournalEntry) => Promise<void>;
@@ -206,6 +298,96 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [boards, setBoards] = useState<Board[]>([]);
   const [boardColumns, setBoardColumns] = useState<BoardColumn[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [transfers, setTransfers] = useState<Transfer[]>([]);
+  const [debts, setDebts] = useState<Debt[]>([]);
+  const [debtPayments, setDebtPayments] = useState<DebtPayment[]>([]);
+  const [walletsReady, setWalletsReady] = useState(false);
+
+  // ---- notices
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const toastId = useRef(0);
+  const dismissToast = useCallback((id: number) => setToasts((p) => p.filter((t) => t.id !== id)), []);
+  const pushToast = useCallback(
+    (t: Omit<Toast, "id">) => {
+      const id = ++toastId.current;
+      setToasts((p) => [...p.slice(-2), { ...t, id }]);
+      setTimeout(() => dismissToast(id), t.action ? 8000 : 6000);
+    },
+    [dismissToast],
+  );
+
+  // ---- language, currency, reminders (account preferences, local copy first)
+  const [lang, setLangState] = useState<Lang>("en");
+  const [currency, setCurrencyState] = useState("BDT");
+  const [reminders, setRemindersState] = useState<ReminderPrefs>(DEFAULT_REMINDERS);
+  const prefsTouched = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    // After the first paint, so the first render matches the server's (English) HTML.
+    setLangState(setLang(storedLang()));
+    try {
+      const code = localStorage.getItem("currency");
+      if (code) setCurrencyState(setCurrency(code).code);
+      const r = localStorage.getItem("reminders");
+      if (r) setRemindersState(parseReminders(JSON.parse(r)));
+    } catch {
+      /* ignore */
+    }
+    loadPrefs()
+      .then((meta) => {
+        if (!prefsTouched.current.has("currency") && typeof meta.currency === "string") {
+          setCurrencyState(setCurrency(meta.currency).code);
+          try {
+            localStorage.setItem("currency", meta.currency);
+          } catch {
+            /* ignore */
+          }
+        }
+        if (!prefsTouched.current.has("lang") && (meta.lang === "en" || meta.lang === "bn")) {
+          setLangState(setLang(meta.lang));
+          rememberLang(asLang(meta.lang));
+        }
+        if (!prefsTouched.current.has("reminders") && meta.reminders) {
+          const r = parseReminders(meta.reminders);
+          setRemindersState(r);
+          try {
+            localStorage.setItem("reminders", JSON.stringify(r));
+          } catch {
+            /* ignore */
+          }
+        }
+      })
+      .catch(() => {
+        /* the dashboard-sections loader already logs this */
+      });
+  }, []);
+  const setLanguage = useCallback((l: Lang) => {
+    prefsTouched.current.add("lang");
+    setLangState(setLang(l));
+    rememberLang(l);
+    savePrefs({ lang: l }).catch((err) => console.warn("[catalyst] could not save the language", err));
+  }, []);
+  const setCurrencyCode = useCallback((code: string) => {
+    prefsTouched.current.add("currency");
+    const c = setCurrency(code);
+    setCurrencyState(c.code);
+    try {
+      localStorage.setItem("currency", c.code);
+    } catch {
+      /* ignore */
+    }
+    savePrefs({ currency: c.code }).catch((err) => console.warn("[catalyst] could not save the currency", err));
+  }, []);
+  const setReminders = useCallback((r: ReminderPrefs) => {
+    prefsTouched.current.add("reminders");
+    setRemindersState(r);
+    try {
+      localStorage.setItem("reminders", JSON.stringify(r));
+    } catch {
+      /* ignore */
+    }
+    savePrefs({ reminders: r }).catch((err) => console.warn("[catalyst] could not save reminders", err));
+  }, []);
 
   const [entryOpen, setEntryOpen] = useState(false);
   const [entryTab, setEntryTab] = useState<EntryTab>("money");
@@ -306,7 +488,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       }
     };
     (async () => {
-      const [cats, txs, mds, bgs, gls, bls, jnl, acts, alogs, brds, bcols, tks] = await Promise.all([
+      // Wallets need the newer database update; until it's run they're simply off.
+      const walletLoad = listWallets()
+        .then(async (list) => ({ ready: true, list: list.length ? list : await seedDefaultWallets() }))
+        .catch((err) => {
+          console.warn("[catalyst] wallets unavailable — run db/supabase.sql?", err);
+          return { ready: false, list: [] as Wallet[] };
+        });
+      const [cats, txs, mds, bgs, gls, bls, jnl, acts, alogs, brds, bcols, tks, wl, trs, dbs, dps] = await Promise.all([
         safe(listCategories, [] as Category[], "categories"),
         safe(listTransactions, [] as Transaction[], "transactions"),
         safe(listMoods, [] as MoodLog[], "moods"),
@@ -319,6 +508,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         safe(listBoards, [] as Board[], "boards"),
         safe(listBoardColumns, [] as BoardColumn[], "boardColumns"),
         safe(listTickets, [] as Ticket[], "tickets"),
+        walletLoad,
+        safe(listTransfers, [] as Transfer[], "transfers"),
+        safe(listDebts, [] as Debt[], "debts"),
+        safe(listDebtPayments, [] as DebtPayment[], "debtPayments"),
       ]);
       let finalCats = cats;
       if (cats.length === 0) {
@@ -361,6 +554,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       setBoards(brds);
       setBoardColumns(bcols);
       setTickets(tks);
+      setWallets(wl.list);
+      setWalletsReady(wl.ready);
+      setTransfers(trs);
+      setDebts(dbs);
+      setDebtPayments(dps);
       setLoading(false);
     })();
   }, []);
@@ -383,19 +581,74 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }, []);
   const closeListScan = useCallback(() => setListScan(null), []);
 
-  const addMoney = useCallback(async (t: NewTransaction) => {
-    const c = await addTransaction(t);
-    setTransactions((p) => [c, ...p].sort((a, b) => b.occurredOn.localeCompare(a.occurredOn)));
-  }, []);
-  const editMoney = useCallback(async (id: string, t: NewTransaction) => {
-    const c = await updateTransaction(id, t);
-    // Same order as the database list: newest day first, then newest added.
-    setTransactions((p) =>
-      p
+  // Budget alerts: when an expense takes a budget past 80% or 100% this month —
+  // each level once per budget per month.
+  const txRef = useRef(transactions);
+  txRef.current = transactions;
+  const budgetsRef = useRef(budgets);
+  budgetsRef.current = budgets;
+  const remindersRef = useRef(reminders);
+  remindersRef.current = reminders;
+  const checkBudgets = useCallback(
+    (before: Transaction[], after: Transaction[]) => {
+      if (!remindersRef.current.budgets) return;
+      const month = toDateKey(new Date()).slice(0, 7);
+      let seen: string[] = [];
+      try {
+        seen = JSON.parse(localStorage.getItem(`budget-alerts:${month}`) ?? "[]");
+      } catch {
+        /* ignore */
+      }
+      for (const b of budgetsRef.current) {
+        const was = budgetUse(b, before).ratio;
+        const { ratio, spent } = budgetUse(b, after);
+        const level = ratio >= 1 ? 100 : ratio >= 0.8 ? 80 : 0;
+        const key = `${b.id}:${level}`;
+        if (!level || was >= level / 100 || seen.includes(key)) continue;
+        seen.push(key);
+        pushToast({
+          tone: "warn",
+          message:
+            level === 100
+              ? `${b.categoryName} budget is used up: ${formatCurrency(spent)} of ${formatCurrency(b.amount)} this month.`
+              : `${b.categoryName} budget is ${Math.round(ratio * 100)}% used: ${formatCurrency(spent)} of ${formatCurrency(b.amount)}.`,
+        });
+      }
+      try {
+        localStorage.setItem(`budget-alerts:${month}`, JSON.stringify(seen));
+      } catch {
+        /* ignore */
+      }
+    },
+    [pushToast],
+  );
+
+  const addMoney = useCallback(
+    async (t: NewTransaction) => {
+      const c = await addTransaction(t);
+      const before = txRef.current;
+      const after = [c, ...before].sort((a, b) => b.occurredOn.localeCompare(a.occurredOn));
+      txRef.current = after;
+      setTransactions(after);
+      if (c.kind === "expense") checkBudgets(before, after);
+      return c;
+    },
+    [checkBudgets],
+  );
+  const editMoney = useCallback(
+    async (id: string, t: NewTransaction) => {
+      const c = await updateTransaction(id, t);
+      const before = txRef.current;
+      // Same order as the database list: newest day first, then newest added.
+      const after = before
         .map((x) => (x.id === id ? c : x))
-        .sort((a, b) => b.occurredOn.localeCompare(a.occurredOn) || b.createdAt.localeCompare(a.createdAt)),
-    );
-  }, []);
+        .sort((a, b) => b.occurredOn.localeCompare(a.occurredOn) || b.createdAt.localeCompare(a.createdAt));
+      txRef.current = after;
+      setTransactions(after);
+      if (c.kind === "expense") checkBudgets(before, after);
+    },
+    [checkBudgets],
+  );
   const removeMoney = useCallback(async (id: string) => {
     await deleteTransaction(id);
     setTransactions((p) => p.filter((t) => t.id !== id));
@@ -468,6 +721,156 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const removeBill = useCallback(async (id: string) => {
     await deleteBill(id);
     setBills((p) => p.filter((b) => b.id !== id));
+  }, []);
+  const billsRef = useRef(bills);
+  billsRef.current = bills;
+  const sortBills = (list: Bill[]) => [...list].sort((a, b) => a.dueOn.localeCompare(b.dueOn));
+  const payBill = useCallback(
+    async (id: string): Promise<BillPayment> => {
+      const bill = billsRef.current.find((b) => b.id === id);
+      if (!bill) throw new Error("That bill no longer exists.");
+      const cat = billCategory(bill, categories);
+      const today = toDateKey(new Date());
+      const txn = await addMoney({
+        kind: "expense",
+        amount: bill.amount,
+        categoryId: cat?.id ?? null,
+        categoryName: cat?.name ?? "Other",
+        place: "",
+        note: bill.name,
+        occurredOn: today,
+        occurredAt: combineDateTime(today, nowTime()),
+        walletId: bill.walletId ?? defaultWallet(wallets)?.id ?? null,
+      });
+      const before = { dueOn: bill.dueOn, isPaid: bill.isPaid, lastPaidTxn: bill.lastPaidTxn };
+      const next = nextDue(bill.dueOn, bill.recurrence);
+      // A repeating bill moves to its next due date (still unpaid); a one-off is done.
+      const patch: Partial<NewBill> = next ? { dueOn: next, isPaid: false } : { isPaid: true };
+      if (walletsReady) patch.lastPaidTxn = txn.id;
+      await updateBill(id, patch);
+      setBills((p) => sortBills(p.map((b) => (b.id === id ? { ...b, ...patch } : b))));
+      return { billId: id, txnId: txn.id, before };
+    },
+    [addMoney, categories, wallets, walletsReady],
+  );
+  const undoBillPayment = useCallback(
+    async ({ billId, txnId, before }: BillPayment) => {
+      const patch: Partial<NewBill> = { dueOn: before.dueOn, isPaid: before.isPaid };
+      if (walletsReady) patch.lastPaidTxn = before.lastPaidTxn;
+      await updateBill(billId, patch);
+      setBills((p) => sortBills(p.map((b) => (b.id === billId ? { ...b, ...patch } : b))));
+      await deleteTransaction(txnId);
+      setTransactions((p) => p.filter((t) => t.id !== txnId));
+    },
+    [walletsReady],
+  );
+  const unpayBill = useCallback(
+    async (id: string, removeExpense: boolean) => {
+      const bill = billsRef.current.find((b) => b.id === id);
+      if (!bill) return;
+      const patch: Partial<NewBill> = { isPaid: false };
+      if (walletsReady && bill.lastPaidTxn) patch.lastPaidTxn = null;
+      await updateBill(id, patch);
+      setBills((p) => p.map((b) => (b.id === id ? { ...b, ...patch } : b)));
+      if (removeExpense && bill.lastPaidTxn) {
+        const txnId = bill.lastPaidTxn;
+        await deleteTransaction(txnId);
+        setTransactions((p) => p.filter((t) => t.id !== txnId));
+      }
+    },
+    [walletsReady],
+  );
+
+  // ---- wallets + transfers
+  const createWallet = useCallback(async (w: NewWallet) => {
+    const x = await addWallet(w);
+    setWallets((p) => [...p, x].sort((a, b) => a.sort - b.sort));
+    return x;
+  }, []);
+  const editWallet = useCallback(async (id: string, patch: Partial<NewWallet>) => {
+    await updateWallet(id, patch);
+    setWallets((p) => p.map((w) => (w.id === id ? { ...w, ...patch } : w)).sort((a, b) => a.sort - b.sort));
+  }, []);
+  const removeWallet = useCallback(async (id: string) => {
+    await deleteWallet(id); // entries move to the default wallet; its transfers go
+    setWallets((p) => p.filter((w) => w.id !== id));
+    setTransfers((p) => p.filter((t) => t.fromWallet !== id && t.toWallet !== id));
+    setTransactions((p) => p.map((t) => (t.walletId === id ? { ...t, walletId: null } : t)));
+    setDebts((p) => p.map((d) => (d.walletId === id ? { ...d, walletId: null } : d)));
+    setDebtPayments((p) => p.map((x) => (x.walletId === id ? { ...x, walletId: null } : x)));
+    setBills((p) => p.map((b) => (b.walletId === id ? { ...b, walletId: null } : b)));
+  }, []);
+  const createTransfer = useCallback(
+    async (t: NewTransfer, fee?: number) => {
+      const x = await addTransfer(t);
+      setTransfers((p) => [x, ...p].sort((a, b) => b.occurredOn.localeCompare(a.occurredOn)));
+      if (fee && fee > 0) {
+        const from = wallets.find((w) => w.id === t.fromWallet);
+        const cat =
+          categories.find((c) => c.kind === "expense" && /^(fees?|charges?)$/i.test(c.name)) ??
+          categories.find((c) => c.kind === "expense" && c.name.toLowerCase() === "other");
+        await addMoney({
+          kind: "expense",
+          amount: Math.round(fee * 100) / 100,
+          categoryId: cat?.id ?? null,
+          categoryName: cat?.name ?? "Other",
+          place: "",
+          note: `${from?.name ?? "Transfer"} fee`,
+          occurredOn: t.occurredOn,
+          occurredAt: t.occurredAt,
+          walletId: t.fromWallet,
+        });
+      }
+    },
+    [addMoney, categories, wallets],
+  );
+  const removeTransfer = useCallback(async (id: string) => {
+    await deleteTransfer(id);
+    setTransfers((p) => p.filter((t) => t.id !== id));
+  }, []);
+
+  // ---- dhar / baki
+  const createDebt = useCallback(async (d: NewDebt) => {
+    const x = await addDebt(d);
+    setDebts((p) => [x, ...p]);
+    return x;
+  }, []);
+  const editDebt = useCallback(async (id: string, patch: Partial<NewDebt>) => {
+    await updateDebt(id, patch);
+    setDebts((p) => p.map((d) => (d.id === id ? { ...d, ...patch } : d)));
+  }, []);
+  const removeDebt = useCallback(async (id: string) => {
+    await deleteDebt(id); // its payments go with it
+    setDebts((p) => p.filter((d) => d.id !== id));
+    setDebtPayments((p) => p.filter((x) => x.debtId !== id));
+  }, []);
+  const debtsRef = useRef(debts);
+  debtsRef.current = debts;
+  const paymentsRef = useRef(debtPayments);
+  paymentsRef.current = debtPayments;
+  const recordDebtPayment = useCallback(async (input: NewDebtPayment) => {
+    const x = await addDebtPayment(input);
+    const payments = [...paymentsRef.current, x];
+    paymentsRef.current = payments;
+    setDebtPayments(payments);
+    const debt = debtsRef.current.find((d) => d.id === input.debtId);
+    if (debt && !debt.closed && debtRemaining(debt, payments) <= 0) {
+      await updateDebt(debt.id, { closed: true });
+      setDebts((p) => p.map((d) => (d.id === debt.id ? { ...d, closed: true } : d)));
+    }
+  }, []);
+  const removeDebtPayment = useCallback(async (id: string) => {
+    const pay = paymentsRef.current.find((x) => x.id === id);
+    await deleteDebtPayment(id);
+    const payments = paymentsRef.current.filter((x) => x.id !== id);
+    paymentsRef.current = payments;
+    setDebtPayments(payments);
+    // Taking a payment back reopens a debt it had closed.
+    const debt = pay && debtsRef.current.find((d) => d.id === pay.debtId);
+    if (debt && debt.closed && debtRemaining(debt, payments) > 0) {
+      await updateDebt(debt.id, { closed: false });
+      setDebts((p) => p.map((d) => (d.id === debt.id ? { ...d, closed: false } : d)));
+    }
   }, []);
 
   const createJournal = useCallback(async (j: NewJournalEntry) => {
@@ -702,6 +1105,20 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       boards,
       boardColumns,
       tickets,
+      wallets,
+      transfers,
+      debts,
+      debtPayments,
+      walletsReady,
+      lang,
+      setLanguage,
+      currency,
+      setCurrencyCode,
+      reminders,
+      setReminders,
+      toasts,
+      pushToast,
+      dismissToast,
       entryOpen,
       entryTab,
       entryDate,
@@ -738,6 +1155,19 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       createBill,
       editBill,
       removeBill,
+      payBill,
+      undoBillPayment,
+      unpayBill,
+      createWallet,
+      editWallet,
+      removeWallet,
+      createTransfer,
+      removeTransfer,
+      createDebt,
+      editDebt,
+      removeDebt,
+      recordDebtPayment,
+      removeDebtPayment,
       createJournal,
       removeJournal,
       createActivity,
@@ -767,11 +1197,19 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       removeBudget, createGoal, editGoal, removeGoal, createBill, editBill, removeBill, createJournal,
       removeJournal, createActivity, removeActivity, toggleActivity, createBoard, renameBoard, removeBoard,
       createColumn, renameColumn, moveColumn, placeColumn, removeColumn, createTicket, editTicket, placeTicket, removeTicket,
-      addTickets, removeTickets,
+      addTickets, removeTickets, wallets, transfers, debts, debtPayments, walletsReady, lang, setLanguage, currency, setCurrencyCode,
+      reminders, setReminders, toasts, pushToast, dismissToast, payBill, undoBillPayment, unpayBill, createWallet,
+      editWallet, removeWallet, createTransfer, removeTransfer, createDebt, editDebt, removeDebt, recordDebtPayment,
+      removeDebtPayment,
     ],
   );
 
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  // A language switch re-renders everything: the text comes from tr().
+  return (
+    <Ctx.Provider value={value}>
+      <Fragment key={lang}>{children}</Fragment>
+    </Ctx.Provider>
+  );
 }
 
 export function useAppData(): AppDataValue {

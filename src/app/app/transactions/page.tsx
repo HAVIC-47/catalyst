@@ -6,10 +6,13 @@ import { ArrowUpRight, ArrowDownLeft, Pencil, Trash2, MapPin, Search, SlidersHor
 import { useAppData } from "@/hooks/use-app-data";
 import { useDebounce } from "@/hooks/use-debounce";
 import type { Kind, Transaction } from "@/types";
-import { cn, formatCurrency, tintText } from "@/lib/utils";
+import { cn, currencySymbol, formatCurrency, tintText, fmt } from "@/lib/utils";
+import { currency } from "@/lib/currency";
+import { defaultWallet } from "@/lib/money";
 import { inRange, rangeWindow, type Range } from "@/lib/range";
 import { AiInsights } from "@/components/ai/ai-insights";
 import { TransactionEditor } from "@/components/entry/transaction-editor";
+import { tr } from "@/lib/i18n";
 
 type KindFilter = "all" | Kind;
 type PeriodFilter = "all" | Range | "custom";
@@ -36,7 +39,14 @@ const amountOrNull = (s: string) => {
 };
 
 export default function TransactionsPage() {
-  const { transactions, categories, removeMoney, openEntry, loading } = useAppData();
+  const { transactions, categories, wallets, walletsReady, removeMoney, openEntry, loading } = useAppData();
+  // Each entry's wallet (no wallet = the default one); shown once there's a choice of wallets.
+  const walletOf = useMemo(() => {
+    const byId = new Map(wallets.map((w) => [w.id, w]));
+    const fallback = defaultWallet(wallets);
+    return (t: Transaction) => (t.walletId ? byId.get(t.walletId) : undefined) ?? fallback;
+  }, [wallets]);
+  const showWallets = walletsReady && wallets.filter((w) => !w.archived).length > 1;
   const colorOf = useMemo(
     () => new Map(categories.map((c) => [c.name, c.color])),
     [categories],
@@ -57,11 +67,13 @@ export default function TransactionsPage() {
   const [category, setCategory] = useState("");
   const [minAmt, setMinAmt] = useState("");
   const [maxAmt, setMaxAmt] = useState("");
+  const [walletFilter, setWalletFilter] = useState("");
 
   const activeFilters =
     (kind !== "all" ? 1 : 0) +
     (period !== "all" ? 1 : 0) +
     (category ? 1 : 0) +
+    (walletFilter ? 1 : 0) +
     (minAmt.trim() || maxAmt.trim() ? 1 : 0);
   const filtering = activeFilters > 0 || q.trim() !== "";
 
@@ -73,6 +85,7 @@ export default function TransactionsPage() {
     setCategory("");
     setMinAmt("");
     setMaxAmt("");
+    setWalletFilter("");
   };
   const clearAll = () => {
     resetFilters();
@@ -82,7 +95,7 @@ export default function TransactionsPage() {
   // Searchable text per transaction: note, category, place, kind, amount (raw and
   // grouped, e.g. "13000" and "13,000") and the spelled-out date ("monday october 12").
   const haystacks = useMemo(() => {
-    const grouped = new Intl.NumberFormat("en-IN");
+    const grouped = new Intl.NumberFormat(currency().locale);
     return new Map(
       transactions.map((t) => [
         t.id,
@@ -90,16 +103,20 @@ export default function TransactionsPage() {
           t.note,
           t.categoryName,
           t.place,
+          showWallets ? (walletOf(t)?.name ?? "") : "",
           t.kind,
           String(t.amount),
           grouped.format(t.amount),
           format(parseISO(t.occurredOn), "EEEE MMMM d yyyy"),
+          // the date and category as shown (Bangla month names, category names)
+          fmt(parseISO(t.occurredOn), "EEEE MMMM d yyyy"),
+          tr(t.categoryName),
         ]
           .join(" ")
           .toLowerCase(),
       ]),
     );
-  }, [transactions]);
+  }, [transactions, showWallets, walletOf]);
 
   const categoryOptions = useMemo(() => {
     const names = new Set<string>();
@@ -126,6 +143,7 @@ export default function TransactionsPage() {
     return transactions.filter((t) => {
       if (kind !== "all" && t.kind !== kind) return false;
       if (category && t.categoryName !== category) return false;
+      if (walletFilter && walletOf(t)?.id !== walletFilter) return false;
       if (win && !inRange(t.occurredOn, win.startKey, win.endKey)) return false;
       if (min !== null && t.amount < min) return false;
       if (max !== null && t.amount > max) return false;
@@ -135,7 +153,7 @@ export default function TransactionsPage() {
       }
       return true;
     });
-  }, [transactions, haystacks, q, kind, category, period, from, to, minAmt, maxAmt]);
+  }, [transactions, haystacks, q, kind, category, walletFilter, walletOf, period, from, to, minAmt, maxAmt]);
 
   const totals = useMemo(() => {
     let income = 0,
@@ -161,16 +179,16 @@ export default function TransactionsPage() {
     <div className="px-4 py-6 sm:px-6 lg:px-8">
       <div className="mb-6 flex items-end justify-between gap-4">
         <div>
-          <div className="label mb-2">Ledger · {transactions.length} total</div>
+          <div className="label mb-2">{tr("Ledger · {n} total", { n: transactions.length })}</div>
           <h1 className="font-display text-5xl font-semibold tracking-tight text-ink sm:text-6xl">
-            Trans<span className="serif-italic text-amber/90">actions.</span>
+            {tr("Trans")}<span className="serif-italic text-amber/90">{tr("actions.")}</span>
           </h1>
         </div>
         <button
           onClick={() => openEntry({ tab: "money" })}
           className="entry-btn min-h-[42px] cursor-pointer rounded-xl px-4 text-sm font-semibold text-paper shadow-entry"
         >
-          + Add
+          {tr("+ Add")}
         </button>
       </div>
 
@@ -188,14 +206,14 @@ export default function TransactionsPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Escape" && setQuery("")}
-            placeholder="Search note, category, place, amount, date…"
-            aria-label="Search transactions"
+            placeholder={tr("Search note, category, place, amount, date…")}
+            aria-label={tr("Search transactions")}
             className="min-h-[42px] w-full rounded-xl border border-line bg-card pl-9 pr-9 text-sm text-ink outline-hidden placeholder:text-ink/30 focus:border-amber/50 [&::-webkit-search-cancel-button]:hidden"
           />
           {query && (
             <button
               onClick={() => setQuery("")}
-              aria-label="Clear search"
+              aria-label={tr("Clear search")}
               className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-lg text-ink/40 transition-colors hover:bg-ink/5 hover:text-ink"
             >
               <X className="h-4 w-4" aria-hidden />
@@ -206,7 +224,7 @@ export default function TransactionsPage() {
           onClick={() => setShowFilters((v) => !v)}
           aria-expanded={showFilters}
           aria-controls="ledger-filters"
-          aria-label="Filters"
+          aria-label={tr("Filters")}
           className={cn(
             "inline-flex min-h-[42px] shrink-0 cursor-pointer items-center gap-2 rounded-xl border px-3 text-sm font-medium transition-colors duration-200",
             showFilters || activeFilters > 0
@@ -215,7 +233,7 @@ export default function TransactionsPage() {
           )}
         >
           <SlidersHorizontal className="h-4 w-4" aria-hidden />
-          <span className="hidden sm:inline">Filters</span>
+          <span className="hidden sm:inline">{tr("Filters")}</span>
           {activeFilters > 0 && (
             <span className="entry-btn rounded-full px-1.5 font-mono text-[10px] leading-4">{activeFilters}</span>
           )}
@@ -224,11 +242,11 @@ export default function TransactionsPage() {
 
       {showFilters && (
         <div id="ledger-filters" className="card mb-4 space-y-4 p-4 sm:p-5">
-          <FilterRow label="Type">
+          <FilterRow label={tr("Type")}>
             <Segmented options={KIND_OPTIONS} value={kind} onChange={setKind} />
           </FilterRow>
 
-          <FilterRow label="Period">
+          <FilterRow label={tr("Period")}>
             <Segmented options={PERIOD_OPTIONS} value={period} onChange={setPeriod} />
             {period === "custom" && (
               <div className="mt-2 flex items-center gap-2">
@@ -236,7 +254,7 @@ export default function TransactionsPage() {
                   type="date"
                   value={from}
                   onChange={(e) => setFrom(e.target.value)}
-                  aria-label="From date"
+                  aria-label={tr("From date")}
                   className={cn(fieldCls, "w-0 min-w-0 flex-1")}
                 />
                 <span className="text-ink/30">–</span>
@@ -244,7 +262,7 @@ export default function TransactionsPage() {
                   type="date"
                   value={to}
                   onChange={(e) => setTo(e.target.value)}
-                  aria-label="To date"
+                  aria-label={tr("To date")}
                   className={cn(fieldCls, "w-0 min-w-0 flex-1")}
                 />
               </div>
@@ -252,14 +270,14 @@ export default function TransactionsPage() {
           </FilterRow>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <FilterRow label="Category">
+            <FilterRow label={tr("Category")}>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                aria-label="Category"
+                aria-label={tr("Category")}
                 className={cn(fieldCls, "w-full cursor-pointer")}
               >
-                <option value="">All categories</option>
+                <option value="">{tr("All categories")}</option>
                 {categoryOptions.map((n) => (
                   <option key={n} value={n}>
                     {n}
@@ -268,7 +286,7 @@ export default function TransactionsPage() {
               </select>
             </FilterRow>
 
-            <FilterRow label="Amount (৳)">
+            <FilterRow label={tr("Amount ({x})", { x: currencySymbol() })}>
               <div className="flex items-center gap-2">
                 <input
                   type="number"
@@ -276,8 +294,8 @@ export default function TransactionsPage() {
                   min={0}
                   value={minAmt}
                   onChange={(e) => setMinAmt(e.target.value)}
-                  placeholder="Min"
-                  aria-label="Minimum amount"
+                  placeholder={tr("Min")}
+                  aria-label={tr("Minimum amount")}
                   className={cn(fieldCls, "w-0 min-w-0 flex-1")}
                 />
                 <span className="text-ink/30">–</span>
@@ -287,13 +305,23 @@ export default function TransactionsPage() {
                   min={0}
                   value={maxAmt}
                   onChange={(e) => setMaxAmt(e.target.value)}
-                  placeholder="Max"
-                  aria-label="Maximum amount"
+                  placeholder={tr("Max")}
+                  aria-label={tr("Maximum amount")}
                   className={cn(fieldCls, "w-0 min-w-0 flex-1")}
                 />
               </div>
             </FilterRow>
           </div>
+
+          {showWallets && (
+            <FilterRow label={tr("Wallet")}>
+              <Segmented
+                options={[{ value: "", label: tr("All") }, ...wallets.filter((w) => !w.archived).map((w) => ({ value: w.id, label: tr(w.name) }))]}
+                value={walletFilter}
+                onChange={setWalletFilter}
+              />
+            </FilterRow>
+          )}
 
           {activeFilters > 0 && (
             <div className="flex justify-end border-t border-line pt-3">
@@ -301,7 +329,7 @@ export default function TransactionsPage() {
                 onClick={resetFilters}
                 className="cursor-pointer font-mono text-[11px] uppercase tracking-widest text-amber/80 transition-colors hover:text-amber"
               >
-                Reset filters
+                {tr("Reset filters")}
               </button>
             </div>
           )}
@@ -311,35 +339,31 @@ export default function TransactionsPage() {
       {/* What the current search / filters add up to */}
       {filtering && (
         <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-xs tabular">
-          <span className="text-ink/55">
-            {filtered.length} of {transactions.length}
-          </span>
-          {totals.income > 0 && <span className="text-income">In {formatCurrency(totals.income)}</span>}
-          {totals.expense > 0 && <span className="text-expense">Out {formatCurrency(totals.expense)}</span>}
-          {totals.saving > 0 && <span className="text-saving">Saved {formatCurrency(totals.saving)}</span>}
-          <span className={cn(totals.net >= 0 ? "text-income" : "text-expense")}>
-            Net {formatCurrency(totals.net, { sign: true })}
-          </span>
+          <span className="text-ink/55">{tr("{n} of {n2}", { n: filtered.length, n2: transactions.length })}</span>
+          {totals.income > 0 && <span className="text-income">{tr("In {amount}", { amount: formatCurrency(totals.income) })}</span>}
+          {totals.expense > 0 && <span className="text-expense">{tr("Out {amount}", { amount: formatCurrency(totals.expense) })}</span>}
+          {totals.saving > 0 && <span className="text-saving">{tr("Saved {amount}", { amount: formatCurrency(totals.saving) })}</span>}
+          <span className={cn(totals.net >= 0 ? "text-income" : "text-expense")}>{tr("Net {amount}", { amount: formatCurrency(totals.net, { sign: true }) })}</span>
           <button
             onClick={clearAll}
             className="ml-auto cursor-pointer uppercase tracking-widest text-amber/80 transition-colors hover:text-amber"
           >
-            Clear
+            {tr("Clear")}
           </button>
         </div>
       )}
 
       {!loading && transactions.length === 0 && (
         <div className="card px-6 py-16 text-center text-sm text-ink/40">
-          No transactions yet. Hit <span className="text-ink/70">+ Add</span> or click a calendar day.
+          {tr("No transactions yet. Hit")}{" "}<span className="text-ink/70">{tr("+ Add")}</span>{" "}{tr("or click a calendar day.")}
         </div>
       )}
 
       {!loading && transactions.length > 0 && filtered.length === 0 && (
         <div className="card px-6 py-16 text-center text-sm text-ink/40">
-          Nothing matches.{" "}
+          {tr("Nothing matches.")}{" "}
           <button onClick={clearAll} className="cursor-pointer text-amber hover:underline">
-            Clear search &amp; filters
+            {tr("Clear search & filters")}
           </button>
         </div>
       )}
@@ -354,22 +378,20 @@ export default function TransactionsPage() {
             <div key={date} className="card overflow-hidden">
               <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-line px-5 py-3">
                 <span className="font-mono text-xs uppercase tracking-widest text-ink/45">
-                  {format(parseISO(date), "EEE · MMM d, yyyy")}
+                  {fmt(parseISO(date), "EEE · MMM d, yyyy")}
                 </span>
                 <div className="flex items-center gap-3 font-mono text-xs tabular">
                   {dayIncome > 0 && (
-                    <span className="text-income">In {formatCurrency(dayIncome)}</span>
+                    <span className="text-income">{tr("In {amount}", { amount: formatCurrency(dayIncome) })}</span>
                   )}
                   {dayExpense > 0 && (
-                    <span className="text-expense">Out {formatCurrency(dayExpense)}</span>
+                    <span className="text-expense">{tr("Out {amount}", { amount: formatCurrency(dayExpense) })}</span>
                   )}
                   {daySaving > 0 && (
-                    <span className="text-saving">Saved {formatCurrency(daySaving)}</span>
+                    <span className="text-saving">{tr("Saved {amount}", { amount: formatCurrency(daySaving) })}</span>
                   )}
                   <span className="text-ink/30">·</span>
-                  <span className={cn(dayNet >= 0 ? "text-income" : "text-expense")}>
-                    Net {formatCurrency(dayNet, { sign: true })}
-                  </span>
+                  <span className={cn(dayNet >= 0 ? "text-income" : "text-expense")}>{tr("Net {amount}", { amount: formatCurrency(dayNet, { sign: true }) })}</span>
                 </div>
               </div>
               <ul className="divide-y divide-line">
@@ -382,14 +404,15 @@ export default function TransactionsPage() {
                         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-bold"
                         style={{ backgroundColor: `${color}22`, color: tintText(color) }}
                       >
-                        {t.categoryName.slice(0, 1).toUpperCase()}
+                        {tr(t.categoryName).slice(0, 1).toUpperCase()}
                       </span>
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-sm text-ink/85">
-                          {t.note || t.categoryName}
+                          {t.note || tr(t.categoryName)}
                         </div>
                         <div className="flex items-center gap-1.5 text-[11px] text-ink/40">
-                          <span>{t.categoryName}</span>
+                          <span>{tr(t.categoryName)}</span>
+                          {showWallets && t.kind !== "saving" && <span className="shrink-0">· {tr(walletOf(t)?.name ?? "")}</span>}
                           {t.place && (
                             <>
                               <MapPin className="h-3 w-3" aria-hidden />
@@ -407,15 +430,15 @@ export default function TransactionsPage() {
                       </span>
                       <button
                         onClick={() => setEditing(t)}
-                        aria-label={`Edit ${t.note || t.categoryName}`}
-                        title="Edit"
+                        aria-label={tr("Edit {x}", { x: t.note || t.categoryName })}
+                        title={tr("Edit")}
                         className="-mr-1 cursor-pointer rounded-lg p-1 text-ink/35 transition-colors hover:bg-ink/5 hover:text-amber"
                       >
                         <Pencil className="h-4 w-4" aria-hidden />
                       </button>
                       <button
                         onClick={() => removeMoney(t.id)}
-                        aria-label="Delete"
+                        aria-label={tr("Delete")}
                         className="cursor-pointer text-ink/0 transition-colors group-hover:text-ink/30 hover:text-expense!"
                       >
                         <Trash2 className="h-4 w-4" aria-hidden />
@@ -470,7 +493,7 @@ function Segmented<T extends string>({
               : "border-line text-ink/55 hover:bg-ink/[0.03] hover:text-ink/80",
           )}
         >
-          {o.label}
+          {tr(o.label)}
         </button>
       ))}
     </div>

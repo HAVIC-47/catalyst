@@ -13,17 +13,25 @@ import {
   ListTodo,
   ShoppingCart,
   Settings,
+  Wallet,
+  HandCoins,
   type LucideIcon,
 } from "lucide-react";
+import { useAppData } from "@/hooks/use-app-data";
+import { currency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
+import { tr } from "@/lib/i18n";
+import { Logo } from "@/components/ui/logo";
 
 const NAV: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/app", label: "Calendar", icon: CalendarDays },
   { href: "/app/dashboard", label: "Dashboard", icon: LayoutGrid },
   { href: "/app/transactions", label: "Transactions", icon: Receipt },
+  { href: "/app/wallets", label: "Wallets", icon: Wallet },
   { href: "/app/budgets", label: "Budgets", icon: PiggyBank },
   { href: "/app/goals", label: "Goals", icon: Target },
   { href: "/app/bills", label: "Bills", icon: Bell },
+  { href: "/app/dhar", label: "Dhar", icon: HandCoins },
   { href: "/app/journal", label: "Journal", icon: NotebookPen },
   { href: "/app/todo", label: "To-do", icon: ListTodo },
   { href: "/app/shopping", label: "To buy", icon: ShoppingCart },
@@ -32,13 +40,18 @@ const NAV: { href: string; label: string; icon: LucideIcon }[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  useAppData(); // re-render when the currency changes
+  const cur = currency();
   return (
     <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-line bg-panel px-3 py-5 lg:flex">
-      <Link href="/app" className="mb-7 flex items-baseline gap-2 px-3">
-        <span className="font-display text-2xl font-semibold tracking-tight text-ink">
-          Catalyst
+      <Link href="/app" className="mb-7 flex items-center gap-2.5 px-3">
+        <Logo size={30} />
+        <span className="flex items-baseline gap-2">
+          <span className="font-display text-2xl font-semibold tracking-tight text-ink">
+            {tr("Catalyst")}
+          </span>
+          <span className="label text-amber/70">{cur.symbol.trim()} {cur.code === "BDT" ? tr("BD") : cur.code}</span>
         </span>
-        <span className="label text-amber/70">৳ BD</span>
       </Link>
 
       <nav className="flex flex-1 flex-col gap-1">
@@ -57,15 +70,16 @@ export function Sidebar() {
                 <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-amber" />
               )}
               <Icon className={cn("h-[18px] w-[18px]", active && "text-amber")} aria-hidden />
-              {label}
+              {tr(label)}
             </Link>
           );
         })}
       </nav>
 
-      <div className="mt-4 flex items-center justify-between px-3">
-        <span className="label">v0.2</span>
-        <span className="label text-ink/30">৳ BDT</span>
+      <div className="mt-4 flex items-center justify-end px-3">
+        <span className="label text-ink/30">
+          {cur.symbol.trim()} {cur.code}
+        </span>
       </div>
     </aside>
   );

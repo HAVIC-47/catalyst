@@ -10,10 +10,13 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Camera, CircleCheck, ClipboardPaste, ImageUp, LoaderCircle, RotateCcw, X } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
 import { BREAK_SAVING, type Category } from "@/types";
-import { TAKA, cn, combineDateTime, formatCurrency, nowTime, toDateKey } from "@/lib/utils";
+import { currencySymbol, cn, combineDateTime, formatCurrency, nowTime, toDateKey } from "@/lib/utils";
 import { LIMITS } from "@/lib/limits";
 import { pastedImage, toBase64, toJpeg } from "@/lib/image";
 import { discountShares, type ScannedMemo, type ScannedNotes } from "@/lib/memo";
+import { WalletSelect, rememberWallet, useStartWallet } from "@/components/entry/wallet-select";
+import { currency } from "@/lib/currency";
+import { tr, trn } from "@/lib/i18n";
 
 type Step = "pick" | "camera" | "reading" | "review" | "notes" | "done" | "error";
 
@@ -69,7 +72,7 @@ export function MemoScanner() {
           <motion.div
             role="dialog"
             aria-modal="true"
-            aria-label="Scan a memo or notes"
+            aria-label={tr("Scan a memo or notes")}
             initial={{ opacity: 0, y: -10, scale: 0.99 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.99 }}
@@ -78,12 +81,12 @@ export function MemoScanner() {
           >
             <div className="flex items-start justify-between border-b border-line p-6 pb-5">
               <div>
-                <div className="label">Memo · notes</div>
-                <h2 className="mt-1 font-display text-3xl font-semibold text-ink">Scan a memo</h2>
+                <div className="label">{tr("Memo · notes")}</div>
+                <h2 className="mt-1 font-display text-3xl font-semibold text-ink">{tr("Scan a memo")}</h2>
               </div>
               <button
                 onClick={closeMemo}
-                aria-label="Close"
+                aria-label={tr("Close")}
                 className="cursor-pointer rounded-lg p-1 text-ink/40 transition-colors hover:bg-ink/5 hover:text-ink"
               >
                 <X className="h-5 w-5" aria-hidden />
@@ -117,6 +120,10 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
   // Notes: their lines, and what was saved (for the done screen).
   const [entries, setEntries] = useState<Entry[]>([]);
   const [noted, setNoted] = useState<{ count: number; spent: number; earned: number; created: Category[] } | null>(null);
+  // One wallet for everything on the memo or note.
+  const startWallet = useStartWallet();
+  const [walletId, setWalletId] = useState<string | null>(null);
+  const wallet = walletId ?? startWallet;
 
   const request = useRef<AbortController | null>(null);
   const cameraInput = useRef<HTMLInputElement>(null);
@@ -218,6 +225,7 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
           note: e.name.trim().slice(0, LIMITS.note),
           occurredOn: day,
           occurredAt: combineDateTime(day, time),
+          walletId: wallet,
         });
         // Mark it saved right away so a retry after an error never adds it twice.
         patchEntry(e.key, { saved: true });
@@ -231,6 +239,7 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
         earned: (prev?.earned ?? 0) + earned,
         created: [...(prev?.created ?? []), ...created],
       }));
+      rememberWallet(wallet);
       setStep("done");
     } catch (err) {
       // Keep what did get saved, so the done screen still tells the whole story.
@@ -241,7 +250,7 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
         created: [...(prev?.created ?? []), ...created],
       }));
       const msg = typeof err === "object" && err && "message" in err ? String((err as { message: unknown }).message) : String(err);
-      setError(done ? `Added ${done} of ${chosenEntries.length}. ${msg} — tap Add again for the rest.` : msg);
+      setError(done ? tr("Added {done} of {n}. {msg} — tap Add again for the rest.", { done, n: chosenEntries.length, msg }) : msg);
     } finally {
       setSaving(false);
     }
@@ -283,7 +292,7 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
     try {
       jpeg = await toJpeg(file);
     } catch {
-      setError("Couldn't open that image — use a JPEG or PNG photo.");
+      setError(tr("Couldn't open that image — use a JPEG or PNG photo."));
       setStep("error");
       return;
     }
@@ -311,7 +320,7 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
       else review(data.memo as ScannedMemo);
     } catch (err) {
       if (ctrl.signal.aborted) return;
-      setError(err instanceof Error && err.message !== "Failed to fetch" ? err.message : "No connection — try again.");
+      setError(err instanceof Error && err.message !== "Failed to fetch" ? err.message : tr("No connection — try again."));
       setStep("error");
     }
   };
@@ -379,16 +388,18 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
           note: line.name.trim().slice(0, LIMITS.note),
           occurredOn: dateKey,
           occurredAt,
+          walletId: wallet,
         });
         // Mark it saved right away so a retry after an error never adds it twice.
         patch(line.key, { saved: true });
         done++;
       }
       setAdded({ count: done, sum });
+      rememberWallet(wallet);
       setStep("done");
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      setError(done ? `Added ${done} of ${chosen.length}. ${msg} — tap Add again for the rest.` : msg);
+      setError(done ? tr("Added {done} of {n}. {msg} — tap Add again for the rest.", { done, n: chosen.length, msg }) : msg);
     } finally {
       setSaving(false);
     }
@@ -413,12 +424,12 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
   if (step === "reading") {
     return (
       <div className="flex flex-col items-center gap-4 p-8 text-center">
-        {photo && <img src={photo} alt="Your memo" className="max-h-56 rounded-xl border border-line object-contain" />}
+        {photo && <img src={photo} alt={tr("Your memo")} className="max-h-56 rounded-xl border border-line object-contain" />}
         <div className="flex items-center gap-2 text-sm text-ink/75">
           <LoaderCircle className="h-4 w-4 animate-spin text-amber" aria-hidden />
-          Reading it…
+          {tr("Reading it…")}
         </div>
-        <p className="text-xs text-ink/50">Usually a few seconds.</p>
+        <p className="text-xs text-ink/50">{tr("Usually a few seconds.")}</p>
       </div>
     );
   }
@@ -426,7 +437,7 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
   if (step === "error") {
     return (
       <div className="flex flex-col items-center gap-4 p-8 text-center">
-        {photo && <img src={photo} alt="Your memo" className="max-h-40 rounded-xl border border-line object-contain opacity-80" />}
+        {photo && <img src={photo} alt={tr("Your memo")} className="max-h-40 rounded-xl border border-line object-contain opacity-80" />}
         <p className="max-w-sm text-sm text-expense" role="alert">
           {error}
         </p>
@@ -435,7 +446,7 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
           className="hairline inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl px-4 text-sm text-ink/80 transition-colors hover:bg-ink/[0.04] hover:text-ink"
         >
           <RotateCcw className="h-4 w-4" aria-hidden />
-          Try again
+          {tr("Try again")}
         </button>
       </div>
     );
@@ -446,19 +457,19 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
       <div className="flex flex-col items-center gap-2 p-8 text-center">
         <CircleCheck className="h-10 w-10 text-income" aria-hidden />
         <div className="font-display text-2xl font-semibold text-ink" role="status">
-          Added {noted.count} {noted.count === 1 ? "entry" : "entries"}
+          {trn(noted.count, "Added {n} entry", "Added {n} entries")}
         </div>
         <div className="font-mono text-sm text-ink/60">
-          {noted.spent > 0 && <span className="text-expense">Spent {formatCurrency(noted.spent)}</span>}
+          {noted.spent > 0 && <span className="text-expense">{tr("Spent {amount}", { amount: formatCurrency(noted.spent) })}</span>}
           {noted.spent > 0 && noted.earned > 0 && " · "}
-          {noted.earned > 0 && <span className="text-income">Earned {formatCurrency(noted.earned)}</span>}
+          {noted.earned > 0 && <span className="text-income">{tr("Earned {amount}", { amount: formatCurrency(noted.earned) })}</span>}
         </div>
         {noted.created.length > 0 && (
           <p className="mt-3 max-w-sm rounded-xl border border-amber/30 bg-amber/[0.08] px-3 py-2 text-xs leading-relaxed text-ink/75">
             <span className="font-semibold text-amber">
-              New {noted.created.length === 1 ? "category" : "categories"} created:
-            </span>{" "}
-            {noted.created.map((c) => `${c.name} (${c.kind})`).join(", ")}. Rename or recolor them in Settings.
+              {noted.created.length === 1 ? tr("New category created: ") : tr("New categories created: ")}
+            </span>
+            {tr("{list}. Rename or recolor them in Settings.", { list: noted.created.map((c) => `${c.name} (${tr(c.kind)})`).join(", ") })}
           </p>
         )}
         <div className="mt-4 flex gap-2">
@@ -466,13 +477,13 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
             onClick={reset}
             className="hairline inline-flex min-h-[44px] cursor-pointer items-center rounded-xl px-4 text-sm text-ink/80 transition-colors hover:bg-ink/[0.04] hover:text-ink"
           >
-            Scan another
+            {tr("Scan another")}
           </button>
           <button
             onClick={onClose}
             className="entry-btn inline-flex min-h-[44px] cursor-pointer items-center rounded-xl px-5 text-sm font-semibold text-paper shadow-entry"
           >
-            Done
+            {tr("Done")}
           </button>
         </div>
       </div>
@@ -487,15 +498,19 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
       <>
         <div className="max-h-[62vh] overflow-y-auto p-6">
           <p className="text-sm leading-relaxed text-ink/60">
-            Found {entries.length} {entries.length === 1 ? "entry" : "entries"} in your note. Check them — untick anything
-            you don&apos;t want — then add.
+            {trn(
+              entries.length,
+              "Found {n} entry in your note. Check it — untick it if you don't want it — then add.",
+              "Found {n} entries in your note. Check them — untick anything you don't want — then add.",
+            )}
           </p>
           {freshCats.length > 0 && (
             <p className="mt-3 rounded-xl border border-amber/30 bg-amber/[0.08] px-3 py-2 text-xs leading-relaxed text-ink/75">
-              <span className="font-semibold text-amber">New {freshCats.length === 1 ? "category" : "categories"}</span> from
-              your note will be created: {freshCats.map((f) => `${f.name} (${f.type})`).join(", ")}.
+              <span className="font-semibold text-amber">{freshCats.length === 1 ? tr("New category ") : tr("New categories ")}</span>
+              {tr("from your note will be created: {list}.", { list: freshCats.map((f) => `${f.name} (${tr(f.type)})`).join(", ") })}
             </p>
           )}
+          <WalletSelect value={wallet} onChange={setWalletId} label={tr("Wallet")} className="mt-4" />
           <ul className="mt-4 divide-y divide-line rounded-xl border border-line">
             {entries.map((e) => {
               const existing = findCat(e.type, e.category);
@@ -510,7 +525,7 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
                     checked={e.on}
                     disabled={e.saved}
                     onChange={(ev) => patchEntry(e.key, { on: ev.target.checked })}
-                    aria-label={`Add ${e.name}`}
+                    aria-label={tr("Add {name}", { name: e.name })}
                     className="h-4 w-4 cursor-pointer accent-amber"
                   />
                   <input
@@ -518,23 +533,23 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
                     onChange={(ev) => patchEntry(e.key, { name: ev.target.value })}
                     maxLength={LIMITS.title}
                     disabled={e.saved}
-                    aria-label="Description"
+                    aria-label={tr("Description")}
                     className="min-w-0 bg-transparent text-sm text-ink outline-hidden"
                   />
                   <div className="flex items-center gap-1 font-mono text-sm">
                     <span className={e.type === "income" ? "text-income" : "text-expense"}>{e.type === "income" ? "+" : "−"}</span>
-                    <span className="text-ink/40">{TAKA}</span>
+                    <span className="text-ink/40">{currencySymbol()}</span>
                     <input
                       inputMode="decimal"
                       value={e.amount}
                       onChange={(ev) => patchEntry(e.key, { amount: ev.target.value.replace(/[^0-9.]/g, "") })}
                       disabled={e.saved}
-                      aria-label={`Amount for ${e.name}`}
+                      aria-label={tr("Amount for {name}", { name: e.name })}
                       className="w-20 bg-transparent text-right tabular text-ink outline-hidden"
                     />
                   </div>
                   <div className="col-span-2 col-start-2 flex flex-wrap items-center gap-2">
-                    <div role="radiogroup" aria-label={`Type of ${e.name}`} className="flex rounded-lg border border-line p-0.5">
+                    <div role="radiogroup" aria-label={tr("Type of {name}", { name: e.name })} className="flex rounded-lg border border-line p-0.5">
                       {(["expense", "income"] as const).map((t) => (
                         <button
                           key={t}
@@ -552,7 +567,7 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
                               : "text-ink/50 hover:text-ink/80",
                           )}
                         >
-                          {t}
+                          {t === "income" ? tr("Income") : tr("Expense")}
                         </button>
                       ))}
                     </div>
@@ -560,17 +575,15 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
                       value={existing?.name ?? e.category}
                       onChange={(ev) => patchEntry(e.key, { category: ev.target.value })}
                       disabled={e.saved}
-                      aria-label={`Category for ${e.name}`}
+                      aria-label={tr("Category for {name}", { name: e.name })}
                       className="min-h-[32px] max-w-[11rem] cursor-pointer rounded-lg border border-line bg-card px-2 text-xs text-ink/80 outline-hidden focus:border-amber/50"
                     >
                       {!existing && e.category.trim() && (
-                        <option value={e.category} className="bg-card">
-                          New: {e.category}
-                        </option>
+                        <option value={e.category} className="bg-card">{tr("New: {category}", { category: e.category })}</option>
                       )}
                       {options.map((c) => (
                         <option key={c.id} value={c.name} className="bg-card">
-                          {c.name}
+                          {tr(c.name)}
                         </option>
                       ))}
                     </select>
@@ -580,10 +593,10 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
                       max={today}
                       onChange={(ev) => patchEntry(e.key, { date: ev.target.value })}
                       disabled={e.saved}
-                      aria-label={`Date of ${e.name}`}
+                      aria-label={tr("Date of {name}", { name: e.name })}
                       className="min-h-[32px] rounded-lg border border-line bg-card px-2 text-xs text-ink/80 outline-hidden focus:border-amber/50"
                     />
-                    {e.saved && <span className="label text-[10px]">added</span>}
+                    {e.saved && <span className="label text-[10px]">{tr("added")}</span>}
                   </div>
                 </li>
               );
@@ -591,10 +604,10 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
           </ul>
           <div className="mt-4 flex flex-wrap items-baseline justify-between gap-2 font-mono text-sm">
             <span className="text-ink/55">
-              Spending <span className="text-expense">{formatCurrency(Math.round(spent * 100) / 100)}</span>
+              {tr("Spending")}{" "}<span className="text-expense">{formatCurrency(Math.round(spent * 100) / 100)}</span>
             </span>
             <span className="text-ink/55">
-              Income <span className="text-income">{formatCurrency(Math.round(earned * 100) / 100)}</span>
+              {tr("Income")}{" "}<span className="text-income">{formatCurrency(Math.round(earned * 100) / 100)}</span>
             </span>
           </div>
           {error && (
@@ -610,7 +623,7 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
             className="hairline inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl px-4 text-sm text-ink/75 transition-colors hover:bg-ink/[0.04] hover:text-ink disabled:opacity-40"
           >
             <RotateCcw className="h-4 w-4" aria-hidden />
-            Retake
+            {tr("Retake")}
           </button>
           <button
             onClick={() => void saveNotes()}
@@ -618,7 +631,7 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
             className="entry-btn inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl px-5 text-sm font-semibold text-paper shadow-entry disabled:cursor-not-allowed disabled:opacity-40"
           >
             {saving && <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />}
-            {saving ? "Adding…" : `Add ${chosenEntries.length} ${chosenEntries.length === 1 ? "entry" : "entries"}`}
+            {saving ? tr("Adding…") : trn(chosenEntries.length, "Add {n} entry", "Add {n} entries")}
           </button>
         </div>
       </>
@@ -630,7 +643,7 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
       <div className="flex flex-col items-center gap-2 p-8 text-center">
         <CircleCheck className="h-10 w-10 text-income" aria-hidden />
         <div className="font-display text-2xl font-semibold text-ink">
-          Added {added.count} expense{added.count === 1 ? "" : "s"}
+          {tr("Added")}{" "}{added.count}{" "}{tr("expense")}{added.count === 1 ? "" : "s"}
         </div>
         <div className="font-mono text-sm text-ink/60">
           {formatCurrency(added.sum)}
@@ -641,13 +654,13 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
             onClick={reset}
             className="hairline inline-flex min-h-[44px] cursor-pointer items-center rounded-xl px-4 text-sm text-ink/80 transition-colors hover:bg-ink/[0.04] hover:text-ink"
           >
-            Scan another
+            {tr("Scan another")}
           </button>
           <button
             onClick={onClose}
             className="entry-btn inline-flex min-h-[44px] cursor-pointer items-center rounded-xl px-5 text-sm font-semibold text-paper shadow-entry"
           >
-            Done
+            {tr("Done")}
           </button>
         </div>
       </div>
@@ -660,36 +673,34 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
         <div className="max-h-[62vh] overflow-y-auto p-6">
           <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
             <label className="block">
-              <span className="label mb-2 block">Shop</span>
+              <span className="label mb-2 block">{tr("Shop")}</span>
               <input
                 value={place}
                 onChange={(e) => setPlace(e.target.value)}
                 maxLength={LIMITS.place}
-                placeholder="Shop or place"
+                placeholder={tr("Shop or place")}
                 className={input}
               />
             </label>
             <div className="grid grid-cols-2 gap-3 sm:contents">
               <label className="block">
-                <span className="label mb-2 block">Date</span>
+                <span className="label mb-2 block">{tr("Date")}</span>
                 <input type="date" value={dateKey} onChange={(e) => e.target.value && setDateKey(e.target.value)} className={input} />
               </label>
               <label className="block">
-                <span className="label mb-2 block">Time</span>
+                <span className="label mb-2 block">{tr("Time")}</span>
                 <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className={input} />
               </label>
             </div>
           </div>
 
           {oddDate && (
-            <p className="mt-2 text-xs text-amber">
-              The memo&apos;s date read as {oddDate} — using today instead. Change it above if that&apos;s wrong.
-            </p>
+            <p className="mt-2 text-xs text-amber">{tr("The memo's date read as {oddDate} — using today instead. Change it above if that's wrong.", { oddDate })}</p>
           )}
 
-          <div className="label mb-2 mt-6">
-            Items · {lines.length}
-          </div>
+          <WalletSelect value={wallet} onChange={setWalletId} label={tr("Paid from")} className="mt-4" />
+
+          <div className="label mb-2 mt-6">{tr("Items · {n}", { n: lines.length })}</div>
           <ul className="divide-y divide-line rounded-xl border border-line">
             {lines.map((l, i) => (
               <li
@@ -701,7 +712,7 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
                   checked={l.on}
                   disabled={l.saved}
                   onChange={(e) => patch(l.key, { on: e.target.checked })}
-                  aria-label={`Add ${l.name}`}
+                  aria-label={tr("Add {name}", { name: l.name })}
                   className="h-4 w-4 cursor-pointer accent-amber"
                 />
                 <input
@@ -709,17 +720,17 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
                   onChange={(e) => patch(l.key, { name: e.target.value })}
                   maxLength={LIMITS.title}
                   disabled={l.saved}
-                  aria-label="Item"
+                  aria-label={tr("Item")}
                   className="min-w-0 bg-transparent text-sm text-ink outline-hidden"
                 />
                 <div className="flex items-center gap-1 font-mono text-sm">
-                  <span className="text-ink/40">{TAKA}</span>
+                  <span className="text-ink/40">{currencySymbol()}</span>
                   <input
                     inputMode="decimal"
                     value={l.amount}
                     onChange={(e) => patch(l.key, { amount: e.target.value.replace(/[^0-9.]/g, "") })}
                     disabled={l.saved}
-                    aria-label={`Amount for ${l.name}`}
+                    aria-label={tr("Amount for {name}", { name: l.name })}
                     className="w-20 bg-transparent text-right tabular text-ink outline-hidden"
                   />
                 </div>
@@ -727,38 +738,38 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
                   value={l.categoryId}
                   onChange={(e) => patch(l.key, { categoryId: e.target.value })}
                   disabled={l.saved}
-                  aria-label={`Category for ${l.name}`}
+                  aria-label={tr("Category for {name}", { name: l.name })}
                   className="col-span-1 col-start-2 min-h-[34px] cursor-pointer rounded-lg border border-line bg-card px-2 text-xs text-ink/80 outline-hidden focus:border-amber/50"
                 >
                   {expenseCats.map((c) => (
                     <option key={c.id} value={c.id} className="bg-card">
-                      {c.name}
+                      {tr(c.name)}
                     </option>
                   ))}
                 </select>
                 <span className="text-right font-mono text-xs text-ink/45">
-                  {l.saved ? "added" : shares[i] > 0 ? `−${formatCurrency(shares[i])}` : ""}
+                  {l.saved ? tr("added") : shares[i] > 0 ? `−${formatCurrency(shares[i])}` : ""}
                 </span>
               </li>
             ))}
           </ul>
 
           {memo.discount > 0 && (
-            <p className="mt-2 text-xs text-ink/55">Discount {formatCurrency(memo.discount)} shared across the items.</p>
+            <p className="mt-2 text-xs text-ink/55">{tr("Discount {amount} shared across the items.", { amount: formatCurrency(memo.discount) })}</p>
           )}
-          {memo.currency && memo.currency !== "BDT" && (
-            <p className="mt-2 text-xs text-amber">This memo is in {memo.currency} — amounts are saved as taka.</p>
+          {memo.currency && memo.currency !== currency().code && (
+            <p className="mt-2 text-xs text-amber">{tr("This memo is in {currency} — amounts are saved as {x}, as written.", { currency: memo.currency, x: currency().name.toLowerCase() })}</p>
           )}
           <div className="mt-4 flex flex-wrap items-baseline justify-between gap-2 font-mono text-sm">
             <span className="text-ink/55">
-              Memo total <span className="text-ink">{memo.total ? formatCurrency(memo.total) : "—"}</span>
+              {tr("Memo total")}{" "}<span className="text-ink">{memo.total ? formatCurrency(memo.total) : "—"}</span>
             </span>
             <span className="text-ink/55">
-              Adding <span className="text-expense">{formatCurrency(sum)}</span>
+              {tr("Adding")}{" "}<span className="text-expense">{formatCurrency(sum)}</span>
             </span>
           </div>
           {mismatch && (
-            <p className="mt-2 text-xs text-expense">That doesn&apos;t match the memo total — check the amounts.</p>
+            <p className="mt-2 text-xs text-expense">{tr("That doesn't match the memo total — check the amounts.")}</p>
           )}
           {error && (
             <p className="mt-3 rounded-xl border border-expense/30 bg-expense/10 px-3 py-2 text-xs text-expense" role="alert">
@@ -773,7 +784,7 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
             className="hairline inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl px-4 text-sm text-ink/75 transition-colors hover:bg-ink/[0.04] hover:text-ink disabled:opacity-40"
           >
             <RotateCcw className="h-4 w-4" aria-hidden />
-            Retake
+            {tr("Retake")}
           </button>
           <button
             onClick={() => void save()}
@@ -781,7 +792,7 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
             className="entry-btn inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl px-5 text-sm font-semibold text-paper shadow-entry disabled:cursor-not-allowed disabled:opacity-40"
           >
             {saving && <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />}
-            {saving ? "Adding…" : `Add ${chosen.length} expense${chosen.length === 1 ? "" : "s"}`}
+            {saving ? tr("Adding…") : trn(chosen.length, "Add {n} expense", "Add {n} expenses")}
           </button>
         </div>
       </>
@@ -792,9 +803,7 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
   return (
     <div className="p-6" onDragOver={(e) => e.preventDefault()} onDrop={onDrop}>
       <p className="text-sm leading-relaxed text-ink/60">
-        Take a photo of a memo or receipt — or upload a screenshot of your notes (Notepad, any notes app, a chat) with
-        expenses and income. You check everything before it&apos;s saved, and categories your note names that you
-        don&apos;t have yet are created for you.
+        {tr("Take a photo of a memo or receipt — or upload a screenshot of your notes (Notepad, any notes app, a chat) with expenses and income. You check everything before it's saved, and categories your note names that you don't have yet are created for you.")}
       </p>
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
         <button
@@ -802,19 +811,19 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
           className="entry-btn flex min-h-[104px] cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl text-sm font-semibold text-paper shadow-entry"
         >
           <Camera className="h-6 w-6" aria-hidden />
-          Take photo
+          {tr("Take photo")}
         </button>
         <button
           onClick={() => fileInput.current?.click()}
           className="hairline flex min-h-[104px] cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl text-sm font-semibold text-ink/80 transition-colors hover:bg-ink/[0.04] hover:text-ink"
         >
           <ImageUp className="h-6 w-6" aria-hidden />
-          Upload photo or screenshot
+          {tr("Upload photo or screenshot")}
         </button>
       </div>
       <p className="mt-3 hidden items-center justify-center gap-1.5 text-center text-xs text-ink/45 lg:flex">
         <ClipboardPaste className="h-3.5 w-3.5" aria-hidden />
-        …or paste a screenshot (Ctrl+V), or drop an image anywhere here.
+        {tr("…or paste a screenshot (Ctrl+V), or drop an image anywhere here.")}
       </p>
       <div className="mt-5 text-center">
         <button
@@ -824,7 +833,7 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
           }}
           className="cursor-pointer text-xs text-ink/55 underline-offset-4 transition-colors hover:text-ink hover:underline"
         >
-          Add an entry by hand instead
+          {tr("Add an entry by hand instead")}
         </button>
       </div>
       <input ref={cameraInput} type="file" accept="image/*" capture="environment" hidden onChange={onFile} />
@@ -893,17 +902,17 @@ function Webcam({
         {!ready && (
           <div className="absolute inset-0 flex items-center justify-center gap-2 text-sm text-paper/80">
             <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
-            Starting camera…
+            {tr("Starting camera…")}
           </div>
         )}
       </div>
-      <p className="mt-3 text-xs text-ink/55">Fit the whole memo in the frame — flat, in good light.</p>
+      <p className="mt-3 text-xs text-ink/55">{tr("Fit the whole memo in the frame — flat, in good light.")}</p>
       <div className="mt-4 flex items-center justify-between gap-3">
         <button
           onClick={onCancel}
           className="hairline inline-flex min-h-[44px] cursor-pointer items-center rounded-xl px-4 text-sm text-ink/75 transition-colors hover:bg-ink/[0.04] hover:text-ink"
         >
-          Cancel
+          {tr("Cancel")}
         </button>
         <button
           onClick={shoot}
@@ -911,7 +920,7 @@ function Webcam({
           className="entry-btn inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl px-5 text-sm font-semibold text-paper shadow-entry disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Camera className="h-4 w-4" aria-hidden />
-          Capture
+          {tr("Capture")}
         </button>
       </div>
     </div>

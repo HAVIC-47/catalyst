@@ -12,8 +12,9 @@ import { Menu } from "@/components/ui/menu";
 import { BoardView, NameInput, boardError, ticketNoun } from "@/components/boards/board-view";
 import { TicketModal } from "@/components/boards/ticket-modal";
 import { AiInsights } from "@/components/ai/ai-insights";
+import { tr, digits } from "@/lib/i18n";
 
-export const BOARD_COPY: Record<
+const BOARD_COPY: Record<
   BoardKind,
   { kicker: string; title: string; accent: string; icon: LucideIcon; board: string; intro: string; placeholder: string; suggested: string }
 > = {
@@ -39,10 +40,25 @@ export const BOARD_COPY: Record<
   },
 };
 
+/** Each kind's words, in the app's language (read on every render). */
+export function boardCopy(kind: BoardKind) {
+  const c = BOARD_COPY[kind];
+  return {
+    ...c,
+    kicker: tr(c.kicker),
+    title: tr(c.title),
+    accent: tr(c.accent),
+    board: tr(c.board),
+    intro: tr(c.intro),
+    placeholder: tr(c.placeholder),
+    suggested: tr(c.suggested),
+  };
+}
+
 export function BoardPage({ kind }: { kind: BoardKind }) {
   const { boards, boardColumns, tickets, loading, renameBoard, removeBoard, selectedBoards, selectBoard, openListScan } =
     useAppData();
-  const copy = BOARD_COPY[kind];
+  const copy = boardCopy(kind);
   const mine = boards.filter((b) => b.kind === kind);
 
   // The board you last opened, per kind (this browser only) — the list scanner
@@ -61,14 +77,14 @@ export function BoardPage({ kind }: { kind: BoardKind }) {
   const open = items.filter((t) => t.columnId !== doneColumn);
   const stats =
     kind === "shopping"
-      ? `${open.length} to get${open.some((t) => t.amount) ? ` · ${formatCurrency(open.reduce((s, t) => s + (t.amount ?? 0), 0))}` : ""}`
-      : `${open.length} open · ${items.length - open.length} done`;
+      ? `${tr("{n} to get", { n: open.length })}${open.some((t) => t.amount) ? ` · ${formatCurrency(open.reduce((s, t) => s + (t.amount ?? 0), 0))}` : ""}`
+      : tr("{open} open · {done} done", { open: open.length, done: items.length - open.length });
 
   const remove = () => {
     if (!board) return;
     const n = items.length;
     const what = n ? ` and its ${n} ${ticketNoun(kind, n)}` : "";
-    if (!window.confirm(`Delete "${board.name}"${what}? This can't be undone.`)) return;
+    if (!window.confirm(tr("Delete \"{name}\"{what}? This can't be undone.", { name: board.name, what }))) return;
     setError("");
     removeBoard(board.id).catch((err) => setError(boardError(err)));
   };
@@ -79,7 +95,7 @@ export function BoardPage({ kind }: { kind: BoardKind }) {
     <div className="px-4 py-6 sm:px-6 lg:px-8">
       <div className="mb-5">
         <div className="label mb-2">
-          {copy.kicker} · {mine.length} {copy.board}
+          {copy.kicker} · {digits(String(mine.length))} {copy.board}
           {mine.length === 1 ? "" : "s"}
         </div>
         <h1 className="font-display text-5xl font-semibold tracking-tight text-ink sm:text-6xl">
@@ -115,7 +131,7 @@ export function BoardPage({ kind }: { kind: BoardKind }) {
             className="inline-flex min-h-[36px] shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-dashed border-line px-3.5 text-sm text-ink/55 transition-colors hover:border-ink/30 hover:text-ink"
           >
             <Plus className="h-3.5 w-3.5" aria-hidden />
-            New {copy.board}
+            {tr("New")}{" "}{copy.board}
           </button>
         </div>
       )}
@@ -137,7 +153,7 @@ export function BoardPage({ kind }: { kind: BoardKind }) {
             {renaming ? (
               <NameInput
                 initial={board.name}
-                label={`Rename ${copy.board}`}
+                label={tr("Rename {board}", { board: copy.board })}
                 onDone={(v) => {
                   setRenaming(false);
                   if (v && v !== board.name) renameBoard(board.id, v).catch((err) => setError(boardError(err)));
@@ -156,20 +172,21 @@ export function BoardPage({ kind }: { kind: BoardKind }) {
                 className="hairline hidden min-h-[36px] cursor-pointer items-center gap-2 rounded-xl px-3 text-sm font-medium text-ink/75 transition-colors hover:bg-ink/[0.04] hover:text-ink lg:inline-flex"
               >
                 <ScanText className="h-4 w-4" aria-hidden />
-                Scan a list
+                {tr("Scan a list")}
               </button>
               <Menu
-                label={`${board.name} options`}
+                label={tr("{name} options", { name: board.name })}
                 items={[
-                  { label: `Rename ${copy.board}`, icon: Pencil, onSelect: () => setRenaming(true) },
-                  { label: `Delete ${copy.board}`, icon: Trash2, onSelect: remove, danger: true },
+                  { label: tr("Rename {board}", { board: copy.board }), icon: Pencil, onSelect: () => setRenaming(true) },
+                  { label: tr("Delete {board}", { board: copy.board }), icon: Trash2, onSelect: remove, danger: true },
                 ]}
               />
             </div>
           </div>
           <p className="-mt-1 mb-3 text-xs text-ink/45 lg:hidden">
-            Tip: tap <span className="font-semibold text-ink/70">+</span> below to add {ticketNoun(kind, 2)} from a screenshot of
-            your notes.
+            {tr("Tip: tap ")}
+            <span className="font-semibold text-ink/70">+</span>
+            {tr(" below to add {x0} from a screenshot of your notes.", { x0: ticketNoun(kind, 2) })}
           </p>
           {error && (
             <p role="alert" className="mb-3 text-sm text-expense">
@@ -180,7 +197,7 @@ export function BoardPage({ kind }: { kind: BoardKind }) {
         </>
       )}
 
-      {loading && <p className="mt-4 text-center font-mono text-xs text-ink/30">Loading…</p>}
+      {loading && <p className="mt-4 text-center font-mono text-xs text-ink/30">{tr("Loading…")}</p>}
 
       <TicketModal ticketId={openTicket} onClose={() => setOpenTicket(null)} />
     </div>
@@ -189,7 +206,7 @@ export function BoardPage({ kind }: { kind: BoardKind }) {
 
 function NewBoard({ kind, first, onDone }: { kind: BoardKind; first: boolean; onDone: (boardId: string | null) => void }) {
   const { createBoard, openListScan } = useAppData();
-  const copy = BOARD_COPY[kind];
+  const copy = boardCopy(kind);
   const Icon = copy.icon;
   const [name, setName] = useState(first ? copy.suggested : "");
   const [busy, setBusy] = useState(false);
@@ -217,11 +234,11 @@ function NewBoard({ kind, first, onDone }: { kind: BoardKind; first: boolean; on
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-line bg-ink/[0.02]">
             <Icon className="h-5 w-5 text-amber" aria-hidden />
           </div>
-          <h2 className="font-display text-2xl font-semibold text-ink">Start your first {copy.board}</h2>
+          <h2 className="font-display text-2xl font-semibold text-ink">{tr("Start your first {board}", { board: copy.board })}</h2>
           <p className="mt-1 max-w-lg text-sm leading-relaxed text-ink/50">{copy.intro}</p>
         </>
       ) : (
-        <div className="label">New {copy.board}</div>
+        <div className="label">{tr("New {board}", { board: copy.board })}</div>
       )}
       <div className="mt-4 flex flex-wrap gap-2">
         <input
@@ -230,7 +247,7 @@ function NewBoard({ kind, first, onDone }: { kind: BoardKind; first: boolean; on
           onChange={(e) => setName(e.target.value)}
           maxLength={LIMITS.name}
           placeholder={copy.placeholder}
-          aria-label={`${copy.board} name`}
+          aria-label={tr("{board} name", { board: copy.board })}
           className="min-h-[44px] min-w-0 flex-1 basis-56 rounded-xl border border-line bg-ink/[0.02] px-3 text-sm text-ink outline-hidden placeholder:text-ink/30 focus:border-amber/50"
         />
         <button
@@ -239,7 +256,7 @@ function NewBoard({ kind, first, onDone }: { kind: BoardKind; first: boolean; on
           className="entry-btn inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl px-4 text-sm font-semibold text-paper disabled:cursor-default disabled:opacity-40"
         >
           <Plus className="h-4 w-4" strokeWidth={2.5} aria-hidden />
-          Create
+          {tr("Create")}
         </button>
         {!first && (
           <button
@@ -247,12 +264,12 @@ function NewBoard({ kind, first, onDone }: { kind: BoardKind; first: boolean; on
             onClick={() => onDone(null)}
             className="min-h-[44px] cursor-pointer rounded-xl px-4 text-sm text-ink/60 transition-colors hover:bg-ink/[0.04] hover:text-ink"
           >
-            Cancel
+            {tr("Cancel")}
           </button>
         )}
       </div>
       <p className="mt-2 text-xs text-ink/40">
-        Starts with {DEFAULT_BOARD_COLUMNS[kind].join(" · ")} — rename them or add more any time.
+        {tr("Starts with {columns} — rename them or add more any time.", { columns: DEFAULT_BOARD_COLUMNS[kind].map((c) => tr(c)).join(" · ") })}
       </p>
       {first && (
         <button
@@ -261,7 +278,7 @@ function NewBoard({ kind, first, onDone }: { kind: BoardKind; first: boolean; on
           className="mt-4 inline-flex min-h-[40px] cursor-pointer items-center gap-2 text-sm font-medium text-amber/90 transition-colors hover:text-amber"
         >
           <ScanText className="h-4 w-4" aria-hidden />
-          Or start from a screenshot of your list
+          {tr("Or start from a screenshot of your list")}
         </button>
       )}
       {error && (

@@ -44,16 +44,18 @@ import { cn, formatCurrency } from "@/lib/utils";
 import { LIMITS } from "@/lib/limits";
 import { Menu } from "@/components/ui/menu";
 import { TicketCard } from "@/components/boards/ticket-card";
+import { tr } from "@/lib/i18n";
 
 type Lists = Record<string, string[]>; // column id -> ticket ids, top to bottom
 
-export const ticketNoun = (kind: BoardKind, n = 1) => (kind === "shopping" ? "item" : "ticket") + (n === 1 ? "" : "s");
+/** "ticket" / "tickets", "item" / "items" — in Bangla the word doesn't change. */
+export const ticketNoun = (kind: BoardKind, n = 1) => tr((kind === "shopping" ? "item" : "ticket") + (n === 1 ? "" : "s"));
 
 /** A Supabase error as a sentence (with a hint when the boards tables are missing). */
 export function boardError(err: unknown): string {
   const msg = typeof err === "object" && err && "message" in err ? String((err as { message: unknown }).message) : String(err);
   if (/(board|ticket).*(does not exist|schema cache)/i.test(msg)) return "Boards aren't set up yet — run db/supabase.sql in Supabase.";
-  return msg || "Something went wrong — try again.";
+  return msg || tr("Something went wrong — try again.");
 }
 
 const COLUMN_W = "w-[84vw] max-w-[320px] sm:w-[288px]";
@@ -209,31 +211,26 @@ export function BoardView({ board, onOpen }: { board: Board; onOpen: (ticketId: 
     if (Date.now() - droppedAt.current > 300) onOpen(id);
   };
 
-  const titleOf = (id: UniqueIdentifier) => byId.get(String(id))?.title ?? "the ticket";
+  const titleOf = (id: UniqueIdentifier) => byId.get(String(id))?.title ?? tr("the ticket");
   const placeOf = (id: UniqueIdentifier) =>
-    columns.find((c) => c.id === columnOf(id, drag.current ?? stored))?.name ?? "the board";
-  const nameOf = (a: Active) => `the ${columns.find((c) => c.id === a.id)?.name ?? ""} column`;
-  const slotOf = (id: UniqueIdentifier) => `position ${columns.findIndex((c) => c.id === id) + 1} of ${columns.length}`;
+    columns.find((c) => c.id === columnOf(id, drag.current ?? stored))?.name ?? tr("the board");
+  const nameOf = (a: Active) => tr("the {name} column", { name: columns.find((c) => c.id === a.id)?.name ?? "" });
+  const slotOf = (id: UniqueIdentifier) => tr("position {n} of {total}", { n: columns.findIndex((c) => c.id === id) + 1, total: columns.length });
   const announcements: Announcements = {
-    onDragStart: ({ active }) => (isColumn(active) ? `Picked up ${nameOf(active)}.` : `Picked up ${titleOf(active.id)}.`),
-    onDragOver: ({ active, over }) =>
-      isColumn(active)
-        ? over
-          ? `${nameOf(active)} is at ${slotOf(over.id)}.`
-          : `${nameOf(active)} is not over a column.`
-        : over
-          ? `${titleOf(active.id)} is in ${placeOf(over.id)}.`
-          : `${titleOf(active.id)} is not over a column.`,
-    onDragEnd: ({ active, over }) =>
-      isColumn(active)
-        ? over
-          ? `${nameOf(active)} was dropped at ${slotOf(over.id)}.`
-          : `${nameOf(active)} was put back.`
-        : over
-          ? `${titleOf(active.id)} was dropped in ${placeOf(over.id)}.`
-          : `${titleOf(active.id)} was put back.`,
-    onDragCancel: ({ active }) =>
-      isColumn(active) ? `Moving ${nameOf(active)} was cancelled.` : `Moving ${titleOf(active.id)} was cancelled.`,
+    onDragStart: ({ active }) => tr("Picked up {name}.", { name: isColumn(active) ? nameOf(active) : titleOf(active.id) }),
+    onDragOver: ({ active, over }) => {
+      const name = isColumn(active) ? nameOf(active) : titleOf(active.id);
+      if (!over) return tr("{name} is not over a column.", { name });
+      return isColumn(active) ? tr("{name} is at {place}.", { name, place: slotOf(over.id) }) : tr("{name} is in {place}.", { name, place: placeOf(over.id) });
+    },
+    onDragEnd: ({ active, over }) => {
+      const name = isColumn(active) ? nameOf(active) : titleOf(active.id);
+      if (!over) return tr("{name} was put back.", { name });
+      return isColumn(active)
+        ? tr("{name} was dropped at {place}.", { name, place: slotOf(over.id) })
+        : tr("{name} was dropped in {place}.", { name, place: placeOf(over.id) });
+    },
+    onDragCancel: ({ active }) => tr("Moving {name} was cancelled.", { name: isColumn(active) ? nameOf(active) : titleOf(active.id) }),
   };
 
   const active = activeId ? byId.get(activeId) : undefined;
@@ -251,8 +248,9 @@ export function BoardView({ board, onOpen }: { board: Board; onOpen: (ticketId: 
       accessibility={{
         announcements,
         screenReaderInstructions: {
-          draggable:
+          draggable: tr(
             "To move it, press space, use the arrow keys, then press space to drop it or escape to cancel. Press enter to open a ticket.",
+          ),
         },
       }}
     >
@@ -355,7 +353,7 @@ function ColumnView({
     p.catch((err) => setError(boardError(err)));
   };
   const remove = () => {
-    if (items.length && !window.confirm(`Delete "${column.name}" and its ${items.length} ${ticketNoun(kind, items.length)}?`)) return;
+    if (items.length && !window.confirm(tr("Delete \"{name}\" and its {n} {x}?", { name: column.name, n: items.length, x: ticketNoun(kind, items.length) }))) return;
     run(removeColumn(column.id));
   };
 
@@ -376,7 +374,7 @@ function ColumnView({
           <>
             <NameInput
               initial={column.name}
-              label="Column name"
+              label={tr("Column name")}
               onDone={(v) => {
                 setRenaming(false);
                 if (v && v !== column.name) run(renameColumn(column.id, v));
@@ -392,8 +390,8 @@ function ColumnView({
             ref={setActivatorNodeRef}
             {...attributes}
             {...listeners}
-            aria-label={`${column.name} column`}
-            title="Drag to move this column"
+            aria-label={tr("{name} column", { name: column.name })}
+            title={tr("Drag to move this column")}
             className="-my-1 -ml-1 flex min-h-[38px] min-w-0 flex-1 cursor-grab touch-manipulation select-none items-center gap-2 rounded-md pl-1 [-webkit-touch-callout:none] focus-visible:outline-2 focus-visible:outline-offset-2 active:cursor-grabbing"
           >
             <h3 className="min-w-0 truncate font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-ink/70">
@@ -403,13 +401,13 @@ function ColumnView({
           </div>
         )}
         <Menu
-          label={`${column.name} column options`}
+          label={tr("{name} column options", { name: column.name })}
           className="ml-auto"
           items={[
-            { label: "Rename", icon: Pencil, onSelect: () => setRenaming(true) },
-            { label: "Move left", icon: ArrowLeft, onSelect: () => run(moveColumn(column.id, -1)), disabled: first },
-            { label: "Move right", icon: ArrowRight, onSelect: () => run(moveColumn(column.id, 1)), disabled: last },
-            { label: "Delete column", icon: Trash2, onSelect: remove, danger: true },
+            { label: tr("Rename"), icon: Pencil, onSelect: () => setRenaming(true) },
+            { label: tr("Move left"), icon: ArrowLeft, onSelect: () => run(moveColumn(column.id, -1)), disabled: first },
+            { label: tr("Move right"), icon: ArrowRight, onSelect: () => run(moveColumn(column.id, 1)), disabled: last },
+            { label: tr("Delete column"), icon: Trash2, onSelect: remove, danger: true },
           ]}
         />
       </header>
@@ -426,7 +424,7 @@ function ColumnView({
           ))}
           {items.length === 0 && !dragging && (
             <li className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-line px-3 py-5 text-center text-xs text-ink/35">
-              {first ? `Add a ${ticketNoun(kind)} below` : "Drag here"}
+              {first ? tr("Add a {x} below", { x: ticketNoun(kind) }) : tr("Drag here")}
             </li>
           )}
         </ul>
@@ -463,7 +461,7 @@ function SortableTicket({
       <div
         {...attributes}
         {...listeners}
-        aria-label={`${ticket.title}, number ${ticket.number}`}
+        aria-label={tr("{title}, number {number}", { title: ticket.title, number: ticket.number })}
         onClick={() => onOpen(ticket.id)}
         onKeyDown={(e) => {
           if (e.key === "Enter" && !dragging) {
@@ -512,7 +510,7 @@ function ColumnPreview({ column, items, kind }: { column: BoardColumn; items: Ti
             <TicketCard ticket={t} kind={kind} done={false} />
           </li>
         ))}
-        {items.length > 6 && <li className="list-none px-1 text-xs text-ink/45">+{items.length - 6} more</li>}
+        {items.length > 6 && <li className="list-none px-1 text-xs text-ink/45">{tr("+{x} more", { x: items.length - 6 })}</li>}
       </ul>
     </section>
   );
@@ -555,7 +553,7 @@ function QuickAdd({ columnId, kind }: { columnId: string; kind: BoardKind }) {
         className="mx-2 mb-2 flex min-h-[40px] cursor-pointer items-center gap-1.5 rounded-lg px-2 text-sm text-ink/45 transition-colors hover:bg-ink/[0.04] hover:text-ink/80"
       >
         <Plus className="h-4 w-4" aria-hidden />
-        Add {ticketNoun(kind)}
+        {tr("Add")}{" "}{ticketNoun(kind)}
       </button>
     );
   }
@@ -575,8 +573,8 @@ function QuickAdd({ columnId, kind }: { columnId: string; kind: BoardKind }) {
           if (e.key === "Escape") close();
         }}
         onBlur={() => !title.trim() && !busy && close()}
-        placeholder={kind === "shopping" ? "What do you need?" : "What needs doing?"}
-        aria-label={`New ${ticketNoun(kind)}`}
+        placeholder={kind === "shopping" ? tr("What do you need?") : tr("What needs doing?")}
+        aria-label={tr("New {x}", { x: ticketNoun(kind) })}
         className="w-full resize-none rounded-lg border border-line bg-card p-2.5 text-sm text-ink outline-hidden placeholder:text-ink/30 focus:border-amber/50"
       />
       {error && (
@@ -590,7 +588,7 @@ function QuickAdd({ columnId, kind }: { columnId: string; kind: BoardKind }) {
           disabled={!title.trim() || busy}
           className="entry-btn min-h-[36px] cursor-pointer rounded-lg px-3.5 text-xs font-semibold text-paper disabled:cursor-default disabled:opacity-40"
         >
-          {busy ? "Adding…" : "Add"}
+          {busy ? tr("Adding…") : tr("Add")}
         </button>
         <button
           type="button"
@@ -598,7 +596,7 @@ function QuickAdd({ columnId, kind }: { columnId: string; kind: BoardKind }) {
           onClick={close}
           className="min-h-[36px] cursor-pointer rounded-lg px-3 text-xs text-ink/55 transition-colors hover:bg-ink/[0.04] hover:text-ink"
         >
-          Cancel
+          {tr("Cancel")}
         </button>
       </div>
     </form>
@@ -623,7 +621,7 @@ function AddColumn({ boardId }: { boardId: string }) {
         )}
       >
         <Plus className="h-4 w-4" aria-hidden />
-        Add column
+        {tr("Add column")}
       </button>
     );
   }
@@ -632,8 +630,8 @@ function AddColumn({ boardId }: { boardId: string }) {
       <NameInput
         key={draft.key}
         initial={draft.name}
-        label="New column name"
-        placeholder="Column name (e.g. Waiting)"
+        label={tr("New column name")}
+        placeholder={tr("Column name (e.g. Waiting)")}
         onDone={(v) => {
           if (!v) {
             setError("");
@@ -658,7 +656,7 @@ function AddColumn({ boardId }: { boardId: string }) {
           {error}
         </p>
       )}
-      <p className="mt-2 text-[11px] text-ink/40">Enter to add · Esc to cancel</p>
+      <p className="mt-2 text-[11px] text-ink/40">{tr("Enter to add · Esc to cancel")}</p>
     </div>
   );
 }

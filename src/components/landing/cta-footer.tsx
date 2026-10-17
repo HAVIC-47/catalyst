@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { Logo } from "@/components/ui/logo";
 
 export function CtaFooter() {
   return (
@@ -33,7 +34,8 @@ export function CtaFooter() {
         </div>
 
         <footer className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-ink/[0.05] pt-6 sm:flex-row">
-          <div className="flex items-baseline gap-2">
+          <div className="flex items-center gap-2">
+            <Logo size={22} />
             <span className="font-display text-lg font-semibold text-ink">Catalyst</span>
             <span className="label text-amber/70">৳ BD</span>
           </div>

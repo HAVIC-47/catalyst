@@ -12,6 +12,7 @@ interface Row {
   occurred_on: string;
   occurred_at: string;
   created_at: string;
+  wallet_id?: string | null;
 }
 const toTx = (r: Row): Transaction => ({
   id: r.id,
@@ -24,6 +25,7 @@ const toTx = (r: Row): Transaction => ({
   occurredOn: r.occurred_on,
   occurredAt: r.occurred_at ?? r.created_at,
   createdAt: r.created_at,
+  walletId: r.wallet_id ?? null,
 });
 
 export async function listTransactions(): Promise<Transaction[]> {
@@ -37,6 +39,8 @@ export async function listTransactions(): Promise<Transaction[]> {
   return (data as Row[]).map(toTx);
 }
 
+// wallet_id only goes out when there is one, so entries still save on a database
+// that hasn't had the wallets update yet.
 const toRow = (input: NewTransaction) => ({
   kind: input.kind,
   amount: input.amount,
@@ -46,6 +50,7 @@ const toRow = (input: NewTransaction) => ({
   note: input.note,
   occurred_on: input.occurredOn,
   occurred_at: input.occurredAt,
+  ...(input.walletId ? { wallet_id: input.walletId } : {}),
 });
 
 export async function addTransaction(input: NewTransaction): Promise<Transaction> {

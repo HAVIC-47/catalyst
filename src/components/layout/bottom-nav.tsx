@@ -7,6 +7,7 @@ import { CalendarDays, LayoutGrid, Receipt, MoreHorizontal, Plus, type LucideIco
 import { cn } from "@/lib/utils";
 import { useAppData } from "@/hooks/use-app-data";
 import { MORE_NAV, MoreSheet } from "@/components/layout/more-sheet";
+import { tr } from "@/lib/i18n";
 
 // Mobile bottom bar: Calendar · Dashboard · + · Ledger · More. The center + scans
 // a memo or notes — or, on the To-do / To buy pages, a screenshot of a list that
@@ -37,7 +38,7 @@ export function BottomNav() {
       <Link href={href} aria-current={active ? "page" : undefined} className={tabClass(active)}>
         {active && <span className="absolute top-1 h-0.5 w-7 rounded-full bg-amber" aria-hidden />}
         <Icon className="h-[18px] w-[18px]" aria-hidden />
-        <span>{label}</span>
+        <span>{tr(label)}</span>
       </Link>
     );
   };
@@ -45,7 +46,7 @@ export function BottomNav() {
   return (
     <>
       <nav
-        aria-label="Primary"
+        aria-label={tr("Primary")}
         className="fixed inset-x-0 bottom-0 z-40 h-[var(--bottomnav-h)] border-t border-line bg-paper/90 backdrop-blur-xl lg:hidden"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
@@ -57,7 +58,7 @@ export function BottomNav() {
           <div className="flex flex-1 items-center justify-center">
             <button
               onClick={() => (boardKind ? openListScan(boardKind) : openMemo())}
-              aria-label={boardKind ? "Add from a screenshot of your list" : "Scan a memo or notes"}
+              aria-label={boardKind ? tr("Add from a screenshot of your list") : tr("Scan a memo or notes")}
               className="entry-btn flex h-12 w-12 cursor-pointer items-center justify-center rounded-full text-paper shadow-entry transition-transform duration-200 focus-visible:rounded-full! active:scale-95"
             >
               <Plus className="h-6 w-6" aria-hidden strokeWidth={2.5} />
@@ -66,10 +67,10 @@ export function BottomNav() {
 
           {tab(LEDGER)}
 
-          <button onClick={() => setMoreOpen(true)} aria-label="More sections" className={tabClass(moreActive)}>
+          <button onClick={() => setMoreOpen(true)} aria-label={tr("More sections")} className={tabClass(moreActive)}>
             {moreActive && <span className="absolute top-1 h-0.5 w-7 rounded-full bg-amber" aria-hidden />}
             <MoreHorizontal className="h-[18px] w-[18px]" aria-hidden />
-            <span>More</span>
+            <span>{tr("More")}</span>
           </button>
         </div>
       </nav>

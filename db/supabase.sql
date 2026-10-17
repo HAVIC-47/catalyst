@@ -5,7 +5,9 @@
 -- budgets, goals, bills, journal_entries, activities, activity_logs (later phases) +
 -- memo_scans (daily limit for the memo reader) +
 -- boards, board_columns, tickets (to-do and to-buy boards) +
--- ai_insights, ai_requests (saved AI summaries and their daily limit).
+-- ai_insights, ai_requests (saved AI summaries and their daily limit) +
+-- wallets, transfers (where money sits and moves between) +
+-- debts, debt_payments (dhar / baki) + push_subscriptions (web reminders).
 -- Every table is Row-Level-Security scoped to auth.uid() so users see only their own data.
 
 create extension if not exists "pgcrypto";
@@ -27,6 +29,35 @@ create table if not exists public.categories (
   created_at timestamptz not null default now()
 );
 
+-- WALLETS (where money sits: cash, bKash, Nagad, a bank account…) ------------
+-- A balance is the opening balance plus the entries and transfers in that wallet.
+create table if not exists public.wallets (
+  id              uuid primary key default gen_random_uuid(),
+  user_id         uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  name            text not null,
+  kind            text not null default 'cash' check (kind in ('cash','mobile','bank','card','other')),
+  color           text not null default '#7A746A',
+  opening_balance numeric(14,2) not null default 0,
+  sort            int  not null default 0,
+  archived        boolean not null default false,
+  created_at      timestamptz not null default now()
+);
+
+-- TRANSFERS between wallets — their own table, so moving money never counts as
+-- spending or income anywhere (and older app versions never see them).
+create table if not exists public.transfers (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  from_wallet uuid not null references public.wallets(id) on delete cascade,
+  to_wallet   uuid not null references public.wallets(id) on delete cascade,
+  amount      numeric(14,2) not null check (amount > 0),
+  note        text not null default '',
+  occurred_on date not null default current_date,
+  occurred_at timestamptz not null default now(),
+  created_at  timestamptz not null default now(),
+  constraint transfers_two_wallets check (from_wallet <> to_wallet)
+);
+
 -- TRANSACTIONS (money) --------------------------------------------------------
 -- amount stored positive; `kind` carries the sign meaning.
 create table if not exists public.transactions (
@@ -46,6 +77,8 @@ alter table public.transactions add column if not exists occurred_at timestamptz
 -- Allow a third kind 'saving' (positive contribution to a separate savings pool).
 alter table public.transactions drop constraint if exists transactions_kind_check;
 alter table public.transactions add constraint transactions_kind_check check (kind in ('expense','income','saving'));
+-- The wallet an entry came from or went into (null = the default wallet).
+alter table public.transactions add column if not exists wallet_id uuid references public.wallets(id) on delete set null;
 
 -- MOOD LOGS (multiple per day, each with a timestamp) -------------------------
 create table if not exists public.mood_logs (
@@ -96,6 +129,38 @@ create table if not exists public.bills (
   recurrence  text not null default 'monthly',
   is_paid     boolean not null default false,
   created_at  timestamptz not null default now()
+);
+-- Paying a bill logs an expense: under this category, from this wallet. The last
+-- one it logged is remembered so "mark unpaid" can take it back off the ledger.
+alter table public.bills add column if not exists category_id uuid references public.categories(id) on delete set null;
+alter table public.bills add column if not exists wallet_id uuid references public.wallets(id) on delete set null;
+alter table public.bills add column if not exists last_paid_txn uuid references public.transactions(id) on delete set null;
+
+-- DEBTS (dhar / baki): money you lent (they owe you) or borrowed (you owe them).
+-- What's left is the amount minus its payments. None of it counts as spending
+-- or income; it only moves money in and out of a wallet.
+create table if not exists public.debts (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  person      text not null,
+  direction   text not null check (direction in ('lent','borrowed')),
+  amount      numeric(14,2) not null check (amount > 0),
+  note        text not null default '',
+  wallet_id   uuid references public.wallets(id) on delete set null,
+  occurred_on date not null default current_date,
+  due_on      date,
+  closed      boolean not null default false,  -- settled, or written off
+  created_at  timestamptz not null default now()
+);
+create table if not exists public.debt_payments (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  debt_id    uuid not null references public.debts(id) on delete cascade,
+  amount     numeric(14,2) not null check (amount > 0),
+  wallet_id  uuid references public.wallets(id) on delete set null,
+  paid_on    date not null default current_date,
+  note       text not null default '',
+  created_at timestamptz not null default now()
 );
 
 -- JOURNAL (daily experience log) ---------------------------------------------
@@ -179,7 +244,7 @@ create table if not exists public.tickets (
 create table if not exists public.ai_insights (
   id         uuid primary key default gen_random_uuid(),
   user_id    uuid not null default auth.uid() references auth.users(id) on delete cascade,
-  topic      text not null check (topic in ('journal','ledger','goals','savings','bills','mood','todo','shopping')),
+  topic      text not null check (topic in ('journal','ledger','goals','savings','bills','mood','todo','shopping','recap')),
   period     text not null check (period in ('week','month','year')),
   start_on   date not null,
   data_hash  text not null default '',
@@ -187,10 +252,10 @@ create table if not exists public.ai_insights (
   created_at timestamptz not null default now(),
   unique (user_id, topic, period, start_on)
 );
--- Topics added after the table was first created (to-do and to-buy boards).
+-- Topics added after the table was first created (boards, the monthly recap).
 alter table public.ai_insights drop constraint if exists ai_insights_topic_check;
 alter table public.ai_insights add constraint ai_insights_topic_check
-  check (topic in ('journal','ledger','goals','savings','bills','mood','todo','shopping'));
+  check (topic in ('journal','ledger','goals','savings','bills','mood','todo','shopping','recap'));
 
 -- AI REQUESTS (one row per summary written with the server's Gemini key) -------
 -- Like memo_scans: holds no content, only caps summaries per account per day.
@@ -199,6 +264,20 @@ create table if not exists public.ai_requests (
   user_id    uuid not null default auth.uid() references auth.users(id) on delete cascade,
   topic      text not null default '',
   created_at timestamptz not null default now()
+);
+
+-- PUSH SUBSCRIPTIONS (web reminders) ------------------------------------------
+-- One row per browser that turned reminders on. The reminders job (run by the
+-- server with its own key) sends each one the evening check-in at its local time.
+create table if not exists public.push_subscriptions (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  endpoint   text not null,
+  p256dh     text not null,
+  auth       text not null,
+  tz         text not null default 'Asia/Dhaka',
+  created_at timestamptz not null default now(),
+  unique (user_id, endpoint)
 );
 
 -- Indexes ---------------------------------------------------------------------
@@ -213,6 +292,11 @@ create index if not exists idx_board_columns_board on public.board_columns (boar
 create index if not exists idx_tickets_board on public.tickets (board_id, column_id, sort);
 create index if not exists idx_tickets_user on public.tickets (user_id);
 create index if not exists idx_ai_requests_user on public.ai_requests (user_id, created_at desc);
+create index if not exists idx_wallets_user on public.wallets (user_id, sort);
+create index if not exists idx_transfers_user on public.transfers (user_id, occurred_on desc);
+create index if not exists idx_debts_user on public.debts (user_id, created_at desc);
+create index if not exists idx_debt_payments_debt on public.debt_payments (debt_id);
+create index if not exists idx_push_user on public.push_subscriptions (user_id);
 
 -- Row-Level Security: enable + owner-only policies on every table -------------
 do $$
@@ -221,7 +305,8 @@ begin
   foreach t in array array[
     'categories','transactions','mood_logs','budgets','goals',
     'bills','journal_entries','activities','activity_logs',
-    'boards','board_columns','tickets','ai_insights'
+    'boards','board_columns','tickets','ai_insights',
+    'wallets','transfers','debts','debt_payments','push_subscriptions'
   ]
   loop
     execute format('alter table public.%I enable row level security;', t);

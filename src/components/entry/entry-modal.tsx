@@ -3,23 +3,25 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { format, parseISO } from "date-fns";
+import { parseISO } from "date-fns";
 import { X, ArrowUpRight, ArrowDownLeft, MapPin } from "lucide-react";
 import { useAppData, type EntryTab } from "@/hooks/use-app-data";
-import { MOOD_PRESETS, MOOD_TAGS, type Category, type Kind } from "@/types";
-import { TAKA, cn, combineDateTime, nowTime, tintText } from "@/lib/utils";
+import { MOOD_PRESETS, MOOD_TAGS, type Category, type Kind, moodName } from "@/types";
+import { currencySymbol, cn, combineDateTime, formatCurrency, nowTime, tintText, fmt } from "@/lib/utils";
 import { MoodIcon } from "@/components/ui/mood-icon";
 import { LIMITS } from "@/lib/limits";
+import { WalletSelect, rememberWallet, useStartWallet } from "@/components/entry/wallet-select";
+import { tr } from "@/lib/i18n";
 
 export function TimeField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <div>
-      <div className="label mb-2">Time</div>
+      <div className="label mb-2">{tr("Time")}</div>
       <input
         type="time"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        aria-label="Time"
+        aria-label={tr("Time")}
         className="min-h-[44px] rounded-xl border border-line bg-ink/[0.02] px-3 text-sm text-ink/80 outline-hidden focus:border-amber/50"
       />
     </div>
@@ -54,7 +56,7 @@ export function EntryModal() {
           <motion.div
             role="dialog"
             aria-modal="true"
-            aria-label="New entry"
+            aria-label={tr("New entry")}
             initial={{ opacity: 0, y: -10, scale: 0.99 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.99 }}
@@ -64,15 +66,15 @@ export function EntryModal() {
             {/* Header */}
             <div className="flex items-start justify-between border-b border-line p-6 pb-5">
               <div>
-                <div className="label">{format(parseISO(entryDate), "EEEE")}</div>
+                <div className="label">{fmt(parseISO(entryDate), "EEEE")}</div>
                 <h2 className="mt-1 font-display text-3xl font-semibold text-ink">
-                  {format(parseISO(entryDate), "MMM d")}{" "}
-                  <span className="text-ink/35">{format(parseISO(entryDate), "yyyy")}</span>
+                  {fmt(parseISO(entryDate), "MMM d")}{" "}
+                  <span className="text-ink/35">{fmt(parseISO(entryDate), "yyyy")}</span>
                 </h2>
               </div>
               <button
                 onClick={closeEntry}
-                aria-label="Close"
+                aria-label={tr("Close")}
                 className="cursor-pointer rounded-lg p-1 text-ink/40 transition-colors hover:bg-ink/5 hover:text-ink"
               >
                 <X className="h-5 w-5" aria-hidden />
@@ -90,7 +92,7 @@ export function EntryModal() {
                     entryTab === t ? "text-ink" : "text-ink/40 hover:text-ink/70",
                   )}
                 >
-                  {t}
+                  {tr(t === "money" ? "Money" : t === "mood" ? "Mood" : "Saving")}
                   {entryTab === t && (
                     <motion.span
                       layoutId="entry-tab"
@@ -122,6 +124,7 @@ interface MoneyFields {
   place: string;
   note: string;
   time: string;
+  walletId: string | null; // null = the wallet new entries start with
 }
 const emptyFields = (): MoneyFields => ({
   amount: "",
@@ -129,12 +132,14 @@ const emptyFields = (): MoneyFields => ({
   place: "",
   note: "",
   time: nowTime(),
+  walletId: null,
 });
 
 type MoneyKind = "expense" | "income";
 
 function MoneyForm({ dateKey }: { dateKey: string }) {
   const { categories, addMoney, closeEntry } = useAppData();
+  const startWallet = useStartWallet();
   const [kind, setKind] = useState<MoneyKind>("expense");
   // Expense and income keep their OWN fields, so switching the sub-tab preserves
   // whatever was typed. Both are saved together on submit if both have an amount.
@@ -168,6 +173,7 @@ function MoneyForm({ dateKey }: { dateKey: string }) {
       note: ff.note.trim(),
       occurredOn: dateKey,
       occurredAt: combineDateTime(dateKey, ff.time),
+      walletId: ff.walletId ?? startWallet,
     };
   };
 
@@ -181,12 +187,13 @@ function MoneyForm({ dateKey }: { dateKey: string }) {
     try {
       // Save expense + income together (whichever have a valid amount).
       for (const e of pending) await addMoney(e!);
+      rememberWallet(pending[pending.length - 1]?.walletId ?? null);
       closeEntry();
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(
         msg.toLowerCase().includes("column") || msg.includes("PGRST")
-          ? "Database missing a column — run the migration in db/supabase.sql, then retry."
+          ? tr("Database missing a column — run the migration in db/supabase.sql, then retry.")
           : msg,
       );
     } finally {
@@ -199,8 +206,8 @@ function MoneyForm({ dateKey }: { dateKey: string }) {
       {/* expense / income — each keeps its own values */}
       <div className="grid grid-cols-2 gap-2 rounded-xl border border-line bg-ink/[0.02] p-1">
         {([
-          { k: "expense" as MoneyKind, label: "Expense", Icon: ArrowUpRight, color: "text-expense" },
-          { k: "income" as MoneyKind, label: "Income", Icon: ArrowDownLeft, color: "text-income" },
+          { k: "expense" as MoneyKind, label: tr("Expense"), Icon: ArrowUpRight, color: "text-expense" },
+          { k: "income" as MoneyKind, label: tr("Income"), Icon: ArrowDownLeft, color: "text-income" },
         ]).map(({ k, label, Icon, color }) => {
           const filled = parseFloat(forms[k].amount) > 0;
           return (
@@ -220,7 +227,7 @@ function MoneyForm({ dateKey }: { dateKey: string }) {
                     "absolute right-2 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full",
                     k === "expense" ? "bg-expense" : "bg-income",
                   )}
-                  aria-label="has amount"
+                  aria-label={tr("has amount")}
                 />
               )}
             </button>
@@ -230,16 +237,16 @@ function MoneyForm({ dateKey }: { dateKey: string }) {
 
       {/* amount */}
       <div>
-        <div className="label mb-2">Amount</div>
+        <div className="label mb-2">{tr("Amount")}</div>
         <div className="flex items-center gap-3 rounded-xl border border-line bg-ink/[0.02] px-4 py-3 focus-within:border-amber/50">
-          <span className="font-mono text-2xl text-ink/40">{TAKA}</span>
+          <span className="font-mono text-2xl text-ink/40">{currencySymbol()}</span>
           <input
             autoFocus
             inputMode="decimal"
             value={f.amount}
             onChange={(e) => set({ amount: e.target.value.replace(/[^0-9.]/g, "") })}
             placeholder="0"
-            aria-label="Amount"
+            aria-label={tr("Amount")}
             className="w-full bg-transparent font-mono text-3xl font-semibold tabular text-ink outline-hidden"
           />
         </div>
@@ -247,12 +254,12 @@ function MoneyForm({ dateKey }: { dateKey: string }) {
 
       {/* category */}
       <div>
-        <div className="label mb-2">Category</div>
+        <div className="label mb-2">{tr("Category")}</div>
         {list.length === 0 ? (
           <div className="rounded-xl border border-dashed border-line p-4 text-center text-xs text-ink/45">
-            No {kind} categories yet.{" "}
+            {tr("No {kind} categories yet.", { kind: tr(kind) })}{" "}
             <a href="/settings" className="text-amber underline-offset-2 hover:underline">
-              Add them in Settings →
+              {tr("Add them in Settings →")}
             </a>
           </div>
         ) : (
@@ -269,20 +276,27 @@ function MoneyForm({ dateKey }: { dateKey: string }) {
         )}
       </div>
 
+      {/* wallet */}
+      <WalletSelect
+        value={f.walletId ?? startWallet}
+        onChange={(id) => set({ walletId: id })}
+        label={kind === "expense" ? tr("Paid from") : tr("Received in")}
+      />
+
       {/* time */}
       <TimeField value={f.time} onChange={(v) => set({ time: v })} />
 
       {/* place */}
       <div>
-        <div className="label mb-2">Place</div>
+        <div className="label mb-2">{tr("Place")}</div>
         <div className="relative">
           <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/35" aria-hidden />
           <input
             value={f.place}
             onChange={(e) => set({ place: e.target.value })}
-            placeholder="Star Kabab, Aarong, Pathao…"
+            placeholder={tr("Star Kabab, Aarong, Pathao…")}
             maxLength={LIMITS.place}
-            aria-label="Place"
+            aria-label={tr("Place")}
             className="min-h-[44px] w-full rounded-xl border border-line bg-ink/[0.02] pl-10 pr-3 text-sm text-ink outline-hidden focus:border-amber/50"
           />
         </div>
@@ -290,13 +304,13 @@ function MoneyForm({ dateKey }: { dateKey: string }) {
 
       {/* note */}
       <div>
-        <div className="label mb-2">Note · optional</div>
+        <div className="label mb-2">{tr("Note · optional")}</div>
         <input
           value={f.note}
           onChange={(e) => set({ note: e.target.value })}
-          placeholder="What was it for?"
+          placeholder={tr("What was it for?")}
           maxLength={LIMITS.note}
-          aria-label="Note"
+          aria-label={tr("Note")}
           className="min-h-[44px] w-full rounded-xl border border-line bg-ink/[0.02] px-3 text-sm text-ink outline-hidden focus:border-amber/50"
         />
       </div>
@@ -312,7 +326,7 @@ function MoneyForm({ dateKey }: { dateKey: string }) {
         disabled={!valid || saving}
         className="entry-btn min-h-[48px] w-full cursor-pointer rounded-xl text-sm font-semibold text-paper shadow-entry transition-transform duration-200 hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
       >
-        {pending.length === 2 ? "Save expense + income" : pending.length === 1 ? "Save entry" : "Save"}
+        {pending.length === 2 ? tr("Save expense + income") : pending.length === 1 ? tr("Save entry") : tr("Save")}
       </button>
     </div>
   );
@@ -340,9 +354,9 @@ export function CategoryTile({
         className="flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold"
         style={{ backgroundColor: `${cat.color}22`, color: tintText(cat.color) }}
       >
-        {cat.name.slice(0, 1).toUpperCase()}
+        {tr(cat.name).slice(0, 1).toUpperCase()}
       </span>
-      <span className="max-w-full truncate text-xs text-ink/70">{cat.name}</span>
+      <span className="max-w-full truncate text-xs text-ink/70">{tr(cat.name)}</span>
     </button>
   );
 }
@@ -379,7 +393,7 @@ function MoodForm({ dateKey }: { dateKey: string }) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(
         msg.toLowerCase().includes("column") || msg.includes("PGRST")
-          ? "Database missing a column — run the migration in db/supabase.sql, then retry."
+          ? tr("Database missing a column — run the migration in db/supabase.sql, then retry.")
           : msg,
       );
     } finally {
@@ -392,7 +406,7 @@ function MoodForm({ dateKey }: { dateKey: string }) {
   return (
     <div className="space-y-6">
       <div>
-        <div className="label mb-3">How was the day?</div>
+        <div className="label mb-3">{tr("How was the day?")}</div>
         <div className="flex items-center justify-between gap-2">
           {MOOD_PRESETS.map((m) => {
             const on = mood === m.value;
@@ -400,7 +414,7 @@ function MoodForm({ dateKey }: { dateKey: string }) {
               <button
                 key={m.value}
                 onClick={() => setMood(m.value)}
-                aria-label={m.label}
+                aria-label={moodName(m)}
                 aria-pressed={on}
                 className={cn(
                   "flex h-20 min-w-0 flex-1 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-2xl border transition-colors duration-200",
@@ -418,7 +432,7 @@ function MoodForm({ dateKey }: { dateKey: string }) {
                 }
               >
                 <MoodIcon mood={m.value} muted={!on} className="h-7 w-7" strokeWidth={1.75} />
-                <span className="text-[10px] font-medium">{m.label}</span>
+                <span className="text-[10px] font-medium">{moodName(m)}</span>
               </button>
             );
           })}
@@ -426,7 +440,7 @@ function MoodForm({ dateKey }: { dateKey: string }) {
       </div>
 
       <div>
-        <div className="label mb-2">What was it about? · optional</div>
+        <div className="label mb-2">{tr("What was it about? · optional")}</div>
         <div className="flex flex-wrap gap-2">
           {MOOD_TAGS.map((t) => {
             const on = tags.includes(t);
@@ -443,7 +457,7 @@ function MoodForm({ dateKey }: { dateKey: string }) {
                     : "border-line text-ink/55 hover:bg-ink/[0.04] hover:text-ink/80",
                 )}
               >
-                {t}
+                {tr(`${t}|tag`)}
               </button>
             );
           })}
@@ -453,21 +467,21 @@ function MoodForm({ dateKey }: { dateKey: string }) {
       <TimeField value={time} onChange={setTime} />
 
       <div>
-        <div className="label mb-2">Note · optional</div>
+        <div className="label mb-2">{tr("Note · optional")}</div>
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
           rows={3}
-          placeholder="What shaped the mood right now?"
+          placeholder={tr("What shaped the mood right now?")}
           maxLength={LIMITS.note}
-          aria-label="Mood note"
+          aria-label={tr("Mood note")}
           className="w-full resize-none rounded-xl border border-line bg-ink/[0.02] p-3 text-sm text-ink outline-hidden focus:border-amber/50"
         />
       </div>
 
       {dayMoods.length > 0 && (
         <div>
-          <div className="label mb-2">Already logged today · {dayMoods.length}</div>
+          <div className="label mb-2">{tr("Already logged today · {n}", { n: dayMoods.length })}</div>
           <div className="flex flex-wrap gap-2">
             {dayMoods.map((m) => (
               <span
@@ -480,7 +494,7 @@ function MoodForm({ dateKey }: { dateKey: string }) {
             ))}
           </div>
           <p className="mt-1.5 text-[11px] text-ink/35">
-            Multiple moods per day are kept — the day shows their average.
+            {tr("Multiple moods per day are kept — the day shows their average.")}
           </p>
         </div>
       )}
@@ -501,7 +515,7 @@ function MoodForm({ dateKey }: { dateKey: string }) {
           color: tintText(active.color),
         }}
       >
-        Save mood
+        {tr("Save mood")}
       </button>
     </div>
   );
@@ -555,7 +569,7 @@ function SavingForm({ dateKey }: { dateKey: string }) {
         msg.toLowerCase().includes("constraint") ||
           msg.toLowerCase().includes("column") ||
           msg.includes("PGRST")
-          ? "Database hasn't been migrated for savings yet — run the latest db/supabase.sql, then retry."
+          ? tr("Database hasn't been migrated for savings yet — run the latest db/supabase.sql, then retry.")
           : msg,
       );
     } finally {
@@ -567,30 +581,23 @@ function SavingForm({ dateKey }: { dateKey: string }) {
     <div className="space-y-6">
       {/* Total savings tile */}
       <div className="rounded-2xl border border-line bg-ink/[0.02] p-5 text-center">
-        <div className="label">Total savings</div>
-        <div className="mt-1 font-mono text-3xl font-semibold tabular text-saving">
-          {TAKA}
-          {new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 }).format(total)}
-        </div>
-        <div className="mt-2 font-mono text-[11px] text-ink/40">
-          {TAKA}
-          {new Intl.NumberFormat("en-IN").format(added)} added · {TAKA}
-          {new Intl.NumberFormat("en-IN").format(broken)} broken
-        </div>
+        <div className="label">{tr("Total savings")}</div>
+        <div className="mt-1 font-mono text-3xl font-semibold tabular text-saving">{formatCurrency(total)}</div>
+        <div className="mt-2 font-mono text-[11px] text-ink/40">{tr("{amount} added · {amount2} broken", { amount: formatCurrency(added), amount2: formatCurrency(broken) })}</div>
       </div>
 
       {/* Amount */}
       <div>
-        <div className="label mb-2">Add to savings</div>
+        <div className="label mb-2">{tr("Add to savings")}</div>
         <div className="flex items-center gap-3 rounded-xl border border-line bg-ink/[0.02] px-4 py-3 focus-within:border-saving/50">
-          <span className="font-mono text-2xl text-ink/40">{TAKA}</span>
+          <span className="font-mono text-2xl text-ink/40">{currencySymbol()}</span>
           <input
             autoFocus
             inputMode="decimal"
             value={amount}
             onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
             placeholder="0"
-            aria-label="Saving amount"
+            aria-label={tr("Saving amount")}
             className="w-full bg-transparent font-mono text-3xl font-semibold tabular text-ink outline-hidden"
           />
         </div>
@@ -599,20 +606,21 @@ function SavingForm({ dateKey }: { dateKey: string }) {
       <TimeField value={time} onChange={setTime} />
 
       <div>
-        <div className="label mb-2">Note · optional</div>
+        <div className="label mb-2">{tr("Note · optional")}</div>
         <input
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="What is this saving for?"
+          placeholder={tr("What is this saving for?")}
           maxLength={LIMITS.note}
-          aria-label="Saving note"
+          aria-label={tr("Saving note")}
           className="min-h-[44px] w-full rounded-xl border border-line bg-ink/[0.02] px-3 text-sm text-ink outline-hidden focus:border-saving/50"
         />
       </div>
 
       <p className="rounded-xl border border-line bg-ink/[0.02] px-3 py-2 text-[11px] text-ink/45">
-        Tip: pick the <span className="text-saving">Break saving</span> category on the Money tab
-        to pull from this pool.
+        {tr("Tip: pick the ")}
+        <span className="text-saving">{tr("Break saving")}</span>
+        {tr(" category on the Money tab to pull from this pool.")}
       </p>
 
       {error && (
@@ -626,7 +634,7 @@ function SavingForm({ dateKey }: { dateKey: string }) {
         disabled={!valid || saving}
         className="min-h-[48px] w-full cursor-pointer rounded-xl border border-saving/40 bg-saving/15 text-sm font-semibold text-saving transition-all duration-200 hover:bg-saving/25 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"
       >
-        Save saving
+        {tr("Save saving")}
       </button>
     </div>
   );

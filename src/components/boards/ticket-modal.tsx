@@ -10,10 +10,11 @@ import { LoaderCircle, Trash2, X } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
 import { TICKET_PRIORITIES, type Ticket } from "@/types";
 import { byTicketOrder } from "@/lib/boards";
-import { TAKA, cn } from "@/lib/utils";
+import { currencySymbol, cn } from "@/lib/utils";
 import { LIMITS } from "@/lib/limits";
 import { PriorityIcon } from "@/components/boards/ticket-card";
 import { boardError, ticketNoun } from "@/components/boards/board-view";
+import { tr } from "@/lib/i18n";
 
 export function TicketModal({ ticketId, onClose }: { ticketId: string | null; onClose: () => void }) {
   const { tickets } = useAppData();
@@ -44,7 +45,7 @@ export function TicketModal({ ticketId, onClose }: { ticketId: string | null; on
           <motion.div
             role="dialog"
             aria-modal="true"
-            aria-label={`Edit ${ticket.title}`}
+            aria-label={tr("Edit {title}", { title: ticket.title })}
             initial={{ opacity: 0, y: -10, scale: 0.99 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.99 }}
@@ -131,16 +132,14 @@ function TicketForm({ ticket, onClose }: { ticket: Ticket; onClose: () => void }
       <div className="flex items-start justify-between gap-3 border-b border-line p-5 pb-4 sm:p-6 sm:pb-5">
         <div className="min-w-0">
           <div className="label truncate">
-            #{ticket.number} · {board?.name ?? "Board"}
+            #{ticket.number} · {board?.name ?? tr("Board")}
           </div>
-          <h2 className="mt-1 font-display text-2xl font-semibold text-ink sm:text-3xl">
-            Edit {ticketNoun(kind)}
-          </h2>
+          <h2 className="mt-1 font-display text-2xl font-semibold text-ink sm:text-3xl">{tr("Edit {x}", { x: ticketNoun(kind) })}</h2>
         </div>
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close"
+          aria-label={tr("Close")}
           className="cursor-pointer rounded-lg p-1 text-ink/40 transition-colors hover:bg-ink/5 hover:text-ink"
         >
           <X className="h-5 w-5" aria-hidden />
@@ -149,7 +148,7 @@ function TicketForm({ ticket, onClose }: { ticket: Ticket; onClose: () => void }
 
       <div className="space-y-4 p-5 sm:p-6">
         <label className="block">
-          <span className="label mb-2 block">Title</span>
+          <span className="label mb-2 block">{tr("Title")}</span>
           <textarea
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -167,7 +166,7 @@ function TicketForm({ ticket, onClose }: { ticket: Ticket; onClose: () => void }
 
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
-            <span className="label mb-2 block">Status</span>
+            <span className="label mb-2 block">{tr("Status")}</span>
             <select value={columnId} onChange={(e) => setColumnId(e.target.value)} className={cn(field, "cursor-pointer bg-card")}>
               {columns.map((c) => (
                 <option key={c.id} value={c.id} className="bg-card">
@@ -178,8 +177,8 @@ function TicketForm({ ticket, onClose }: { ticket: Ticket; onClose: () => void }
           </label>
 
           <div>
-            <span className="label mb-2 block">Priority</span>
-            <div className="flex gap-1.5" role="radiogroup" aria-label="Priority">
+            <span className="label mb-2 block">{tr("Priority")}</span>
+            <div className="flex gap-1.5" role="radiogroup" aria-label={tr("Priority")}>
               {TICKET_PRIORITIES.map((p) => (
                 <button
                   key={p.value}
@@ -195,14 +194,14 @@ function TicketForm({ ticket, onClose }: { ticket: Ticket; onClose: () => void }
                   )}
                 >
                   <PriorityIcon priority={p.value} />
-                  {p.label}
+                  {tr(`${p.label}|priority`)}
                 </button>
               ))}
             </div>
           </div>
 
           <label className="block">
-            <span className="label mb-2 block">Due date</span>
+            <span className="label mb-2 block">{tr("Due date")}</span>
             <span className="flex items-center gap-2">
               <input type="date" value={dueOn} onChange={(e) => setDueOn(e.target.value)} className={cn(field, "text-ink/80")} />
               {dueOn && (
@@ -211,7 +210,7 @@ function TicketForm({ ticket, onClose }: { ticket: Ticket; onClose: () => void }
                   onClick={() => setDueOn("")}
                   className="shrink-0 cursor-pointer font-mono text-[11px] uppercase tracking-widest text-amber/80 hover:text-amber"
                 >
-                  Clear
+                  {tr("Clear")}
                 </button>
               )}
             </span>
@@ -219,14 +218,14 @@ function TicketForm({ ticket, onClose }: { ticket: Ticket; onClose: () => void }
 
           {kind === "shopping" && (
             <label className="block">
-              <span className="label mb-2 block">Price</span>
+              <span className="label mb-2 block">{tr("Price")}</span>
               <span className="flex items-center gap-2 rounded-xl border border-line bg-ink/[0.02] px-3 focus-within:border-amber/50">
-                <span className="font-mono text-ink/40">{TAKA}</span>
+                <span className="font-mono text-ink/40">{currencySymbol()}</span>
                 <input
                   inputMode="decimal"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
-                  placeholder="Optional"
+                  placeholder={tr("Optional")}
                   className="min-h-[42px] w-full min-w-0 bg-transparent font-mono text-sm text-ink outline-hidden placeholder:text-ink/30"
                 />
               </span>
@@ -235,13 +234,13 @@ function TicketForm({ ticket, onClose }: { ticket: Ticket; onClose: () => void }
         </div>
 
         <label className="block">
-          <span className="label mb-2 block">Notes</span>
+          <span className="label mb-2 block">{tr("Notes")}</span>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={4}
             maxLength={LIMITS.description}
-            placeholder={kind === "shopping" ? "Brand, size, where to get it…" : "Details, links, next steps…"}
+            placeholder={kind === "shopping" ? tr("Brand, size, where to get it…") : tr("Details, links, next steps…")}
             className={cn(field, "resize-y py-2.5")}
           />
         </label>
@@ -256,32 +255,32 @@ function TicketForm({ ticket, onClose }: { ticket: Ticket; onClose: () => void }
       <div className="flex items-center justify-between gap-3 border-t border-line p-4">
         {confirmDelete ? (
           <div className="flex items-center gap-2">
-            <span className="text-sm text-ink/70">Delete?</span>
+            <span className="text-sm text-ink/70">{tr("Delete?")}</span>
             <button
               type="button"
               onClick={() => void remove()}
               disabled={busy}
               className="min-h-[40px] cursor-pointer rounded-xl border border-expense/40 px-3 text-sm font-medium text-expense transition-colors hover:bg-expense/10 disabled:opacity-40"
             >
-              Delete
+              {tr("Delete")}
             </button>
             <button
               type="button"
               onClick={() => setConfirmDelete(false)}
               className="min-h-[40px] cursor-pointer rounded-xl px-3 text-sm text-ink/60 hover:bg-ink/[0.04]"
             >
-              Keep
+              {tr("Keep")}
             </button>
           </div>
         ) : (
           <button
             type="button"
             onClick={() => setConfirmDelete(true)}
-            aria-label={`Delete this ${ticketNoun(kind)}`}
+            aria-label={tr("Delete this {x}", { x: ticketNoun(kind) })}
             className="hairline inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl px-3 text-sm text-ink/60 transition-colors hover:border-expense/40 hover:text-expense"
           >
             <Trash2 className="h-4 w-4" aria-hidden />
-            <span className="hidden sm:inline">Delete</span>
+            <span className="hidden sm:inline">{tr("Delete")}</span>
           </button>
         )}
         <div className="flex items-center gap-2">
@@ -290,7 +289,7 @@ function TicketForm({ ticket, onClose }: { ticket: Ticket; onClose: () => void }
             onClick={onClose}
             className="min-h-[44px] cursor-pointer rounded-xl px-4 text-sm text-ink/60 transition-colors hover:bg-ink/[0.04] hover:text-ink"
           >
-            Cancel
+            {tr("Cancel")}
           </button>
           <button
             type="submit"
@@ -298,7 +297,7 @@ function TicketForm({ ticket, onClose }: { ticket: Ticket; onClose: () => void }
             className="entry-btn inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl px-5 text-sm font-semibold text-paper shadow-entry disabled:cursor-not-allowed disabled:opacity-40"
           >
             {busy && <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />}
-            Save
+            {tr("Save")}
           </button>
         </div>
       </div>

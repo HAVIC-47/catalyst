@@ -2,7 +2,7 @@
 // year, plus suggestions. Shared by the API route and the web card; the Android
 // app mirrors these shapes in lib/data/insights.dart.
 
-export const INSIGHT_TOPICS = ["journal", "ledger", "goals", "savings", "bills", "mood", "todo", "shopping"] as const;
+export const INSIGHT_TOPICS = ["journal", "ledger", "goals", "savings", "bills", "mood", "todo", "shopping", "recap"] as const;
 export type InsightTopic = (typeof INSIGHT_TOPICS)[number];
 
 export const INSIGHT_PERIODS = ["week", "month", "year"] as const;
@@ -18,7 +18,11 @@ export const INSIGHT_LABELS: Record<InsightTopic, string> = {
   mood: "Mood",
   todo: "To-do",
   shopping: "To-buy",
+  recap: "Recap",
 };
+
+/** Languages the AI can write in — the app's UI language. */
+export type InsightLang = "en" | "bn";
 
 export interface Insight {
   headline: string;

@@ -3,6 +3,7 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { RANGES, type Range } from "@/lib/range";
 import { cn } from "@/lib/utils";
+import { tr } from "@/lib/i18n";
 
 // The dashboard's single period selector: Day / Week / Month / Year + prev / Now / next.
 // Compact on phones so both groups share one row. `ranges` narrows the choice
@@ -37,14 +38,14 @@ export function RangeControls({
               range === r ? "seg-on text-amber" : "text-ink/45 hover:text-ink/75",
             )}
           >
-            {r}
+            {tr(r[0].toUpperCase() + r.slice(1))}
           </button>
         ))}
       </div>
       <div className="flex items-center gap-1">
         <button
           onClick={() => setOffset((o) => o - 1)}
-          aria-label="Previous period"
+          aria-label={tr("Previous period")}
           className={cn(navCls, "w-8 sm:w-9")}
         >
           <ChevronLeft className="h-4 w-4" aria-hidden />
@@ -54,12 +55,12 @@ export function RangeControls({
           disabled={offset === 0}
           className={cn(navCls, "px-2 font-mono text-[10px] uppercase tracking-widest sm:px-3 sm:text-[11px]")}
         >
-          Now
+          {tr("Now")}
         </button>
         <button
           onClick={() => setOffset((o) => Math.min(0, o + 1))}
           disabled={offset >= 0}
-          aria-label="Next period"
+          aria-label={tr("Next period")}
           className={cn(navCls, "w-8 sm:w-9")}
         >
           <ChevronRight className="h-4 w-4" aria-hidden />

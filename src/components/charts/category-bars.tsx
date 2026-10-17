@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { Category, Transaction } from "@/types";
 import { rangeWindow, type Range } from "@/lib/range";
+import { tr, trn, digits } from "@/lib/i18n";
 
 const FALLBACK = "#7A746A";
 
@@ -38,7 +39,7 @@ export function CategoryBars({
           (kindOf.get(name) as "expense" | "income" | undefined) ??
           (inferred === "income" ? "income" : "expense");
         return {
-          name,
+          name: tr(name),
           count,
           color: colorOf.get(name) ?? FALLBACK,
           kind,
@@ -51,13 +52,14 @@ export function CategoryBars({
   return (
     <div>
       {bars.length === 0 ? (
-        <p className="py-12 text-center text-sm text-ink/35">No transactions this period.</p>
+        <p className="py-12 text-center text-sm text-ink/35">{tr("No transactions this period.")}</p>
       ) : (
         <div style={{ height: Math.max(180, bars.length * 36 + 24) }} className="mt-1 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={bars} layout="vertical" margin={{ top: 0, right: 12, left: 0, bottom: 0 }}>
               <XAxis
                 type="number"
+                tickFormatter={(v) => digits(String(v))}
                 tick={{ fill: "rgb(var(--c-ink) / 0.5)", fontSize: 11 }}
                 axisLine={false}
                 tickLine={false}
@@ -80,7 +82,7 @@ export function CategoryBars({
                     <div className="card px-3 py-2 text-xs">
                       <div className="text-ink/80">{p.name}</div>
                       <div className="font-mono text-ink/55">
-                        {p.count} {p.count === 1 ? "entry" : "entries"} · {p.kind}
+                        {trn(p.count, "{n} entry", "{n} entries")} · {tr(p.kind)}
                       </div>
                     </div>
                   );

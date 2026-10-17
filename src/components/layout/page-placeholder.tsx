@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import { tr } from "@/lib/i18n";
 
 export function PagePlaceholder({
   kicker,
@@ -25,7 +26,7 @@ export function PagePlaceholder({
         <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-line bg-ink/[0.02]">
           <Icon className="h-6 w-6 text-amber" aria-hidden />
         </div>
-        <h2 className="font-display text-2xl font-semibold text-ink">Coming next</h2>
+        <h2 className="font-display text-2xl font-semibold text-ink">{tr("Coming next")}</h2>
         <p className="mt-2 max-w-sm text-sm text-ink/45">{blurb}</p>
       </div>
     </div>

@@ -8,6 +8,7 @@ import { BREAK_SAVING, type Transaction } from "@/types";
 import { cn, formatCurrency } from "@/lib/utils";
 import { rangeWindow, type Range } from "@/lib/range";
 import { useAppData } from "@/hooks/use-app-data";
+import { tr } from "@/lib/i18n";
 
 const ADDED_COLOR = "#3D80BC"; // blue
 const BROKEN_COLOR = "#CB453B"; // rose
@@ -38,14 +39,14 @@ export function SavingsDonut({
   }, [transactions, startKey, endKey, vaultMode]);
 
   const slices = [
-    { name: "Added", value: added, color: ADDED_COLOR },
-    { name: "Broken", value: broken, color: BROKEN_COLOR },
+    { name: tr("Added"), value: added, color: ADDED_COLOR },
+    { name: tr("Broken"), value: broken, color: BROKEN_COLOR },
   ].filter((s) => s.value > 0);
 
   return (
     <div>
       {slices.length === 0 ? (
-        <p className="py-12 text-center text-sm text-ink/35">No saving activity this period.</p>
+        <p className="py-12 text-center text-sm text-ink/35">{tr("No saving activity this period.")}</p>
       ) : (
         <div className="mt-4 flex flex-col items-center gap-5">
           <div className="relative h-44 w-44">
@@ -67,7 +68,7 @@ export function SavingsDonut({
               </PieChart>
             </ResponsiveContainer>
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-              <span className="label">Net</span>
+              <span className="label">{tr("Net")}</span>
               <span
                 className={cn("font-mono text-lg font-semibold tabular", net >= 0 ? "text-saving" : "text-expense")}
               >
@@ -79,12 +80,12 @@ export function SavingsDonut({
           <ul className="w-full space-y-1.5">
             <li className="flex items-center gap-2 text-sm">
               <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: ADDED_COLOR }} />
-              <span className="text-ink/65">Added</span>
+              <span className="text-ink/65">{tr("Added")}</span>
               <span className="ml-auto font-mono tabular text-ink/50">{formatCurrency(added)}</span>
             </li>
             <li className="flex items-center gap-2 text-sm">
               <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: BROKEN_COLOR }} />
-              <span className="text-ink/65">Broken</span>
+              <span className="text-ink/65">{tr("Broken")}</span>
               <span className="ml-auto font-mono tabular text-ink/50">{formatCurrency(broken)}</span>
             </li>
           </ul>

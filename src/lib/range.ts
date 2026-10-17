@@ -7,12 +7,11 @@ import {
   endOfMonth,
   endOfWeek,
   endOfYear,
-  format,
   startOfMonth,
   startOfWeek,
   startOfYear,
 } from "date-fns";
-import { toDateKey } from "@/lib/utils";
+import { toDateKey, fmt } from "@/lib/utils";
 
 export type Range = "day" | "week" | "month" | "year";
 export const RANGES: Range[] = ["day", "week", "month", "year"];
@@ -25,14 +24,14 @@ export function rangeWindow(
   if (range === "day") {
     const d = addDays(now, offset);
     const k = toDateKey(d);
-    return { startKey: k, endKey: k, label: format(d, "EEE, MMM d") };
+    return { startKey: k, endKey: k, label: fmt(d, "EEE, MMM d") };
   }
   if (range === "week") {
     const a = addWeeks(now, offset);
     return {
       startKey: toDateKey(startOfWeek(a)),
       endKey: toDateKey(endOfWeek(a)),
-      label: `${format(startOfWeek(a), "MMM d")} – ${format(endOfWeek(a), "MMM d")}`,
+      label: `${fmt(startOfWeek(a), "MMM d")} – ${fmt(endOfWeek(a), "MMM d")}`,
     };
   }
   if (range === "month") {
@@ -40,14 +39,14 @@ export function rangeWindow(
     return {
       startKey: toDateKey(startOfMonth(a)),
       endKey: toDateKey(endOfMonth(a)),
-      label: format(a, "MMMM yyyy"),
+      label: fmt(a, "MMMM yyyy"),
     };
   }
   const a = addYears(now, offset);
   return {
     startKey: toDateKey(startOfYear(a)),
     endKey: toDateKey(endOfYear(a)),
-    label: format(a, "yyyy"),
+    label: fmt(a, "yyyy"),
   };
 }
 

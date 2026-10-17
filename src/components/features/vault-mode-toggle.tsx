@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Vault, Info } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
 import { cn } from "@/lib/utils";
+import { tr } from "@/lib/i18n";
 
 // Toggle for Vault Mode: when on, every income adds to the savings pool and every
 // expense draws from it. Hover (or focus) the info dot for an explainer.
@@ -17,7 +18,7 @@ export function VaultModeToggle() {
       <div className="relative flex items-center">
         <button
           type="button"
-          aria-label="What is Vault Mode?"
+          aria-label={tr("What is Vault Mode?")}
           onMouseEnter={() => setTip(true)}
           onMouseLeave={() => setTip(false)}
           onFocus={() => setTip(true)}
@@ -31,11 +32,8 @@ export function VaultModeToggle() {
             role="tooltip"
             className="card absolute right-0 top-6 z-20 w-60 p-3 text-left text-xs leading-relaxed text-ink/70 shadow-card"
           >
-            <span className="font-semibold text-ink">Vault Mode</span> — treat every
-            transaction as part of your savings vault. Income is{" "}
-            <span className="text-income">added</span> to savings and expenses are{" "}
-            <span className="text-expense">drawn</span> from it, so this chart tracks your true
-            net flow into savings.
+            <span className="font-semibold text-ink">{tr("Vault Mode")}</span>{" "}
+            {tr("— treat every transaction as part of your savings vault. Income is added to savings and expenses are drawn from it, so this chart tracks your true net flow into savings.")}
           </div>
         )}
       </div>
@@ -45,7 +43,7 @@ export function VaultModeToggle() {
         type="button"
         role="switch"
         aria-checked={vaultMode}
-        aria-label="Vault Mode"
+        aria-label={tr("Vault Mode")}
         onClick={() => setVaultMode(!vaultMode)}
         className={cn(
           "flex cursor-pointer items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors duration-200",
@@ -55,7 +53,7 @@ export function VaultModeToggle() {
         )}
       >
         <Vault className="h-3.5 w-3.5" aria-hidden />
-        Vault
+        {tr("Vault")}
         <span
           className={cn(
             "relative h-3.5 w-6 rounded-full transition-colors",

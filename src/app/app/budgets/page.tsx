@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import { isSameMonth } from "date-fns";
 import { Plus, Trash2 } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
-import { TAKA, cn, formatCurrency, tintText } from "@/lib/utils";
+import { currencySymbol, cn, formatCurrency, tintText } from "@/lib/utils";
+import { tr } from "@/lib/i18n";
 
 export default function BudgetsPage() {
   const { budgets, transactions, categories, createBudget, editBudget, removeBudget, loading } =
@@ -42,41 +43,39 @@ export default function BudgetsPage() {
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
       <div className="mb-6">
-        <div className="label mb-2">Budgets · this month</div>
+        <div className="label mb-2">{tr("Budgets · this month")}</div>
         <h1 className="font-display text-5xl font-semibold tracking-tight text-ink sm:text-6xl">
-          Spend <span className="serif-italic text-amber/90">limits.</span>
+          {tr("Spend")}{" "}<span className="serif-italic text-amber/90">{tr("limits.")}</span>
         </h1>
         {budgets.length > 0 && (
-          <p className="mt-3 font-mono text-sm text-ink/45">
-            {formatCurrency(totalSpent)} of {formatCurrency(totalBudget)} used
-          </p>
+          <p className="mt-3 font-mono text-sm text-ink/45">{tr("{amount} of {amount2} used", { amount: formatCurrency(totalSpent), amount2: formatCurrency(totalBudget) })}</p>
         )}
       </div>
 
       {/* add budget — category, limit and button each get a full row on phones, one row from sm up */}
       <div className="card mb-6 grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
         <label className="block min-w-0">
-          <span className="label mb-1.5 block">Category</span>
+          <span className="label mb-1.5 block">{tr("Category")}</span>
           <select
             value={newCatId}
             onChange={(e) => setNewCatId(e.target.value)}
             className="min-h-[44px] w-full cursor-pointer rounded-xl border border-line bg-card px-3 text-sm text-ink/80 outline-hidden focus:border-amber/50"
           >
             {available.length === 0 ? (
-              <option value="">All categories budgeted</option>
+              <option value="">{tr("All categories budgeted")}</option>
             ) : (
               available.map((c) => (
                 <option key={c.id} value={c.id} className="bg-card">
-                  {c.name}
+                  {tr(c.name)}
                 </option>
               ))
             )}
           </select>
         </label>
         <label className="block min-w-0">
-          <span className="label mb-1.5 block">Monthly limit</span>
+          <span className="label mb-1.5 block">{tr("Monthly limit")}</span>
           <span className="flex items-center gap-2 rounded-xl border border-line bg-ink/[0.02] px-3 focus-within:border-amber/50">
-            <span className="font-mono text-ink/40">{TAKA}</span>
+            <span className="font-mono text-ink/40">{currencySymbol()}</span>
             <input
               inputMode="decimal"
               value={newAmt}
@@ -92,13 +91,13 @@ export default function BudgetsPage() {
           disabled={available.length === 0 || !(parseFloat(newAmt) > 0)}
           className="entry-btn inline-flex min-h-[44px] w-full cursor-pointer items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-paper disabled:opacity-40 sm:w-auto"
         >
-          <Plus className="h-4 w-4" strokeWidth={2.5} aria-hidden /> Set budget
+          <Plus className="h-4 w-4" strokeWidth={2.5} aria-hidden />{" "}{tr("Set budget")}
         </button>
       </div>
 
       {!loading && budgets.length === 0 && (
         <div className="card px-6 py-16 text-center text-sm text-ink/40">
-          No budgets yet. Pick a category and set a monthly limit.
+          {tr("No budgets yet. Pick a category and set a monthly limit.")}
         </div>
       )}
 
@@ -117,13 +116,13 @@ export default function BudgetsPage() {
                     className="flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold"
                     style={{ backgroundColor: `${cat?.color ?? "#7A746A"}22`, color: tintText(cat?.color ?? "#7A746A") }}
                   >
-                    {b.categoryName.slice(0, 1).toUpperCase()}
+                    {tr(b.categoryName).slice(0, 1).toUpperCase()}
                   </span>
-                  <span className="text-sm font-medium text-ink/85">{b.categoryName}</span>
+                  <span className="text-sm font-medium text-ink/85">{tr(b.categoryName)}</span>
                 </div>
                 <button
                   onClick={() => removeBudget(b.id)}
-                  aria-label="Delete budget"
+                  aria-label={tr("Delete budget")}
                   className="cursor-pointer text-ink/30 transition-colors hover:text-expense"
                 >
                   <Trash2 className="h-4 w-4" aria-hidden />
@@ -139,10 +138,10 @@ export default function BudgetsPage() {
 
               <div className="mt-2 flex items-center justify-between font-mono text-xs">
                 <span className={over ? "text-expense" : "text-ink/55"}>
-                  {formatCurrency(spent)} spent
+                  {tr("{amount} spent", { amount: formatCurrency(spent) })}
                 </span>
                 <span className="flex items-center gap-1 text-ink/40">
-                  of
+                  {tr("of")}
                   <input
                     defaultValue={String(b.amount)}
                     onBlur={(e) => {
@@ -150,12 +149,12 @@ export default function BudgetsPage() {
                       if (v > 0 && v !== b.amount) editBudget(b.id, { amount: v });
                     }}
                     inputMode="decimal"
-                    aria-label="Edit limit"
+                    aria-label={tr("Edit limit")}
                     className="w-16 rounded-sm border border-transparent bg-transparent text-right text-ink/70 outline-hidden hover:border-line focus:border-amber/50"
                   />
                 </span>
               </div>
-              {over && <p className="mt-1 font-mono text-[11px] text-expense">Over by {formatCurrency(spent - b.amount)}</p>}
+              {over && <p className="mt-1 font-mono text-[11px] text-expense">{tr("Over by {amount}", { amount: formatCurrency(spent - b.amount) })}</p>}
             </div>
           );
         })}

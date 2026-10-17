@@ -9,7 +9,6 @@ import {
   endOfMonth,
   endOfWeek,
   endOfYear,
-  format,
   isSameMonth,
   isToday,
   startOfMonth,
@@ -19,9 +18,10 @@ import {
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
-import { moodPreset } from "@/types";
-import { TAKA, cn, compactCurrency, formatCurrency, toDateKey } from "@/lib/utils";
+import { moodPreset, moodName } from "@/types";
+import { cn, compactCurrency, formatCurrency, toDateKey, fmt } from "@/lib/utils";
 import { MoodIcon } from "@/components/ui/mood-icon";
+import { tr, trn } from "@/lib/i18n";
 
 type Range = "week" | "month" | "year";
 const RANGES: Range[] = ["week", "month", "year"];
@@ -129,17 +129,17 @@ export default function CalendarPage() {
     if (range === "week") {
       const s = startOfWeek(cursor);
       const e = endOfWeek(cursor);
-      return { start: s, end: e, label: `${format(s, "MMM d")} – ${format(e, "MMM d, yyyy")}` };
+      return { start: s, end: e, label: `${fmt(s, "MMM d")} – ${fmt(e, "MMM d, yyyy")}` };
     }
     if (range === "year") {
       const s = startOfYear(cursor);
       const e = endOfYear(cursor);
-      return { start: s, end: e, label: format(cursor, "yyyy") };
+      return { start: s, end: e, label: fmt(cursor, "yyyy") };
     }
     return {
       start: startOfMonth(cursor),
       end: endOfMonth(cursor),
-      label: format(cursor, "MMMM yyyy"),
+      label: fmt(cursor, "MMMM yyyy"),
     };
   }, [range, cursor]);
 
@@ -181,22 +181,22 @@ export default function CalendarPage() {
               {period.label}
             </h1>
             <span className="label">
-              {loading ? "loading…" : `${summary.count} active ${summary.count === 1 ? "day" : "days"}`}
+              {loading ? tr("loading…") : trn(summary.count, "{n} active day", "{n} active days")}
             </span>
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-sm sm:text-base lg:mt-3">
             <span className="text-ink/45">
-              NET{" "}
+              {tr("NET")}{" "}
               <span className={summary.net >= 0 ? "text-income" : "text-expense"}>
                 {formatCurrency(summary.net, { sign: true })}
               </span>
             </span>
             <span className="text-ink/30">·</span>
             <span className="text-ink/45">
-              IN <span className="text-income">{compactCurrency(summary.income)}</span>
+              {tr("IN")}{" "}<span className="text-income">{compactCurrency(summary.income)}</span>
             </span>
             <span className="text-ink/45">
-              OUT <span className="text-expense">{compactCurrency(summary.expense)}</span>
+              {tr("OUT")}{" "}<span className="text-expense">{compactCurrency(summary.expense)}</span>
             </span>
           </div>
         </div>
@@ -216,7 +216,7 @@ export default function CalendarPage() {
                   range === r ? "seg-on text-amber" : "text-ink/45 hover:text-ink/75",
                 )}
               >
-                {r}
+                {tr(r[0].toUpperCase() + r.slice(1))}
               </button>
             ))}
           </div>
@@ -224,7 +224,7 @@ export default function CalendarPage() {
           <div className="ml-auto flex items-center gap-1.5 sm:ml-0 sm:gap-2">
             <button
               onClick={goPrev}
-              aria-label="Previous"
+              aria-label={tr("Previous")}
               className="hairline flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl text-ink/60 transition-colors hover:bg-ink/5 hover:text-ink sm:h-10 sm:w-10"
             >
               <ChevronLeft className="h-4 w-4" aria-hidden />
@@ -233,11 +233,11 @@ export default function CalendarPage() {
               onClick={() => setCursor(new Date())}
               className="hairline h-9 cursor-pointer rounded-xl px-3 font-mono text-xs uppercase tracking-widest text-ink/70 transition-colors hover:bg-ink/5 hover:text-ink sm:h-10 sm:px-4"
             >
-              Today
+              {tr("Today")}
             </button>
             <button
               onClick={goNext}
-              aria-label="Next"
+              aria-label={tr("Next")}
               className="hairline flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl text-ink/60 transition-colors hover:bg-ink/5 hover:text-ink sm:h-10 sm:w-10"
             >
               <ChevronRight className="h-4 w-4" aria-hidden />
@@ -249,19 +249,19 @@ export default function CalendarPage() {
       {/* Legend */}
       <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[10px] uppercase tracking-widest text-ink/40 sm:gap-x-5 lg:mb-4">
         <div className="flex items-center gap-2">
-          <span className="text-ink/55">Mood</span>
+          <span className="text-ink/55">{tr("Mood")}</span>
           <div className="h-2.5 w-14 rounded-full bg-linear-to-r from-[#A8322A] via-[#B59A3C] to-[#2E8159] sm:w-28" />
         </div>
         <div className="flex items-center gap-2">
           <span className="h-2.5 w-2.5 rounded-xs" style={{ backgroundColor: "rgb(var(--tint-spend))" }} />
           <span>
-            <span className="hidden sm:inline">Heavier </span>spend
+            <span className="hidden sm:inline">{tr("Heavier")}{" "}</span>{tr("spend")}
           </span>
         </div>
         <div className="flex items-center gap-2">
           <span className="h-2.5 w-2.5 rounded-xs" style={{ backgroundColor: "rgb(var(--tint-income))" }} />
           <span>
-            <span className="hidden sm:inline">Heavier </span>income
+            <span className="hidden sm:inline">{tr("Heavier")}{" "}</span>{tr("income")}
           </span>
         </div>
       </div>
@@ -305,7 +305,7 @@ function MonthGrid({
             key={d}
             className="px-1.5 py-2 font-mono text-[10px] tracking-[0.12em] text-ink/35 sm:px-3 sm:py-2.5 sm:tracking-[0.2em]"
           >
-            {d}
+            {tr(d)}
           </div>
         ))}
       </div>
@@ -343,7 +343,7 @@ function MonthGrid({
                       : "text-ink/70",
                   )}
                 >
-                  {format(day, "dd")}
+                  {fmt(day, "dd")}
                 </span>
                 {preset && (
                   <MoodIcon mood={preset.value} className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" strokeWidth={2} />
@@ -354,7 +354,7 @@ function MonthGrid({
                   {/* Roomy cells: separate out / in lines. */}
                   <div className="cal-flow space-y-0.5">
                     {data.expense > 0 && (
-                      <div className="text-expense">−{compactCurrency(data.expense).replace(TAKA, TAKA)}</div>
+                      <div className="text-expense">−{compactCurrency(data.expense)}</div>
                     )}
                     {data.income > 0 && <div className="text-income">+{compactCurrency(data.income)}</div>}
                   </div>
@@ -396,7 +396,7 @@ function WeekView({
             key={d}
             className="px-1.5 py-2 font-mono text-[10px] tracking-[0.12em] text-ink/35 sm:px-3 sm:py-2.5 sm:tracking-[0.2em]"
           >
-            {d}
+            {tr(d)}
           </div>
         ))}
       </div>
@@ -425,7 +425,7 @@ function WeekView({
                       : "text-ink/75",
                   )}
                 >
-                  {format(day, "dd")}
+                  {fmt(day, "dd")}
                 </span>
                 {preset && <MoodIcon mood={preset.value} className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={1.75} />}
               </div>
@@ -436,7 +436,7 @@ function WeekView({
                 {data?.income ? (
                   <div className="text-income">+{compactCurrency(data.income)}</div>
                 ) : null}
-                {preset && <div className="text-ink/45">{preset.label}</div>}
+                {preset && <div className="text-ink/45">{moodName(preset)}</div>}
               </div>
             </button>
           );
@@ -480,15 +480,15 @@ function YearView({
         return (
           <div key={mDate.getMonth()} className="card p-2 sm:p-3">
             <div className="mb-2 flex items-baseline justify-between px-1">
-              <h3 className="font-display text-lg font-semibold text-ink">{format(mDate, "MMM")}</h3>
+              <h3 className="font-display text-lg font-semibold text-ink">{fmt(mDate, "MMM")}</h3>
               <span className="font-mono text-[10px] uppercase tracking-widest text-ink/30">
-                {format(mDate, "yyyy")}
+                {fmt(mDate, "yyyy")}
               </span>
             </div>
             <div className="grid grid-cols-7 gap-0.5">
               {WEEKDAYS.map((d) => (
                 <div key={d} className="text-center font-mono text-[8px] tracking-widest text-ink/25">
-                  {d[0]}
+                  {tr(d).slice(0, 1)}
                 </div>
               ))}
               {days.map((day) => {
@@ -503,8 +503,12 @@ function YearView({
                     style={yearCellStyle(data, maxFlow)}
                     title={
                       data
-                        ? `${format(day, "MMM d")} · spent ${compactCurrency(data.expense)} · earned ${compactCurrency(data.income)}${data.mood ? ` · mood ${data.mood}/5` : ""}`
-                        : format(day, "MMM d")
+                        ? tr("{date} · spent {spent} · earned {earned}", {
+                            date: fmt(day, "MMM d"),
+                            spent: compactCurrency(data.expense),
+                            earned: compactCurrency(data.income),
+                          }) + (data.mood ? ` · ${tr("mood {value}/5", { value: data.mood })}` : "")
+                        : fmt(day, "MMM d")
                     }
                     className={cn(
                       "flex aspect-square cursor-pointer items-center justify-center rounded-[3px] font-mono text-[9px] tabular transition-shadow hover:ring-1 hover:ring-ink/50",
@@ -513,7 +517,7 @@ function YearView({
                       !data && "bg-ink/[0.04]",
                     )}
                   >
-                    <span className={data ? "font-medium text-ink" : "text-ink/45"}>{format(day, "d")}</span>
+                    <span className={data ? "font-medium text-ink" : "text-ink/45"}>{fmt(day, "d")}</span>
                   </button>
                 );
               })}

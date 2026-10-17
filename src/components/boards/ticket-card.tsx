@@ -1,7 +1,8 @@
-import { format, parseISO } from "date-fns";
+import { parseISO } from "date-fns";
 import { AlignLeft, CalendarClock, ChevronsDown, ChevronsUp, Equal } from "lucide-react";
 import type { BoardKind, Ticket, TicketPriority } from "@/types";
-import { cn, formatCurrency, toDateKey } from "@/lib/utils";
+import { cn, formatCurrency, toDateKey, fmt } from "@/lib/utils";
+import { tr } from "@/lib/i18n";
 
 const PRIORITY: Record<TicketPriority, { icon: typeof ChevronsUp; color: string; label: string }> = {
   high: { icon: ChevronsUp, color: "rgb(var(--c-expense))", label: "High priority" },
@@ -11,7 +12,7 @@ const PRIORITY: Record<TicketPriority, { icon: typeof ChevronsUp; color: string;
 
 export function PriorityIcon({ priority, className }: { priority: TicketPriority; className?: string }) {
   const { icon: Icon, color, label } = PRIORITY[priority];
-  return <Icon className={cn("h-3.5 w-3.5 shrink-0", className)} style={{ color }} aria-label={label} role="img" />;
+  return <Icon className={cn("h-3.5 w-3.5 shrink-0", className)} style={{ color }} aria-label={tr(label)} role="img" />;
 }
 
 /** A ticket as it sits on the board (also the floating copy while dragging). */
@@ -43,11 +44,11 @@ export function TicketCard({
         {ticket.dueOn && (
           <span className={cn("inline-flex items-center gap-1", overdue && "text-expense")}>
             <CalendarClock className="h-3 w-3" aria-hidden />
-            <span className="sr-only">{overdue ? "Overdue, due" : "Due"}</span>
-            {format(parseISO(ticket.dueOn), "MMM d")}
+            <span className="sr-only">{overdue ? tr("Overdue, due") : tr("Due")}</span>
+            {fmt(parseISO(ticket.dueOn), "MMM d")}
           </span>
         )}
-        {ticket.description && <AlignLeft className="h-3 w-3" aria-label="Has a description" role="img" />}
+        {ticket.description && <AlignLeft className="h-3 w-3" aria-label={tr("Has a description")} role="img" />}
         {kind === "shopping" && ticket.amount !== null && (
           <span className="ml-auto tabular text-ink/75">{formatCurrency(ticket.amount)}</span>
         )}

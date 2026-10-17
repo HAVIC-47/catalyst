@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { MoodLog } from "@/types";
 import { rangeWindow, type Range } from "@/lib/range";
+import { tr, trn, digits } from "@/lib/i18n";
 
 const TAG_COLORS = [
   "#3D80BC", "#7A4E86", "#C06A33", "#2E8159", "#CB453B",
@@ -23,7 +24,7 @@ export function MoodTagBars({ moods, range, offset }: { moods: MoodLog[]; range:
       for (const tag of m.tags) counts.set(tag, (counts.get(tag) ?? 0) + 1);
     }
     return [...counts.entries()]
-      .map(([name, count], i) => ({ name, count, color: TAG_COLORS[i % TAG_COLORS.length] }))
+      .map(([name, count], i) => ({ name: tr(`${name}|tag`), count, color: TAG_COLORS[i % TAG_COLORS.length] }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
   }, [moods, startKey, endKey]);
@@ -32,7 +33,7 @@ export function MoodTagBars({ moods, range, offset }: { moods: MoodLog[]; range:
     <div>
       {bars.length === 0 ? (
         <p className="py-12 text-center text-sm text-ink/35">
-          No mood tags logged this period.
+          {tr("No mood tags logged this period.")}
         </p>
       ) : (
         <div style={{ height: Math.max(180, bars.length * 36 + 24) }} className="mt-1 w-full">
@@ -40,6 +41,7 @@ export function MoodTagBars({ moods, range, offset }: { moods: MoodLog[]; range:
             <BarChart data={bars} layout="vertical" margin={{ top: 0, right: 12, left: 0, bottom: 0 }}>
               <XAxis
                 type="number"
+                tickFormatter={(v) => digits(String(v))}
                 tick={{ fill: "rgb(var(--c-ink) / 0.5)", fontSize: 11 }}
                 axisLine={false}
                 tickLine={false}
@@ -62,7 +64,7 @@ export function MoodTagBars({ moods, range, offset }: { moods: MoodLog[]; range:
                     <div className="card px-3 py-2 text-xs">
                       <div className="text-ink/80">{p.name}</div>
                       <div className="font-mono text-ink/55">
-                        {p.count} {p.count === 1 ? "time" : "times"}
+                        {trn(p.count, "{n} time", "{n} times")}
                       </div>
                     </div>
                   );

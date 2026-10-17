@@ -1,4 +1,5 @@
 // Client-side correlation + aggregation math.
+import { tr } from "@/lib/i18n";
 
 /** Pearson correlation coefficient. Returns 0 when undefined (constant series / <2 points). */
 export function pearson(xs: number[], ys: number[]): number {
@@ -37,11 +38,11 @@ export function mean(xs: number[]): number {
   return xs.length ? sum(xs) / xs.length : 0;
 }
 
-/** Plain-language reading of a correlation magnitude. */
+/** Plain-language reading of a correlation magnitude (in the app's language). */
 export function correlationLabel(r: number): string {
   const a = Math.abs(r);
-  const strength = a >= 0.6 ? "Strong" : a >= 0.3 ? "Moderate" : a >= 0.12 ? "Mild" : "No clear";
-  if (a < 0.12) return "No clear link";
-  const dir = r > 0 ? "higher mood ↔ higher net flow" : "lower mood ↔ heavier spend";
-  return `${strength} link · ${dir}`;
+  if (a < 0.12) return tr("No clear link");
+  const strength = a >= 0.6 ? tr("Strong link") : a >= 0.3 ? tr("Moderate link") : tr("Mild link");
+  const dir = r > 0 ? tr("higher mood ↔ higher net flow") : tr("lower mood ↔ heavier spend");
+  return `${strength} · ${dir}`;
 }

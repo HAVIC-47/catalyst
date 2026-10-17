@@ -13,9 +13,10 @@ import type { BoardKind, Ticket } from "@/types";
 import { cn, formatCurrency, toDateKey } from "@/lib/utils";
 import { pastedImage, toBase64, toJpeg } from "@/lib/image";
 import type { ListItem } from "@/lib/memo";
-import { BOARD_COPY } from "@/components/boards/board-page";
+import { boardCopy } from "@/components/boards/board-page";
 import { boardError, ticketNoun } from "@/components/boards/board-view";
 import { PriorityIcon } from "@/components/boards/ticket-card";
+import { tr } from "@/lib/i18n";
 
 export function ListScanner() {
   const { listScan, closeListScan } = useAppData();
@@ -45,7 +46,7 @@ export function ListScanner() {
           <motion.div
             role="dialog"
             aria-modal="true"
-            aria-label={`Add ${ticketNoun(listScan, 2)} from a screenshot`}
+            aria-label={tr("Add {x} from a screenshot", { x: ticketNoun(listScan, 2) })}
             initial={{ opacity: 0, y: -10, scale: 0.99 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.99 }}
@@ -54,12 +55,12 @@ export function ListScanner() {
           >
             <div className="flex items-start justify-between border-b border-line p-6 pb-5">
               <div>
-                <div className="label">{BOARD_COPY[listScan].kicker}</div>
-                <h2 className="mt-1 font-display text-3xl font-semibold text-ink">Scan a list</h2>
+                <div className="label">{boardCopy(listScan).kicker}</div>
+                <h2 className="mt-1 font-display text-3xl font-semibold text-ink">{tr("Scan a list")}</h2>
               </div>
               <button
                 onClick={closeListScan}
-                aria-label="Close"
+                aria-label={tr("Close")}
                 className="cursor-pointer rounded-lg p-1 text-ink/40 transition-colors hover:bg-ink/5 hover:text-ink"
               >
                 <X className="h-5 w-5" aria-hidden />
@@ -78,7 +79,7 @@ type Step = "pick" | "reading" | "done" | "error";
 
 function ScanFlow({ kind, onClose }: { kind: BoardKind; onClose: () => void }) {
   const { boards, boardColumns, selectedBoards, selectBoard, createBoard, addTickets, removeTickets } = useAppData();
-  const copy = BOARD_COPY[kind];
+  const copy = boardCopy(kind);
   const target = boards.find((b) => b.kind === kind && b.id === selectedBoards[kind]) ?? boards.find((b) => b.kind === kind) ?? null;
 
   const [step, setStep] = useState<Step>("pick");
@@ -117,7 +118,7 @@ function ScanFlow({ kind, onClose }: { kind: BoardKind; onClose: () => void }) {
       columns = made.columns;
       selectBoard(kind, board.id);
     }
-    if (!columns.length) throw new Error(`Add a column to "${board.name}" first.`);
+    if (!columns.length) throw new Error(tr("Add a column to \"{name}\" first.", { name: board.name }));
     const first = columns[0].id;
     const last = columns.length > 1 ? columns[columns.length - 1].id : first;
     const tickets = await addTickets(
@@ -144,7 +145,7 @@ function ScanFlow({ kind, onClose }: { kind: BoardKind; onClose: () => void }) {
     try {
       jpeg = await toJpeg(file);
     } catch {
-      setError("Couldn't open that image — use a JPEG or PNG screenshot.");
+      setError(tr("Couldn't open that image — use a JPEG or PNG screenshot."));
       setStep("error");
       return;
     }
@@ -159,12 +160,12 @@ function ScanFlow({ kind, onClose }: { kind: BoardKind; onClose: () => void }) {
         signal: ctrl.signal,
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.list) throw new Error(data.error || "Couldn't read this screenshot.");
+      if (!res.ok || !data.list) throw new Error(data.error || tr("Couldn't read this screenshot."));
       if (ctrl.signal.aborted) return;
       await addAll(data.list.items as ListItem[]);
     } catch (err) {
       if (ctrl.signal.aborted) return;
-      setError(err instanceof TypeError ? "No connection — try again." : boardError(err));
+      setError(err instanceof TypeError ? tr("No connection — try again.") : boardError(err));
       setStep("error");
     }
   };
@@ -212,12 +213,12 @@ function ScanFlow({ kind, onClose }: { kind: BoardKind; onClose: () => void }) {
   if (step === "reading") {
     return (
       <div className="flex flex-col items-center gap-4 p-8 text-center">
-        {photo && <img src={photo} alt="Your list" className="max-h-56 rounded-xl border border-line object-contain" />}
+        {photo && <img src={photo} alt={tr("Your list")} className="max-h-56 rounded-xl border border-line object-contain" />}
         <div className="flex items-center gap-2 text-sm text-ink/75">
           <LoaderCircle className="h-4 w-4 animate-spin text-amber" aria-hidden />
-          Reading the list…
+          {tr("Reading the list…")}
         </div>
-        <p className="text-xs text-ink/50">Usually a few seconds.</p>
+        <p className="text-xs text-ink/50">{tr("Usually a few seconds.")}</p>
       </div>
     );
   }
@@ -225,7 +226,7 @@ function ScanFlow({ kind, onClose }: { kind: BoardKind; onClose: () => void }) {
   if (step === "error") {
     return (
       <div className="flex flex-col items-center gap-4 p-8 text-center">
-        {photo && <img src={photo} alt="Your list" className="max-h-40 rounded-xl border border-line object-contain opacity-80" />}
+        {photo && <img src={photo} alt={tr("Your list")} className="max-h-40 rounded-xl border border-line object-contain opacity-80" />}
         <p className="max-w-sm text-sm text-expense" role="alert">
           {error}
         </p>
@@ -234,7 +235,7 @@ function ScanFlow({ kind, onClose }: { kind: BoardKind; onClose: () => void }) {
           className="hairline inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl px-4 text-sm text-ink/80 transition-colors hover:bg-ink/[0.04] hover:text-ink"
         >
           <RotateCcw className="h-4 w-4" aria-hidden />
-          Try again
+          {tr("Try again")}
         </button>
       </div>
     );
@@ -252,10 +253,10 @@ function ScanFlow({ kind, onClose }: { kind: BoardKind; onClose: () => void }) {
             <CircleCheck className="h-10 w-10 text-income" aria-hidden />
           )}
           <div className="font-display text-2xl font-semibold text-ink" role="status">
-            {undone ? "Taken back off the board" : `Added ${n} ${ticketNoun(kind, n)}`}
+            {undone ? tr("Taken back off the board") : tr("Added {n} {x}", { n, x: ticketNoun(kind, n) })}
           </div>
           <div className="text-sm text-ink/60">
-            {undone ? `Nothing was kept on ${added.board}.` : `to ${added.board}`}
+            {undone ? tr("Nothing was kept on {board}.", { board: added.board }) : tr("to {board}", { board: added.board })}
             {!undone && total > 0 && <span className="font-mono"> · {formatCurrency(total)}</span>}
           </div>
         </div>
@@ -268,7 +269,7 @@ function ScanFlow({ kind, onClose }: { kind: BoardKind; onClose: () => void }) {
                   <PriorityIcon priority={t.priority} />
                   <span className={cn("min-w-0 flex-1 truncate text-ink/85", done && "text-ink/45 line-through")}>{t.title}</span>
                   {t.amount !== null && <span className="font-mono text-xs tabular text-ink/60">{formatCurrency(t.amount)}</span>}
-                  {done && <span className="label text-[10px]">{kind === "shopping" ? "bought" : "done"}</span>}
+                  {done && <span className="label text-[10px]">{kind === "shopping" ? tr("bought") : tr("done")}</span>}
                 </li>
               );
             })}
@@ -287,7 +288,7 @@ function ScanFlow({ kind, onClose }: { kind: BoardKind; onClose: () => void }) {
               className="hairline inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl px-4 text-sm text-ink/75 transition-colors hover:bg-ink/[0.04] hover:text-ink disabled:opacity-40"
             >
               {busy ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : <Undo2 className="h-4 w-4" aria-hidden />}
-              Undo
+              {tr("Undo")}
             </button>
           ) : (
             <span />
@@ -297,13 +298,13 @@ function ScanFlow({ kind, onClose }: { kind: BoardKind; onClose: () => void }) {
               onClick={reset}
               className="hairline inline-flex min-h-[44px] cursor-pointer items-center rounded-xl px-4 text-sm text-ink/80 transition-colors hover:bg-ink/[0.04] hover:text-ink"
             >
-              Scan another
+              {tr("Scan another")}
             </button>
             <button
               onClick={onClose}
               className="entry-btn inline-flex min-h-[44px] cursor-pointer items-center rounded-xl px-5 text-sm font-semibold text-paper shadow-entry"
             >
-              Done
+              {tr("Done")}
             </button>
           </div>
         </div>
@@ -315,10 +316,12 @@ function ScanFlow({ kind, onClose }: { kind: BoardKind; onClose: () => void }) {
   return (
     <div className="p-6" onDragOver={(e) => e.preventDefault()} onDrop={onDrop}>
       <p className="text-sm leading-relaxed text-ink/60">
-        Upload a screenshot of your {kind === "shopping" ? "shopping list" : "to-do list"} — from any notes app, Notepad, a
-        chat, or a photo of a handwritten list. Every item goes straight onto{" "}
+        {kind === "shopping"
+          ? tr("Upload a screenshot of your shopping list — from any notes app, Notepad, a chat, or a photo of a handwritten list. Every item goes straight onto ")
+          : tr("Upload a screenshot of your to-do list — from any notes app, Notepad, a chat, or a photo of a handwritten list. Every item goes straight onto ")}
         <span className="font-medium text-ink">{target?.name ?? copy.suggested}</span>
-        {target ? "" : ` (a new ${copy.board})`}; ticked items go in as {kind === "shopping" ? "bought" : "done"}.
+        {target ? "" : tr(" (a new {board})", { board: copy.board })}
+        {kind === "shopping" ? tr("; ticked items go in as bought.") : tr("; ticked items go in as done.")}
       </p>
       <div className={cn("mt-5 grid gap-3", touch && "sm:grid-cols-2")}>
         <button
@@ -326,7 +329,7 @@ function ScanFlow({ kind, onClose }: { kind: BoardKind; onClose: () => void }) {
           className="entry-btn flex min-h-[104px] cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl text-sm font-semibold text-paper shadow-entry"
         >
           <ImageUp className="h-6 w-6" aria-hidden />
-          Upload screenshot
+          {tr("Upload screenshot")}
         </button>
         {touch && (
           <button
@@ -334,14 +337,14 @@ function ScanFlow({ kind, onClose }: { kind: BoardKind; onClose: () => void }) {
             className="hairline flex min-h-[104px] cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl text-sm font-semibold text-ink/80 transition-colors hover:bg-ink/[0.04] hover:text-ink"
           >
             <Camera className="h-6 w-6" aria-hidden />
-            Take photo
+            {tr("Take photo")}
           </button>
         )}
       </div>
       {!touch && (
         <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-xs text-ink/45">
           <ClipboardPaste className="h-3.5 w-3.5" aria-hidden />
-          …or paste a screenshot (Ctrl+V), or drop an image here.
+          {tr("…or paste a screenshot (Ctrl+V), or drop an image here.")}
         </p>
       )}
       <input ref={cameraInput} type="file" accept="image/*" capture="environment" hidden onChange={onFile} />

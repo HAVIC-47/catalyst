@@ -1,27 +1,44 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { format } from "date-fns";
+import { bn as bnDates } from "date-fns/locale";
+import { currency } from "@/lib/currency";
+import { digits, isBangla } from "@/lib/i18n";
 
 export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
 }
 
-/** Bangladeshi Taka. Uses the ৳ symbol with en-IN grouping (1,00,000 style). */
+/** The Bangladeshi taka sign — the default currency (see lib/currency for the chosen one). */
 export const TAKA = "৳";
 
+/** The account currency's sign, for amount inputs and labels (৳ unless changed in Settings). */
+export function currencySymbol(): string {
+  return currency().symbol.trim();
+}
+
+/** An amount in the account's currency: ৳1,25,000 by default (en-IN grouping), $125,000 for dollars. */
 export function formatCurrency(value: number, opts: { sign?: boolean } = {}): string {
+  const c = currency();
   const sign = value > 0 ? (opts.sign ? "+" : "") : value < 0 ? "−" : "";
-  const formatted = new Intl.NumberFormat("en-IN", {
-    maximumFractionDigits: value % 1 === 0 ? 0 : 2,
+  const formatted = new Intl.NumberFormat(c.locale, {
+    maximumFractionDigits: value % 1 === 0 ? 0 : c.decimals,
   }).format(Math.abs(value));
-  return `${sign}${TAKA}${formatted}`;
+  return digits(`${sign}${c.symbol}${formatted}`);
 }
 
 export function compactCurrency(value: number): string {
-  const formatted = new Intl.NumberFormat("en-IN", {
+  const c = currency();
+  const formatted = new Intl.NumberFormat(c.locale, {
     notation: "compact",
     maximumFractionDigits: 1,
   }).format(Math.abs(value));
-  return `${value < 0 ? "−" : ""}${TAKA}${formatted}`;
+  return digits(`${value < 0 ? "−" : ""}${c.symbol}${formatted}`);
+}
+
+/** A date as shown, in the app's language (Bengali month names and digits in Bangla). */
+export function fmt(date: Date | number, pattern: string): string {
+  return isBangla() ? digits(format(date, pattern, { locale: bnDates })) : format(date, pattern);
 }
 
 /**

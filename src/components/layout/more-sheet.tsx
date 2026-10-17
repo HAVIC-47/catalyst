@@ -16,6 +16,8 @@ import {
   LogOut,
   Plus,
   X,
+  Wallet,
+  HandCoins,
   type LucideIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -23,12 +25,15 @@ import { cn } from "@/lib/utils";
 import { useAppData } from "@/hooks/use-app-data";
 import { VaultModeToggle } from "@/components/features/vault-mode-toggle";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { tr } from "@/lib/i18n";
 
 /** Sections that aren't in the phone's bottom bar (Calendar, Dashboard, Ledger are). */
 export const MORE_NAV: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/app/journal", label: "Journal", icon: NotebookPen },
   { href: "/app/todo", label: "To-do", icon: ListTodo },
   { href: "/app/shopping", label: "To buy", icon: ShoppingCart },
+  { href: "/app/wallets", label: "Wallets", icon: Wallet },
+  { href: "/app/dhar", label: "Dhar", icon: HandCoins },
   { href: "/app/budgets", label: "Budgets", icon: PiggyBank },
   { href: "/app/goals", label: "Goals", icon: Target },
   { href: "/app/bills", label: "Bills", icon: Bell },
@@ -79,7 +84,7 @@ export function MoreSheet({ open, onClose }: { open: boolean; onClose: () => voi
           <motion.div
             role="dialog"
             aria-modal="true"
-            aria-label="More sections"
+            aria-label={tr("More sections")}
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
@@ -88,10 +93,10 @@ export function MoreSheet({ open, onClose }: { open: boolean; onClose: () => voi
             style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1rem)" }}
           >
             <div className="mb-4 flex items-center justify-between">
-              <span className="label">More</span>
+              <span className="label">{tr("More")}</span>
               <button
                 onClick={onClose}
-                aria-label="Close"
+                aria-label={tr("Close")}
                 className="cursor-pointer rounded-lg p-1 text-ink/45 transition-colors hover:bg-ink/[0.05] hover:text-ink"
               >
                 <X className="h-5 w-5" aria-hidden />
@@ -115,7 +120,7 @@ export function MoreSheet({ open, onClose }: { open: boolean; onClose: () => voi
                     )}
                   >
                     <Icon className="h-5 w-5" aria-hidden />
-                    {label}
+                    {tr(label)}
                   </Link>
                 );
               })}
@@ -131,15 +136,15 @@ export function MoreSheet({ open, onClose }: { open: boolean; onClose: () => voi
                 className="entry-btn flex min-h-[48px] w-full cursor-pointer items-center justify-center gap-2 rounded-xl text-sm font-semibold shadow-entry active:scale-[0.98]"
               >
                 <Plus className="h-4 w-4" aria-hidden strokeWidth={2.5} />
-                New entry
+                {tr("New entry")}
               </button>
             </div>
             <div className="mt-4 flex items-center justify-between">
-              <span className="text-sm text-ink/70">Vault Mode</span>
+              <span className="text-sm text-ink/70">{tr("Vault Mode")}</span>
               <VaultModeToggle />
             </div>
             <div className="mt-3 flex items-center justify-between">
-              <span className="text-sm text-ink/70">Theme</span>
+              <span className="text-sm text-ink/70">{tr("Theme")}</span>
               <ThemeToggle />
             </div>
             <div className="mt-3">
@@ -148,7 +153,7 @@ export function MoreSheet({ open, onClose }: { open: boolean; onClose: () => voi
                 className="flex min-h-[48px] w-full cursor-pointer items-center gap-3 rounded-xl border border-line px-4 text-sm text-ink/80 transition-colors hover:border-expense/40 hover:text-expense"
               >
                 <LogOut className="h-4 w-4" aria-hidden />
-                Sign out
+                {tr("Sign out")}
                 {email && <span className="ml-auto truncate text-xs text-ink/40">{email}</span>}
               </button>
             </div>

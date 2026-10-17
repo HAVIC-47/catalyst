@@ -5,6 +5,7 @@ import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 import type { Category, Kind, Transaction } from "@/types";
 import { formatCurrency } from "@/lib/utils";
 import { rangeWindow, type Range } from "@/lib/range";
+import { tr } from "@/lib/i18n";
 
 const FALLBACK = "#7A746A";
 
@@ -37,8 +38,8 @@ export function CategoryDonut({
   }, [transactions, categories, kind, startKey, endKey]);
 
   const total = slices.reduce((s, x) => s + x.value, 0);
-  const headerLabel = kind === "expense" ? "Spent" : "Earned";
-  const emptyLabel = kind === "expense" ? "No spending this period." : "No income this period.";
+  const headerLabel = kind === "expense" ? tr("Spent") : tr("Earned");
+  const emptyLabel = kind === "expense" ? tr("No spending this period.") : tr("No income this period.");
 
   return (
     <div>
@@ -77,7 +78,7 @@ export function CategoryDonut({
             {slices.slice(0, 6).map((s) => (
               <li key={s.name} className="flex items-center gap-2 text-sm">
                 <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: s.color }} />
-                <span className="text-ink/65">{s.name}</span>
+                <span className="text-ink/65">{tr(s.name)}</span>
                 <span className="ml-auto font-mono tabular text-ink/50">
                   {formatCurrency(s.value)}
                 </span>

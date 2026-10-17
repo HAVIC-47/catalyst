@@ -1,16 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { format, parseISO } from "date-fns";
+import { parseISO } from "date-fns";
 import { Plus, Trash2, Check, X } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
-import { MOOD_PRESETS, moodPreset } from "@/types";
-import { cn, toDateKey } from "@/lib/utils";
+import { MOOD_PRESETS, moodPreset, moodName } from "@/types";
+import { cn, toDateKey, fmt } from "@/lib/utils";
 import { MoodIcon } from "@/components/ui/mood-icon";
 import { LIMITS } from "@/lib/limits";
 import { AiInsights } from "@/components/ai/ai-insights";
+import { tr } from "@/lib/i18n";
 
-const ACT_COLORS = ["#3D80BC", "#2E8159", "#7A4E86", "#C06A33", "#CB453B", "#8E5B6E", "#3D80BC"];
+const ACT_COLORS = ["#3D80BC", "#2E8159", "#7A4E86", "#C06A33", "#CB453B", "#8E5B6E", "#B59A3C"];
 
 export default function JournalPage() {
   const {
@@ -56,9 +57,9 @@ export default function JournalPage() {
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
       <div className="mb-6">
-        <div className="label mb-2">Journal · {format(new Date(), "EEEE, MMM d")}</div>
+        <div className="label mb-2">{tr("Journal")} · {fmt(new Date(), "EEEE, MMM d")}</div>
         <h1 className="font-display text-5xl font-semibold tracking-tight text-ink sm:text-6xl">
-          Daily <span className="serif-italic text-amber/90">log.</span>
+          {tr("Daily")}{" "}<span className="serif-italic text-amber/90">{tr("log.")}</span>
         </h1>
       </div>
 
@@ -68,22 +69,22 @@ export default function JournalPage() {
         {/* entry composer + history */}
         <div className="space-y-6">
           <div className="card p-5">
-            <div className="label mb-3">New entry · today</div>
+            <div className="label mb-3">{tr("New entry · today")}</div>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Title"
+              placeholder={tr("Title")}
               maxLength={LIMITS.title}
-              aria-label="Entry title"
+              aria-label={tr("Entry title")}
               className="mb-2 w-full rounded-xl border border-line bg-ink/[0.02] px-3 py-2.5 text-sm text-ink outline-hidden focus:border-amber/50"
             />
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
               rows={4}
-              placeholder="How did the day go? What happened?"
+              placeholder={tr("How did the day go? What happened?")}
               maxLength={LIMITS.body}
-              aria-label="Entry body"
+              aria-label={tr("Entry body")}
               className="w-full resize-none rounded-xl border border-line bg-ink/[0.02] p-3 text-sm text-ink outline-hidden focus:border-amber/50"
             />
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
@@ -94,9 +95,9 @@ export default function JournalPage() {
                     <button
                       key={m.value}
                       onClick={() => setMood(on ? null : m.value)}
-                      aria-label={m.label}
+                      aria-label={moodName(m)}
                       aria-pressed={on}
-                      title={m.label}
+                      title={moodName(m)}
                       className={cn(
                         "flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border transition-colors duration-200",
                         on ? "" : "border-line text-ink/40 hover:bg-ink/[0.03] hover:text-ink/70",
@@ -117,14 +118,14 @@ export default function JournalPage() {
                 disabled={!title.trim() && !body.trim()}
                 className="entry-btn min-h-[42px] cursor-pointer rounded-xl px-5 text-sm font-semibold text-paper disabled:opacity-40"
               >
-                Save entry
+                {tr("Save entry")}
               </button>
             </div>
           </div>
 
           {!loading && journal.length === 0 && (
             <div className="card px-6 py-12 text-center text-sm text-ink/40">
-              No journal entries yet. Write your first above.
+              {tr("No journal entries yet. Write your first above.")}
             </div>
           )}
 
@@ -136,21 +137,21 @@ export default function JournalPage() {
                   <div className="mb-1 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       {p && (
-                        <span title={p.label} className="flex shrink-0">
+                        <span title={moodName(p)} className="flex shrink-0">
                           <MoodIcon mood={p.value} className="h-5 w-5" strokeWidth={1.75} />
                         </span>
                       )}
                       <h3 className="font-display text-lg font-semibold text-ink">
-                        {j.title || "Untitled"}
+                        {j.title || tr("Untitled")}
                       </h3>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="font-mono text-[11px] text-ink/35">
-                        {format(parseISO(j.entryOn), "MMM d, yyyy")}
+                        {fmt(parseISO(j.entryOn), "MMM d, yyyy")}
                       </span>
                       <button
                         onClick={() => removeJournal(j.id)}
-                        aria-label="Delete entry"
+                        aria-label={tr("Delete entry")}
                         className="cursor-pointer text-ink/0 transition-colors group-hover:text-ink/30 hover:text-expense!"
                       >
                         <Trash2 className="h-4 w-4" aria-hidden />
@@ -166,9 +167,9 @@ export default function JournalPage() {
 
         {/* custom activities */}
         <div className="card h-fit p-5">
-          <div className="label mb-3">Today&apos;s activities</div>
+          <div className="label mb-3">{tr("Today's activities")}</div>
           <p className="mb-4 text-xs text-ink/40">
-            Track custom daily-life habits. Tap to mark done for today.
+            {tr("Track custom daily-life habits. Tap to mark done for today.")}
           </p>
 
           <div className="mb-4 space-y-2">
@@ -197,7 +198,7 @@ export default function JournalPage() {
                   </button>
                   <button
                     onClick={() => removeActivity(a.id)}
-                    aria-label={`Remove ${a.name}`}
+                    aria-label={tr("Remove {name}", { name: a.name })}
                     className="cursor-pointer text-ink/0 transition-colors group-hover:text-ink/30 hover:text-expense!"
                   >
                     <X className="h-4 w-4" aria-hidden />
@@ -206,7 +207,7 @@ export default function JournalPage() {
               );
             })}
             {activities.length === 0 && (
-              <p className="text-xs text-ink/30">No activities yet. Add one below.</p>
+              <p className="text-xs text-ink/30">{tr("No activities yet. Add one below.")}</p>
             )}
           </div>
 
@@ -215,15 +216,15 @@ export default function JournalPage() {
               value={actName}
               onChange={(e) => setActName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addActivity()}
-              placeholder="e.g. Workout, Read, Sleep 8h"
+              placeholder={tr("e.g. Workout, Read, Sleep 8h")}
               maxLength={LIMITS.name}
-              aria-label="New activity"
+              aria-label={tr("New activity")}
               className="min-h-[40px] flex-1 rounded-lg border border-line bg-ink/[0.02] px-3 text-sm text-ink outline-hidden focus:border-amber/50"
             />
             <button
               onClick={addActivity}
               disabled={!actName.trim()}
-              aria-label="Add activity"
+              aria-label={tr("Add activity")}
               className="entry-btn flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg text-paper disabled:opacity-40"
             >
               <Plus className="h-4 w-4" aria-hidden strokeWidth={2.5} />

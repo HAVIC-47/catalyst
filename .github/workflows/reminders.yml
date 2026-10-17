@@ -1,0 +1,32 @@
+# Web reminders: calls the site's reminders job (/api/cron/reminders) once an hour.
+# The job decides who is due — each user's own evening check-in hour, in their
+# timezone — and sends one push to the browsers they turned reminders on in.
+#
+# Secrets: CRON_SECRET (the same value as the CRON_SECRET env var on Vercel) and,
+# optionally, SITE_URL (defaults to the live site). Without CRON_SECRET this does
+# nothing.
+name: Reminders
+
+on:
+  schedule:
+    # A few minutes past the hour: GitHub's :00 slot is congested.
+    - cron: "5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Run the reminders job
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SITE_URL: ${{ secrets.SITE_URL || 'https://catalyst-hishab.vercel.app' }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then echo "CRON_SECRET isn't set — nothing to do."; exit 0; fi
+          resp=$(curl -sS --max-time 60 -w '\n%{http_code}' -X POST \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$SITE_URL/api/cron/reminders")
+          code=$(printf '%s' "$resp" | tail -n1)
+          echo "HTTP $code — $(printf '%s' "$resp" | sed '$d')"
+          [ "$code" = "200" ] || exit 1

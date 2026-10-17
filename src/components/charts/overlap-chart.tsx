@@ -33,9 +33,10 @@ import {
 } from "recharts";
 import type { MoodLog, Transaction } from "@/types";
 import { pearson, correlationLabel } from "@/lib/math";
-import { compactCurrency, formatCurrency, toDateKey } from "@/lib/utils";
+import { compactCurrency, formatCurrency, toDateKey, fmt } from "@/lib/utils";
 import type { Range } from "@/lib/range";
 import { RangeControls } from "@/components/charts/range-controls";
+import { tr, digits } from "@/lib/i18n";
 
 interface Point {
   key: string; // bucket key
@@ -82,11 +83,11 @@ export function OverlapChart({
       {/* Fixed three-line header (nothing wraps), so the phone layout can budget its height. */}
       <div className="mb-3 sm:mb-4">
         <div className="flex items-baseline justify-between gap-3">
-          <div className="label truncate">Trend · {periodLabel}</div>
-          <div className="shrink-0 font-mono text-[11px] text-ink/40 sm:text-xs">r = {correlation.toFixed(2)}</div>
+          <div className="label truncate">{tr("Trend · {periodLabel}", { periodLabel })}</div>
+          <div className="shrink-0 font-mono text-[11px] text-ink/40 sm:text-xs">r = {digits(correlation.toFixed(2))}</div>
         </div>
         <h2 className="mt-1 font-display text-xl font-semibold text-ink sm:text-2xl">
-          Mood <span className="serif-italic text-ink/50">×</span> money
+          {tr("Mood")}{" "}<span className="serif-italic text-ink/50">×</span>{" "}{tr("money")}
         </h2>
         <div className="truncate font-mono text-[11px] text-ink/40 sm:text-xs">
           {correlationLabel(correlation)}
@@ -123,6 +124,7 @@ export function OverlapChart({
               orientation="right"
               domain={[0, 5]}
               ticks={[1, 2, 3, 4, 5]}
+              tickFormatter={(v) => digits(String(v))}
               tick={{ fill: "#9268A0", fontSize: 11 }}
               axisLine={false}
               tickLine={false}
@@ -197,13 +199,13 @@ function buildPoints(
       d.setHours(h, 0, 0, 0);
       return {
         key: `h${h}`,
-        label: format(d, "ha"),
+        label: fmt(d, "ha"),
         net: Math.round(netByHour[h] * 100) / 100,
         saving: Math.round(savingByHour[h] * 100) / 100,
         mood: avg(moodsByHour[h]),
       };
     });
-    return { points, periodLabel: format(day, "EEE, MMM d, yyyy") };
+    return { points, periodLabel: fmt(day, "EEE, MMM d, yyyy") };
   }
 
   // Aggregate per day-key (moods averaged, savings separate from net).
@@ -232,13 +234,13 @@ function buildPoints(
       for (const [k, arr] of moodsByDay) if (k.startsWith(ym)) moodVals.push(...arr);
       return {
         key: ym,
-        label: format(mDate, "MMM"),
+        label: fmt(mDate, "MMM"),
         net: Math.round(net * 100) / 100,
         saving: Math.round(savings * 100) / 100,
         mood: avg(moodVals),
       };
     });
-    return { points, periodLabel: format(anchor, "yyyy") };
+    return { points, periodLabel: fmt(anchor, "yyyy") };
   }
 
   // week / month -> daily buckets
@@ -249,19 +251,19 @@ function buildPoints(
     const anchor = addWeeks(now, offset);
     start = startOfWeek(anchor);
     end = endOfWeek(anchor);
-    periodLabel = `${format(start, "MMM d")} – ${format(end, "MMM d")}`;
+    periodLabel = `${fmt(start, "MMM d")} – ${fmt(end, "MMM d")}`;
   } else {
     const anchor = addMonths(now, offset);
     start = startOfMonth(anchor);
     end = endOfMonth(anchor);
-    periodLabel = format(anchor, "MMMM yyyy");
+    periodLabel = fmt(anchor, "MMMM yyyy");
   }
 
   const points = eachDayOfInterval({ start, end }).map((d) => {
     const k = toDateKey(d);
     return {
       key: k,
-      label: format(d, range === "week" ? "EEE" : "MMM d"),
+      label: fmt(d, range === "week" ? "EEE" : "MMM d"),
       net: Math.round((netByDay.get(k) ?? 0) * 100) / 100,
       saving: Math.round((savingByDay.get(k) ?? 0) * 100) / 100,
       mood: avg(moodsByDay.get(k) ?? []),
@@ -276,14 +278,12 @@ function OverlapTooltip({ active, payload }: any) {
   return (
     <div className="card px-3 py-2 text-xs">
       <div className="mb-1 font-mono text-ink/50">{p.label}</div>
-      <div className={p.net >= 0 ? "text-income" : "text-expense"}>
-        Net {formatCurrency(p.net, { sign: true })}
-      </div>
+      <div className={p.net >= 0 ? "text-income" : "text-expense"}>{tr("Net {amount}", { amount: formatCurrency(p.net, { sign: true }) })}</div>
       {p.saving > 0 && (
-        <div style={{ color: "#3D80BC" }}>Saving +{formatCurrency(p.saving)}</div>
+        <div style={{ color: "#3D80BC" }}>{tr("Saving +{amount}", { amount: formatCurrency(p.saving) })}</div>
       )}
       <div className="text-neon-purple">
-        Mood {p.mood ?? "—"}
+        {tr("Mood")}{" "}{p.mood ?? "—"}
         {p.mood ? " / 5" : ""}
       </div>
     </div>

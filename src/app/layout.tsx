@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Newsreader, Hanken_Grotesk, IBM_Plex_Mono } from "next/font/google";
+import { Newsreader, Hanken_Grotesk, IBM_Plex_Mono, Noto_Sans_Bengali, Noto_Serif_Bengali } from "next/font/google";
 import { Heartbeat } from "@/components/system/heartbeat";
 import "./globals.css";
 
@@ -23,10 +23,34 @@ const mono = IBM_Plex_Mono({
   variable: "--font-plex-mono",
 });
 
+// Bangla UI: Bengali faces sit behind the Latin ones in each stack, so a page in
+// English never downloads them (the browser fetches a face only for its script).
+const bengaliSans = Noto_Sans_Bengali({
+  subsets: ["bengali"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-bengali-sans",
+  preload: false,
+});
+const bengaliSerif = Noto_Serif_Bengali({
+  subsets: ["bengali"],
+  weight: ["500", "600"],
+  variable: "--font-bengali-serif",
+  preload: false,
+});
+
 export const metadata: Metadata = {
   title: "Catalyst — Mood & Money",
   description:
     "An honest ledger that maps every taka against how the day actually felt.",
+  // The tab icon follows the system's light/dark setting: icon.svg holds both
+  // logos; favicon.ico (the light one) is for browsers without SVG icons.
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "32x32" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export const viewport = {
@@ -46,7 +70,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="en"
       suppressHydrationWarning
-      className={`dark ${display.variable} ${body.variable} ${mono.variable}`}
+      className={`dark ${display.variable} ${body.variable} ${mono.variable} ${bengaliSans.variable} ${bengaliSerif.variable}`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInit }} />

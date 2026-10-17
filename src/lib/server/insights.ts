@@ -3,11 +3,18 @@
 // totals, the change since the period before, top categories, best and hardest
 // days. Amounts arrive pre-formatted (৳1,25,000) and every comparison is already
 // worked out, so the model only writes; it never does arithmetic.
+import { AsyncLocalStorage } from "node:async_hooks";
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { pearson } from "@/lib/math";
+import { DEFAULT_CURRENCY, type CurrencyInfo } from "@/lib/currency";
 import { BREAK_SAVING, MOOD_PRESETS, moodPreset } from "@/types";
-import type { Insight, InsightPeriod, InsightTopic } from "@/lib/insights";
+import type { Insight, InsightLang, InsightPeriod, InsightTopic } from "@/lib/insights";
+
+// The currency amounts are written in, per request: two users' summaries can be
+// built at the same time in one server instance, so it can't be a module global.
+const request = new AsyncLocalStorage<{ currency: CurrencyInfo }>();
+const currencyNow = () => request.getStore()?.currency ?? DEFAULT_CURRENCY;
 
 // ------------------------------------------------------------------ dates
 // yyyy-mm-dd keys, handled in UTC so the server's own timezone never shifts a day.
@@ -88,10 +95,13 @@ function progress(w: InsightWindow, today: string) {
 
 // ------------------------------------------------------------------ figures
 const num = (v: number | string | null | undefined) => (typeof v === "string" ? parseFloat(v) : (v ?? 0)) || 0;
-const grouped = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 });
-/** Taka with en-IN grouping, like the apps: ৳1,25,000 / −৳950. */
-const tk = (n: number) => `${n < 0 ? "−" : ""}৳${grouped.format(Math.abs(Math.round(n * 100) / 100))}`;
-/** Whole taka, for worked-out figures (averages, per-month amounts). */
+/** An amount the way the apps write it, in the account's currency: ৳1,25,000 / −৳950 for taka. */
+const tk = (n: number) => {
+  const c = currencyNow();
+  const grouped = new Intl.NumberFormat(c.locale, { maximumFractionDigits: c.decimals });
+  return `${n < 0 ? "−" : ""}${c.symbol}${grouped.format(Math.abs(Math.round(n * 100) / 100))}`;
+};
+/** Whole amounts, for worked-out figures (averages, per-month amounts). */
 const tk0 = (n: number) => tk(Math.round(n));
 const pct = (part: number, whole: number) => (whole > 0 ? `${Math.round((part / whole) * 100)}%` : "—");
 const mean = (xs: number[]) => (xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : 0);
@@ -871,6 +881,140 @@ function boardsDigest(kind: "todo" | "shopping") {
   };
 }
 
+
+// ------------------------------------------------------------------ recap
+// A look back over a whole month (or year): the other digests, trimmed to their
+// headline facts, plus dhar still open and what's in each wallet.
+interface WalletRow {
+  id: string;
+  name: string;
+  opening_balance: number | string;
+  archived: boolean;
+  sort: number;
+}
+interface TransferRow {
+  from_wallet: string;
+  to_wallet: string;
+  amount: number | string;
+}
+interface DebtRow {
+  id: string;
+  person: string;
+  direction: "lent" | "borrowed";
+  amount: number | string;
+  wallet_id: string | null;
+  due_on: string | null;
+  closed: boolean;
+}
+interface DebtPaymentRow {
+  debt_id: string;
+  amount: number | string;
+  wallet_id: string | null;
+}
+
+/** Wallet balances and open dhar — null before the wallets update has been run. */
+async function moneyPlaces(db: SupabaseClient, today: string) {
+  try {
+    const [wallets, transfers, debts, payments, txs] = await Promise.all([
+      all<WalletRow>((a, b) => db.from("wallets").select("id,name,opening_balance,archived,sort").order("sort").order("id").range(a, b)),
+      all<TransferRow>((a, b) => db.from("transfers").select("from_wallet,to_wallet,amount").order("id").range(a, b)),
+      all<DebtRow>((a, b) => db.from("debts").select("id,person,direction,amount,wallet_id,due_on,closed").order("id").range(a, b)),
+      all<DebtPaymentRow>((a, b) => db.from("debt_payments").select("debt_id,amount,wallet_id").order("id").range(a, b)),
+      all<{ kind: string; amount: number | string; wallet_id: string | null }>((a, b) =>
+        db.from("transactions").select("kind,amount,wallet_id").order("id").range(a, b),
+      ),
+    ]);
+    const live = wallets.filter((x) => !x.archived);
+    const fallback = (live[0] ?? wallets[0])?.id;
+    const bal = new Map(wallets.map((x) => [x.id, num(x.opening_balance)]));
+    const add = (id: string | null, n: number) => {
+      const k = id && bal.has(id) ? id : fallback;
+      if (k) bal.set(k, (bal.get(k) ?? 0) + n);
+    };
+    for (const t of txs) {
+      if (t.kind === "income") add(t.wallet_id, num(t.amount));
+      else if (t.kind === "expense") add(t.wallet_id, -num(t.amount));
+    }
+    for (const t of transfers) {
+      add(t.from_wallet, -num(t.amount));
+      add(t.to_wallet, num(t.amount));
+    }
+    const paidOn = new Map<string, number>();
+    const byId = new Map(debts.map((d) => [d.id, d]));
+    for (const d of debts) add(d.wallet_id, d.direction === "lent" ? -num(d.amount) : num(d.amount));
+    for (const p of payments) {
+      const d = byId.get(p.debt_id);
+      if (!d) continue;
+      add(p.wallet_id, d.direction === "lent" ? num(p.amount) : -num(p.amount));
+      paidOn.set(d.id, (paidOn.get(d.id) ?? 0) + num(p.amount));
+    }
+    const open = debts
+      .map((d) => ({ d, left: Math.max(0, num(d.amount) - (paidOn.get(d.id) ?? 0)) }))
+      .filter((x) => !x.d.closed && x.left > 0.004);
+    const owed = (dir: "lent" | "borrowed") => open.filter((x) => x.d.direction === dir).reduce((s, x) => s + x.left, 0);
+    return {
+      source: [wallets, transfers, debts, payments],
+      facts: {
+        ...(live.length ? { wallets: live.map((x) => ({ wallet: x.name, balance: tk(bal.get(x.id) ?? 0) })) } : {}),
+        ...(open.length
+          ? {
+              dhar: {
+                owedToYou: tk(owed("lent")),
+                youOwe: tk(owed("borrowed")),
+                open: open.slice(0, 10).map(({ d, left }) => ({
+                  person: clip(d.person, 60),
+                  ...(d.direction === "lent" ? { theyOweYou: tk(left) } : { youOweThem: tk(left) }),
+                  ...(d.due_on ? { due: longDate(d.due_on), ...(d.due_on < today ? { overdue: true } : {}) } : {}),
+                })),
+              },
+            }
+          : {}),
+      },
+    };
+  } catch {
+    return null;
+  }
+}
+
+const pick = (facts: Record<string, unknown> | undefined, keys: string[]) =>
+  Object.fromEntries(keys.filter((k) => facts && facts[k] !== undefined).map((k) => [k, facts![k]]));
+
+async function recap(db: SupabaseClient, w: InsightWindow, today: string): Promise<Digest> {
+  const quiet = <T,>(p: Promise<T>) => p.catch(() => null);
+  const [money, saved, aims, dues, feel, tasks, places] = await Promise.all([
+    ledger(db, w, today),
+    quiet(savings(db, w, today)),
+    quiet(goals(db, w, today)),
+    quiet(bills(db, w, today)),
+    quiet(mood(db, w, today)),
+    quiet(boardsDigest("todo")(db, w, today)),
+    moneyPlaces(db, today),
+  ]);
+  const cats = (money.facts.spendingByCategory as unknown[] | undefined)?.slice(0, 5);
+  const biggest = (money.facts.largestExpenses as unknown[] | undefined)?.slice(0, 3);
+  return {
+    empty: money.empty && (feel?.empty ?? true),
+    source: [money.source, saved?.source, aims?.source, dues?.source, feel?.source, tasks?.source, places?.source],
+    facts: {
+      period: w.label,
+      status: progress(w, today).text,
+      money: {
+        ...pick(money.facts, ["totals", "comparedWith", "incomeBySource", "budgets"]),
+        ...(cats ? { topSpending: cats } : {}),
+        ...(biggest ? { largestExpenses: biggest } : {}),
+      },
+      ...(saved ? { savings: pick(saved.facts, ["thisPeriod", "savingsPoolAllTime"]) } : {}),
+      ...(aims && !aims.empty ? { goals: pick(aims.facts, ["overview", "goals"]) } : {}),
+      ...(dues && !dues.empty ? { bills: pick(dues.facts, ["thisPeriodTotals", "overdue", "recurringBillsPerMonth"]) } : {}),
+      ...(feel && !feel.empty
+        ? { mood: pick(feel.facts, ["averageMood", "comparedWith", "moodCounts", "bestDays", "hardestDays", "contextTags", "moneyAndMood", "habits"]) }
+        : {}),
+      ...(tasks && !tasks.empty ? { tasks: pick(tasks.facts, ["totals"]) } : {}),
+      ...(places?.facts ?? {}),
+    },
+  };
+}
+
 // ------------------------------------------------------------------ entry point
 const BUILDERS: Record<InsightTopic, (db: SupabaseClient, w: InsightWindow, today: string) => Promise<Digest>> = {
   ledger,
@@ -881,15 +1025,25 @@ const BUILDERS: Record<InsightTopic, (db: SupabaseClient, w: InsightWindow, toda
   mood,
   todo: boardsDigest("todo"),
   shopping: boardsDigest("shopping"),
+  recap,
 };
 
-export async function buildDigest(db: SupabaseClient, topic: InsightTopic, w: InsightWindow, today: string) {
-  const d = await BUILDERS[topic](db, w, today);
-  return {
-    facts: d.facts,
-    empty: d.empty,
-    hash: createHash("sha256").update(JSON.stringify(d.source)).digest("hex").slice(0, 32),
-  };
+/** The digest for one topic and period, amounts written in the account's currency. */
+export async function buildDigest(
+  db: SupabaseClient,
+  topic: InsightTopic,
+  w: InsightWindow,
+  today: string,
+  currency: CurrencyInfo = DEFAULT_CURRENCY,
+) {
+  return request.run({ currency }, async () => {
+    const d = await BUILDERS[topic](db, w, today);
+    return {
+      facts: d.facts,
+      empty: d.empty,
+      hash: createHash("sha256").update(JSON.stringify(d.source)).digest("hex").slice(0, 32),
+    };
+  });
 }
 
 // ------------------------------------------------------------------ prompt
@@ -897,10 +1051,10 @@ const BASE = `You write short insight cards for Catalyst, a personal mood and mo
 
 Rules:
 - Use only what the digest says. Never invent amounts, dates, events, people or reasons.
-- Amounts are Bangladeshi Taka. Copy them exactly as the digest writes them (e.g. ৳1,25,000). Don't convert, recalculate or use $.
+- {{CURRENCY}}
 - Lead with what matters most, using the digest's own comparisons and figures.
 - If the period is still in progress, say "so far". If there is little data, say so in a sentence and keep everything short.
-- Write in English, even when entries or notes are in Bengali.
+- {{LANGUAGE}}
 - headline: at most 8 words, no full stop — like a newspaper headline.
 - summary: 2 to 4 sentences, at most 70 words.
 - highlights: 2 to 4 short facts from the digest, each under 20 words.
@@ -924,9 +1078,21 @@ const FOCUS: Record<InsightTopic, string> = {
     "Topic: to-do boards — open tasks, tasks in each board's last column (done), what's overdue or due soon, what's high priority, and what was added during the period. The boards show their current state only: don't say when tasks were finished. Suggestions are practical ways to get through the list — what to do first, splitting big tasks, scheduling, clearing or rescheduling overdue ones.",
   shopping:
     "Topic: to-buy lists — what's still to buy, what the priced items add up to, what's already in the last column (bought), and this period's spending on groceries and shopping. The lists show their current state only: don't say when things were bought. Suggestions are about shopping smarter — one trip for several items, pricing unpriced items, a budget for the list, dropping what isn't needed.",
+  recap:
+    "Topic: the recap — a look back over the whole period: money in and out and how it compares with the period before, savings and goals, bills, mood and what went with better or harder days, dhar (money lent or borrowed) still open, wallet balances and tasks. The headline sums the period up. The summary covers the two or three things that mattered most. Highlights mix money and mood. Suggestions are three or four concrete things to do differently in the next period, each following from the data.",
 };
 
-export const systemPrompt = (topic: InsightTopic) => `${BASE}\n\n${FOCUS[topic]}`;
+/** The rules, with the account's currency and the language to write in. */
+export function systemPrompt(topic: InsightTopic, opts: { currency?: CurrencyInfo; lang?: InsightLang } = {}) {
+  const c = opts.currency ?? DEFAULT_CURRENCY;
+  const example = `${c.symbol}${new Intl.NumberFormat(c.locale).format(125000)}`;
+  const currencyRule = `Amounts are in ${c.name} (${c.code}). Copy them exactly as the digest writes them (e.g. ${example}). Don't convert or recalculate them, and don't use any other currency.`;
+  const languageRule =
+    opts.lang === "bn"
+      ? "Write in Bengali (বাংলা), in simple everyday words, the way a Bangladeshi friend would. Keep amounts, dates and names exactly as the digest writes them."
+      : "Write in English, even when entries or notes are in Bengali.";
+  return `${BASE.replace("{{CURRENCY}}", currencyRule).replace("{{LANGUAGE}}", languageRule)}\n\n${FOCUS[topic]}`;
+}
 export const userPrompt = (facts: Record<string, unknown>) => `Digest:\n${JSON.stringify(facts)}`;
 
 export const INSIGHT_SCHEMA = {
