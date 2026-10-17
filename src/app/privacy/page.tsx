@@ -70,9 +70,9 @@ export default function PrivacyPage() {
           <li>A copy of your data is kept on the phone so the app works offline. It&apos;s removed when you sign out.</li>
           <li>Reminders are scheduled on the phone itself.</li>
           <li>
-            <strong className="text-ink">bKash / Nagad messages</strong> — only if you turn this on in Settings, the app
-            reads confirmation messages from those two senders on the phone to suggest entries. The messages are never
-            uploaded; only the entries you choose to add are saved.
+            <strong className="text-ink">bKash / Nagad messages</strong> — when you share a message to the app (or
+            paste one in Settings), it&apos;s read on the phone to suggest an entry. The app has no permission to read
+            your SMS; messages are never uploaded, and only the entries you choose to add are saved.
           </li>
           <li>To tell you about updates, the app asks GitHub for the latest version, so GitHub sees that request.</li>
         </List>
@@ -101,7 +101,7 @@ export default function PrivacyPage() {
             Delete your account in Settings → Delete account (on the website or in the app). It removes your account and
             everything in it, permanently.
           </li>
-          <li>Turn reminders, browser notifications and bKash / Nagad messages on or off in Settings.</li>
+          <li>Turn reminders and browser notifications on or off in Settings.</li>
         </List>
       </Section>
 
