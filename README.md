@@ -70,6 +70,7 @@ Anyone can then sign up with email at your `*.vercel.app` URL; each user gets pr
 - **Account** — forgot password, optional Google sign-in, and **Delete account** (Settings), which removes the account and everything in it.
 - **About the app** — Settings → About the app lists everything the web does (the Android app lists its own, with what's new after each update).
 - **Logo** — the browser-tab icon follows the system's light or dark setting; inside the app the logo follows the site's theme.
+- **Privacy Policy and Terms** — public pages at `/privacy` and `/terms` (linked from the landing footer; the Google sign-in consent screen and a Play Store listing point to them too). They cover the website and the Android app.
 
 ## Architecture
 

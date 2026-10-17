@@ -39,8 +39,10 @@ export function CtaFooter() {
             <span className="font-display text-lg font-semibold text-ink">Catalyst</span>
             <span className="label text-amber/70">৳ BD</span>
           </div>
-          <div className="font-mono text-[11px] uppercase tracking-widest text-ink/35">
-            Mood × money · v0.3
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 font-mono text-[11px] uppercase tracking-widest text-ink/35">
+            <Link href="/privacy" className="transition-colors hover:text-ink/70">Privacy</Link>
+            <Link href="/terms" className="transition-colors hover:text-ink/70">Terms</Link>
+            <span>Mood × money · v0.3</span>
           </div>
         </footer>
       </div>
