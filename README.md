@@ -69,6 +69,7 @@ Anyone can then sign up with email at your `*.vercel.app` URL; each user gets pr
 - **বাংলা** — the whole app in Bangla: every page, Bengali month names and digits, AI summaries in Bangla. Settings → Language (or the switch on the login page).
 - **Account** — forgot password, optional Google sign-in, and **Delete account** (Settings), which removes the account and everything in it.
 - **About the app** — Settings → About the app lists everything the web does (the Android app lists its own, with what's new after each update).
+- **Settings** — a short list that says how each thing is set: language and currency, reminders, dashboard sections, categories, About the app and the account, each on its own page under `/app/settings` (the sections live in [src/components/settings/](src/components/settings)).
 - **Logo** — the browser-tab icon follows the system's light or dark setting; inside the app the logo follows the site's theme.
 - **Privacy Policy and Terms** — public pages at `/privacy` and `/terms` (linked from the landing footer; the Google sign-in consent screen and a Play Store listing point to them too). They cover the website and the Android app.
 

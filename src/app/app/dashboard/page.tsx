@@ -116,7 +116,7 @@ export default function DashboardPage() {
         <div className="mb-1 flex items-center justify-between gap-3 lg:mb-2">
           <span className="label">{tr("Dashboard · this month")}</span>
           <Link
-            href="/app/settings#dashboard"
+            href="/app/settings/dashboard"
             className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-ink/40 transition-colors hover:text-amber"
           >
             <SlidersHorizontal className="h-3 w-3" aria-hidden />
@@ -192,7 +192,7 @@ export default function DashboardPage() {
       {nothingShown && (
         <div className="card px-6 py-12 text-center text-sm text-ink/40">
           {tr("Every dashboard section is hidden.")}{" "}
-          <Link href="/app/settings#dashboard" className="text-amber hover:underline">
+          <Link href="/app/settings/dashboard" className="text-amber hover:underline">
             {tr("Choose what to show")}
           </Link>{" "}
           {tr("— your data is all still there.")}
