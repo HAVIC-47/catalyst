@@ -3,9 +3,9 @@
 // The Settings sections, each shown on its own page under /app/settings:
 // language and currency (/language), reminders (/reminders), dashboard sections
 // (/dashboard), categories (/categories) and the account (/account).
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, Check, BellRing, Loader2 } from "lucide-react";
+import { Plus, Trash2, Check, BellRing, Loader2, KeyRound } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES, type Kind } from "@/types";
 import { DASHBOARD_SECTIONS } from "@/lib/dashboard-sections";
@@ -193,6 +193,131 @@ export function RemindersSection() {
 }
 
 // ---------------------------------------------------------------- account
+const passwordInput =
+  "min-h-[44px] w-full rounded-xl border border-line bg-card px-3 text-sm text-ink outline-hidden focus:border-amber/50";
+
+/** Change the password: the current one (checked by signing in with it, which is
+ *  also the "recent login" Supabase can ask for), then the new one twice.
+ *  Google-only accounts have no password to change. */
+function PasswordChange() {
+  const [email, setEmail] = useState<string | null>(null);
+  const [hasPassword, setHasPassword] = useState(true);
+  const [open, setOpen] = useState(false);
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [again, setAgain] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    createClient()
+      .auth.getUser()
+      .then(({ data }) => {
+        setEmail(data.user?.email ?? null);
+        const meta = data.user?.app_metadata ?? {};
+        const providers: string[] = Array.isArray(meta.providers) ? meta.providers : [meta.provider ?? "email"];
+        setHasPassword(providers.includes("email"));
+      });
+  }, []);
+
+  const close = () => {
+    setOpen(false);
+    setCurrent("");
+    setNext("");
+    setAgain("");
+    setError("");
+  };
+
+  const save = async (e: FormEvent) => {
+    e.preventDefault();
+    if (busy) return;
+    const problem = !current
+      ? tr("Type your current password.")
+      : next.length < 8
+        ? tr("Use at least 8 characters.")
+        : next !== again
+          ? tr("The two passwords don't match.")
+          : "";
+    if (problem) {
+      setError(problem);
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const supabase = createClient();
+      const { error: wrong } = await supabase.auth.signInWithPassword({ email: email ?? "", password: current });
+      if (wrong) {
+        throw new Error(wrong.code === "invalid_credentials" || /invalid login/i.test(wrong.message) ? tr("The current password is wrong.") : wrong.message);
+      }
+      const { error: failed } = await supabase.auth.updateUser({ password: next });
+      if (failed) throw new Error(failed.message);
+      close();
+      setDone(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : tr("Something went wrong."));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="mt-5 rounded-xl border border-line p-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="min-w-0 flex-1 text-sm text-ink/75">
+          {tr("Password")}
+          <span className="block text-[11px] text-ink/45">
+            {!hasPassword
+              ? tr("You sign in with Google, so there's no password to change. To add one, sign out and use “Forgot password?” on the login page.")
+              : done
+                ? tr("Password changed.")
+                : tr("Change it any time — you'll need the current one.")}
+          </span>
+        </span>
+        {hasPassword && !open && (
+          <button
+            type="button"
+            onClick={() => {
+              setDone(false);
+              setOpen(true);
+            }}
+            className="inline-flex min-h-[40px] cursor-pointer items-center gap-2 rounded-xl border border-line px-4 text-sm font-semibold text-ink/75 transition-colors hover:bg-ink/[0.04]"
+          >
+            <KeyRound className="h-4 w-4" aria-hidden />
+            {tr("Change password")}
+          </button>
+        )}
+      </div>
+      {open && (
+        <form onSubmit={(e) => void save(e)} className="mt-4 grid max-w-sm gap-2">
+          <input type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} placeholder={tr("Current password")} aria-label={tr("Current password")} className={passwordInput} />
+          <input type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} placeholder={tr("New password (min 8)")} aria-label={tr("New password (min 8)")} className={passwordInput} />
+          <input type="password" autoComplete="new-password" value={again} onChange={(e) => setAgain(e.target.value)} placeholder={tr("Type it again")} aria-label={tr("Type it again")} className={passwordInput} />
+          {error && (
+            <p className="text-xs text-expense" role="alert">
+              {error}
+            </p>
+          )}
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <button
+              type="submit"
+              disabled={busy}
+              className="entry-btn inline-flex min-h-[40px] cursor-pointer items-center gap-2 rounded-xl px-4 text-sm font-semibold text-paper disabled:opacity-50"
+            >
+              {busy && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
+              {tr("Change password")}
+            </button>
+            <button type="button" onClick={close} className="min-h-[40px] cursor-pointer rounded-xl px-3 text-sm text-ink/60 hover:bg-ink/[0.04]">
+              {tr("Cancel")}
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
+
 export function AccountSection() {
   const router = useRouter();
   const [email, setEmail] = useState<string | null>(null);
@@ -233,9 +358,8 @@ export function AccountSection() {
       <h2 className="font-display text-xl font-semibold text-ink">
         {tr("Your")}{" "}<span className="serif-italic text-amber/90">{tr("account")}</span>
       </h2>
-      <p className="mt-1 text-sm text-ink/45">
-        {tr("Signed in as {email}. To change your password, sign out and use “Forgot password?” on the login page.", { email: email ?? "…" })}
-      </p>
+      <p className="mt-1 text-sm text-ink/45">{tr("Signed in as {email}.", { email: email ?? "…" })}</p>
+      <PasswordChange />
       <div className="mt-5 rounded-xl border border-expense/30 bg-expense/[0.04] p-4">
         <div className="flex flex-wrap items-center gap-3">
           <span className="min-w-0 flex-1 text-sm text-ink/75">
@@ -381,7 +505,9 @@ export function CategorySection({ kind }: { kind: Kind }) {
     if (!n || adding) return;
     setAdding(true);
     try {
-      await createCategory({ name: n, kind, color, sort: list.length });
+      // First in its list: below the lowest sort number of its kind.
+      const first = list.length ? Math.min(...list.map((c) => c.sort)) - 1 : 0;
+      await createCategory({ name: n, kind, color, sort: first });
       setName("");
     } finally {
       setAdding(false);
@@ -394,7 +520,7 @@ export function CategorySection({ kind }: { kind: Kind }) {
     try {
       const defaults = kind === "expense" ? DEFAULT_EXPENSE_CATEGORIES : DEFAULT_INCOME_CATEGORIES;
       const have = new Set(list.map((c) => c.name.toLowerCase()));
-      let i = list.length;
+      let i = list.length ? Math.max(...list.map((c) => c.sort)) + 1 : 0; // after everything else
       for (const d of defaults) {
         if (have.has(d.name.toLowerCase())) continue;
         await createCategory({ name: d.name, kind, color: d.color, sort: i++ });
@@ -420,7 +546,45 @@ export function CategorySection({ kind }: { kind: Kind }) {
         </div>
       </div>
 
-      <ul className="mb-4 space-y-2">
+      {/* add new — on top, so a new category lands where you can see it */}
+      <div className="mb-4 rounded-xl border border-dashed border-line p-3">
+        <div className="flex items-center gap-2">
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && add()}
+            placeholder={tr("New {kind} category", { kind })}
+            maxLength={LIMITS.name}
+            aria-label={tr("New {kind} category name", { kind })}
+            className="min-h-[40px] w-0 min-w-0 flex-1 rounded-lg border border-line bg-ink/[0.02] px-3 text-sm text-ink outline-hidden focus:border-amber/50"
+          />
+          <button
+            onClick={add}
+            disabled={!name.trim() || adding}
+            aria-label={tr("Add category")}
+            className="entry-btn flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg text-paper disabled:opacity-40"
+          >
+            <Plus className="h-4 w-4" aria-hidden strokeWidth={2.5} />
+          </button>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {SWATCHES.map((s) => (
+            <button
+              key={s}
+              onClick={() => setColor(s)}
+              aria-label={tr("Pick color {s}", { s })}
+              className={cn(
+                "flex h-6 w-6 cursor-pointer items-center justify-center rounded-full transition-transform hover:scale-110",
+              )}
+              style={{ backgroundColor: s }}
+            >
+              {color === s && <Check className="h-3.5 w-3.5 text-paper" aria-hidden strokeWidth={3} />}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <ul className="space-y-2">
         {list.map((c) => (
           <li key={c.id} className="flex items-center gap-3 rounded-xl border border-line bg-ink/[0.02] p-2.5">
             <span
@@ -460,44 +624,6 @@ export function CategorySection({ kind }: { kind: Kind }) {
           </li>
         ))}
       </ul>
-
-      {/* add new */}
-      <div className="rounded-xl border border-dashed border-line p-3">
-        <div className="flex items-center gap-2">
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && add()}
-            placeholder={tr("New {kind} category", { kind })}
-            maxLength={LIMITS.name}
-            aria-label={tr("New {kind} category name", { kind })}
-            className="min-h-[40px] w-0 min-w-0 flex-1 rounded-lg border border-line bg-ink/[0.02] px-3 text-sm text-ink outline-hidden focus:border-amber/50"
-          />
-          <button
-            onClick={add}
-            disabled={!name.trim() || adding}
-            aria-label={tr("Add category")}
-            className="entry-btn flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg text-paper disabled:opacity-40"
-          >
-            <Plus className="h-4 w-4" aria-hidden strokeWidth={2.5} />
-          </button>
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          {SWATCHES.map((s) => (
-            <button
-              key={s}
-              onClick={() => setColor(s)}
-              aria-label={tr("Pick color {s}", { s })}
-              className={cn(
-                "flex h-6 w-6 cursor-pointer items-center justify-center rounded-full transition-transform hover:scale-110",
-              )}
-              style={{ backgroundColor: s }}
-            >
-              {color === s && <Check className="h-3.5 w-3.5 text-paper" aria-hidden strokeWidth={3} />}
-            </button>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

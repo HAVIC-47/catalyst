@@ -7,14 +7,26 @@ import { ArrowLeft, ChevronRight, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { tr } from "@/lib/i18n";
 
-export function SettingsPage({ title, wide = false, children }: { title: string; wide?: boolean; children: React.ReactNode }) {
+export function SettingsPage({
+  title,
+  wide = false,
+  back = "/app/settings",
+  backLabel,
+  children,
+}: {
+  title: string;
+  wide?: boolean;
+  back?: string;
+  backLabel?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
       <div className={cn("mx-auto", wide ? "max-w-5xl" : "max-w-3xl")}>
         <div className="mb-6 flex items-center gap-3">
           <Link
-            href="/app/settings"
-            aria-label={tr("Back to Settings")}
+            href={back}
+            aria-label={backLabel ?? tr("Back to Settings")}
             className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-line text-ink/60 transition-colors hover:text-ink"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden />

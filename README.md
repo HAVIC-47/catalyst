@@ -67,9 +67,9 @@ Anyone can then sign up with email at your `*.vercel.app` URL; each user gets pr
 - **Reminders** — an evening "how was today?" when no mood is logged, the day before a bill or dhar is due, and budget alerts at 80% and 100%. Shown in the app's reminders bar and as notifications on the phone (Android app) and — if turned on in Settings — in the browser. Set once; the web and the app share the settings.
 - **Currency** — taka by default; Settings switches how every amount is written (dollar, Canadian dollar, euro, rupee, riyal, ringgit…). Nothing is converted.
 - **বাংলা** — the whole app in Bangla: every page, Bengali month names and digits, AI summaries in Bangla. Settings → Language (or the switch on the login page).
-- **Account** — forgot password, optional Google sign-in, and **Delete account** (Settings), which removes the account and everything in it.
+- **Account** — change password (Settings → Account: the current one, then the new one), forgot password, optional Google sign-in, and **Delete account**, which removes the account and everything in it.
 - **About the app** — Settings → About the app lists everything the web does (the Android app lists its own, with what's new after each update).
-- **Settings** — a short list that says how each thing is set: language and currency, reminders, dashboard sections, categories, About the app and the account, each on its own page under `/app/settings` (the sections live in [src/components/settings/](src/components/settings)).
+- **Settings** — a short list that says how each thing is set: language and currency, reminders, dashboard sections, categories, About the app and the account, each on its own page under `/app/settings` (the sections live in [src/components/settings/](src/components/settings)). Categories has an Expense and an Income page; a new category is added at the top and comes first everywhere.
 - **Logo** — the browser-tab icon follows the system's light or dark setting; inside the app the logo follows the site's theme.
 - **Privacy Policy and Terms** — public pages at `/privacy` and `/terms` (linked from the landing footer; the Google sign-in consent screen and a Play Store listing point to them too). They cover the website and the Android app.
 

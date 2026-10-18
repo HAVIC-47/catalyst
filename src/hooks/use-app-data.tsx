@@ -284,6 +284,12 @@ interface AppDataValue {
 
 const Ctx = createContext<AppDataValue | null>(null);
 
+/** Categories in the database's order: by kind, then sort, then name — a new
+ *  category gets the lowest sort of its kind, so it comes first. */
+function orderCategories(list: Category[]): Category[] {
+  return [...list].sort((a, b) => a.kind.localeCompare(b.kind) || a.sort - b.sort || a.name.localeCompare(b.name));
+}
+
 export function AppDataProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -672,7 +678,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   const createCategory = useCallback(async (c: NewCategory) => {
     const x = await addCategory(c);
-    setCategories((p) => [...p, x]);
+    setCategories((p) => orderCategories([...p, x]));
     return x;
   }, []);
   const editCategory = useCallback(async (id: string, patch: Partial<NewCategory>) => {
