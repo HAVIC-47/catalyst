@@ -7,7 +7,8 @@
 -- boards, board_columns, tickets (to-do and to-buy boards) +
 -- ai_insights, ai_requests (saved AI summaries and their daily limit) +
 -- wallets, transfers (where money sits and moves between) +
--- debts, debt_payments (dhar / baki) + push_subscriptions (web reminders).
+-- debts, debt_payments (dhar / baki) + push_subscriptions (web reminders) +
+-- recurring (incomes and expenses that log themselves) + challenges.
 -- Every table is Row-Level-Security scoped to auth.uid() so users see only their own data.
 
 create extension if not exists "pgcrypto";
@@ -135,6 +136,58 @@ create table if not exists public.bills (
 alter table public.bills add column if not exists category_id uuid references public.categories(id) on delete set null;
 alter table public.bills add column if not exists wallet_id uuid references public.wallets(id) on delete set null;
 alter table public.bills add column if not exists last_paid_txn uuid references public.transactions(id) on delete set null;
+
+-- RECURRING income and expenses: a salary on the 1st, rent, subscriptions — they
+-- log themselves. Every week (or every few), every month (or every few: 3 = a
+-- quarter, 12 = a year) on a day, or twice a month on two days, at a time of day
+-- in the timezone it was set up in. next_on is the next date not logged yet.
+-- Whichever gets there first logs a due date: the web or the app when open, or
+-- the hourly reminders job (src/app/api/cron/reminders).
+create table if not exists public.recurring (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  name        text not null,
+  kind        text not null check (kind in ('expense','income')),
+  amount      numeric(14,2) not null check (amount > 0),
+  category_id uuid references public.categories(id) on delete set null,
+  wallet_id   uuid references public.wallets(id) on delete set null,
+  frequency   text not null default 'monthly' check (frequency in ('weekly','monthly','twice_monthly')),
+  every       smallint not null default 1 check (every between 1 and 12),
+  day1        smallint not null default 1 check (day1 between 1 and 31),  -- weekly: 1 Mon … 7 Sun
+  day2        smallint check (day2 between 1 and 31),                     -- twice a month
+  at_time     text not null default '09:00',
+  start_on    date not null default current_date,
+  end_on      date,
+  next_on     date not null default current_date,
+  paused      boolean not null default false,
+  tz          text not null default 'Asia/Dhaka',
+  created_at  timestamptz not null default now()
+);
+-- The entries a rule logged: which rule and which of its dates. One entry per
+-- rule and date, so two devices (or a device and the job) can never log it twice.
+alter table public.transactions add column if not exists recurring_id uuid references public.recurring(id) on delete set null;
+alter table public.transactions add column if not exists recurring_on date;
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'transactions_recurring_once') then
+    alter table public.transactions add constraint transactions_recurring_once unique (recurring_id, recurring_on);
+  end if;
+end $$;
+
+-- CHALLENGES: no-spend days, spending under an amount, skipping a category,
+-- saving an amount, or logging every day — for a number of days from a start.
+-- Progress comes from the entries themselves; only the settings are stored.
+create table if not exists public.challenges (
+  id            uuid primary key default gen_random_uuid(),
+  user_id       uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  kind          text not null check (kind in ('no_spend','spend_under','skip_category','save','log_daily')),
+  target        numeric(14,2) not null default 0 check (target >= 0),
+  category_id   uuid references public.categories(id) on delete set null,
+  category_name text not null default '',
+  start_on      date not null default current_date,
+  days          smallint not null default 7 check (days between 1 and 366),
+  created_at    timestamptz not null default now()
+);
 
 -- DEBTS (dhar / baki): money you lent (they owe you) or borrowed (you owe them).
 -- What's left is the amount minus its payments. None of it counts as spending
@@ -297,6 +350,9 @@ create index if not exists idx_transfers_user on public.transfers (user_id, occu
 create index if not exists idx_debts_user on public.debts (user_id, created_at desc);
 create index if not exists idx_debt_payments_debt on public.debt_payments (debt_id);
 create index if not exists idx_push_user on public.push_subscriptions (user_id);
+create index if not exists idx_recurring_user on public.recurring (user_id);
+create index if not exists idx_recurring_due on public.recurring (next_on) where not paused;
+create index if not exists idx_challenges_user on public.challenges (user_id, start_on desc);
 
 -- Row-Level Security: enable + owner-only policies on every table -------------
 do $$
@@ -306,7 +362,8 @@ begin
     'categories','transactions','mood_logs','budgets','goals',
     'bills','journal_entries','activities','activity_logs',
     'boards','board_columns','tickets','ai_insights',
-    'wallets','transfers','debts','debt_payments','push_subscriptions'
+    'wallets','transfers','debts','debt_payments','push_subscriptions',
+    'recurring','challenges'
   ]
   loop
     execute format('alter table public.%I enable row level security;', t);

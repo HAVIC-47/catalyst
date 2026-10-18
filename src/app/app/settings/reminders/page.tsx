@@ -1,13 +1,6 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { SettingsPage } from "@/components/settings/settings-page";
-import { RemindersSection } from "@/components/settings/sections";
-import { tr } from "@/lib/i18n";
-
+// Reminders became Settings → Notifications (every kind, each on or off).
 export default function RemindersSettingsPage() {
-  return (
-    <SettingsPage title={tr("Reminders")}>
-      <RemindersSection />
-    </SettingsPage>
-  );
+  redirect("/app/settings/notifications");
 }

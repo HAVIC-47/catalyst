@@ -80,7 +80,7 @@ export function CurrencySection() {
   );
 }
 
-// ---------------------------------------------------------------- reminders
+// ---------------------------------------------------------------- notifications
 function Toggle({ on, onChange, label, hint }: { on: boolean; onChange: (v: boolean) => void; label: string; hint: string }) {
   return (
     <button
@@ -101,7 +101,9 @@ function Toggle({ on, onChange, label, hint }: { on: boolean; onChange: (v: bool
   );
 }
 
-export function RemindersSection() {
+/** Settings → Notifications: every kind of reminder and alert, each on or off —
+ *  shared with the Android app — and notifications in this browser. */
+export function NotificationsSection() {
   const { reminders, setReminders } = useAppData();
   const set = (patch: Partial<typeof reminders>) => setReminders({ ...reminders, ...patch });
   const [push, setPush] = useState<"unsupported" | "off" | "on" | "busy">("off");
@@ -133,12 +135,12 @@ export function RemindersSection() {
   };
 
   return (
-    <section id="reminders" className="card scroll-mt-20 p-5 sm:p-6">
+    <section id="notifications" className="card scroll-mt-20 p-5 sm:p-6">
       <h2 className="font-display text-xl font-semibold text-ink">
         {tr("Reminders")}{" "}<span className="serif-italic text-amber/90">{tr("that help")}</span>
       </h2>
       <p className="mb-4 mt-1 max-w-lg text-sm text-ink/45">
-        {tr("Shown at the top of the app here, and as notifications on your phone (Android app) and — if you turn them on below — in this browser.")}
+        {tr("Turn off anything you don't want. Shown in the app here, as notifications on your phone (Android app) and — if you turn them on below — in this browser.")}
       </p>
       <div className="grid gap-2 sm:grid-cols-2">
         <Toggle on={reminders.checkin} onChange={(v) => set({ checkin: v })} label={tr("Evening check-in")} hint={tr("“How was today?” if no mood is logged")} />
@@ -157,6 +159,13 @@ export function RemindersSection() {
         <Toggle on={reminders.budgets} onChange={(v) => set({ budgets: v })} label={tr("Budgets")} hint={tr("When a category reaches 80% and 100%")} />
         <Toggle on={reminders.dhar} onChange={(v) => set({ dhar: v })} label={tr("Dhar")} hint={tr("The day before money lent or borrowed is due back")} />
       </div>
+      <h3 className="mb-2 mt-5 font-mono text-[11px] uppercase tracking-widest text-ink/40">{tr("Alerts")}</h3>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <Toggle on={reminders.recurring} onChange={(v) => set({ recurring: v })} label={tr("Recurring entries")} hint={tr("When a salary, rent or subscription is added by itself")} />
+        <Toggle on={reminders.moodSpend} onChange={(v) => set({ moodSpend: v })} label={tr("Mood & money")} hint={tr("When a low day comes with a lot of spending")} />
+        <Toggle on={reminders.streaks} onChange={(v) => set({ streaks: v })} label={tr("Streaks")} hint={tr("Milestones, and when a streak is about to end")} />
+        <Toggle on={reminders.challenges} onChange={(v) => set({ challenges: v })} label={tr("Challenges")} hint={tr("Won, missed, or on its last day")} />
+      </div>
       <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-line pt-4">
         <span className="min-w-0 flex-1 text-sm text-ink/70">
           {tr("Notifications in this browser")}
@@ -164,7 +173,7 @@ export function RemindersSection() {
             {push === "unsupported"
               ? tr("Not available here (or not set up on the server yet).")
               : push === "on"
-                ? tr("On — you'll get the evening reminder here.")
+                ? tr("On — reminders and recurring entries come here too, even with the tab closed.")
                 : tr("Off — reminders only show inside the app.")}
           </span>
         </span>

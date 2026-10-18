@@ -1,7 +1,7 @@
 "use client";
 
 // Settings: a short list, each row leading to its own page — language and
-// currency, reminders, dashboard sections, categories, About the app, account.
+// currency, notifications, dashboard sections, categories, About the app, account.
 // Each row says how it's set right now.
 import { useEffect, useState } from "react";
 import { BellRing, Info, Languages, LayoutGrid, Tags, UserRound } from "lucide-react";
@@ -10,6 +10,7 @@ import { DASHBOARD_SECTIONS } from "@/lib/dashboard-sections";
 import { currencyOf } from "@/lib/currency";
 import { createClient } from "@/lib/supabase/client";
 import { fmt } from "@/lib/utils";
+import { WEB_NOTICE_KINDS } from "@/lib/reminders";
 import { tr } from "@/lib/i18n";
 import { SettingsCard, SettingsRow } from "@/components/settings/settings-page";
 
@@ -24,7 +25,7 @@ export default function SettingsPage() {
   }, []);
 
   const cur = currencyOf(currency);
-  const on = [reminders.checkin, reminders.bills, reminders.budgets, reminders.dhar].filter(Boolean).length;
+  const on = WEB_NOTICE_KINDS.filter((k) => reminders[k]).length;
   const [h, m] = reminders.checkinTime.split(":").map(Number);
   const hidden = dashboardHidden ?? [];
   const shown = DASHBOARD_SECTIONS.filter((s) => !hidden.includes(s.id)).length;
@@ -47,13 +48,15 @@ export default function SettingsPage() {
             hint={`${lang === "bn" ? "বাংলা" : "English"} · ${cur.symbol.trim()} ${tr(cur.name)}`}
           />
           <SettingsRow
-            href="/app/settings/reminders"
+            href="/app/settings/notifications"
             icon={BellRing}
-            title={tr("Reminders")}
+            title={tr("Notifications")}
             hint={
               on === 0
                 ? tr("All off")
-                : tr("{n} of 4 on · check-in at {time}", { n: on, time: fmt(new Date(2000, 0, 1, h || 0, m || 0), "h:mm a") })
+                : reminders.checkin
+                  ? tr("{n} of {total} on · check-in at {time}", { n: on, total: WEB_NOTICE_KINDS.length, time: fmt(new Date(2000, 0, 1, h || 0, m || 0), "h:mm a") })
+                  : tr("{n} of {total} on", { n: on, total: WEB_NOTICE_KINDS.length })
             }
           />
           <SettingsRow

@@ -18,6 +18,9 @@ import {
   X,
   Wallet,
   HandCoins,
+  Repeat,
+  Flame,
+  HandHeart,
   type LucideIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -37,6 +40,9 @@ export const MORE_NAV: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/app/budgets", label: "Budgets", icon: PiggyBank },
   { href: "/app/goals", label: "Goals", icon: Target },
   { href: "/app/bills", label: "Bills", icon: Bell },
+  { href: "/app/recurring", label: "Recurring", icon: Repeat },
+  { href: "/app/challenges", label: "Challenges", icon: Flame },
+  { href: "/app/zakat", label: "Zakat", icon: HandHeart },
   { href: "/app/settings", label: "Settings", icon: Settings },
 ];
 

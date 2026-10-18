@@ -13,6 +13,8 @@ import { SavingsDonut } from "@/components/charts/savings-donut";
 import { CategoryBars } from "@/components/charts/category-bars";
 import { MoodTagBars } from "@/components/charts/mood-tag-bars";
 import { AiInsights } from "@/components/ai/ai-insights";
+import { NetWorthCard } from "@/components/dashboard/net-worth";
+import { HabitsStrip } from "@/components/dashboard/habits-strip";
 import { cn, formatCurrency } from "@/lib/utils";
 import { walletBalances } from "@/lib/money";
 import { rangeWindow, type Range } from "@/lib/range";
@@ -106,6 +108,8 @@ export default function DashboardPage() {
     !show("insights") &&
     !show("recap") &&
     !show("wallets") &&
+    !show("netWorth") &&
+    !show("habits") &&
     visibleCharts.length === 0;
   // The recap opens on last month during the first week of a month.
   const recapOffset = now.getDate() <= 7 ? -1 : 0;
@@ -169,6 +173,10 @@ export default function DashboardPage() {
       )}
 
       {show("wallets") && <WalletStrip />}
+
+      {show("netWorth") && <NetWorthCard className="mb-4 lg:mb-6" />}
+
+      {show("habits") && <HabitsStrip className="mb-4 lg:mb-6" />}
 
       {/* The month (or year) in one AI read, with what to do differently next time. */}
       {show("recap") && (

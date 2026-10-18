@@ -23,11 +23,14 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong className="text-ink">What you enter</strong> — transactions, moods and their tags, notes, journal
-            entries, habits, budgets, goals, bills, wallets, transfers, dhar records and your to-do and to-buy boards.
+            entries, habits, budgets, goals, bills, wallets, transfers, dhar records, challenges and your to-do and to-buy
+            boards. Recurring incomes and expenses are kept with the time zone they were set up in, so our server can add
+            each one to your ledger at its time.
           </li>
           <li>
-            <strong className="text-ink">Your settings</strong> — language, currency, reminder settings and dashboard
-            sections, kept with your account so the website and the app match.
+            <strong className="text-ink">Your settings</strong> — language, currency, which notifications you get,
+            dashboard sections and the figures you enter in the zakat calculator, kept with your account so the website
+            and the app match.
           </li>
           <li>
             <strong className="text-ink">AI summaries</strong> — summaries you ask for are saved to your account, so they
@@ -35,7 +38,7 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong className="text-ink">Browser reminders</strong> — if you turn on notifications in a browser, we keep
-            that browser&apos;s push address, its keys and its time zone, only to send your reminders.
+            that browser&apos;s push address, its keys and its time zone, only to send your reminders and alerts.
           </li>
           <li>
             <strong className="text-ink">Daily limits</strong> — a count of how many photos and summaries your account used

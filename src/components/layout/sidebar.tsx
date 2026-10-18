@@ -15,6 +15,9 @@ import {
   Settings,
   Wallet,
   HandCoins,
+  Repeat,
+  Flame,
+  HandHeart,
   type LucideIcon,
 } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
@@ -31,7 +34,10 @@ const NAV: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/app/budgets", label: "Budgets", icon: PiggyBank },
   { href: "/app/goals", label: "Goals", icon: Target },
   { href: "/app/bills", label: "Bills", icon: Bell },
+  { href: "/app/recurring", label: "Recurring", icon: Repeat },
   { href: "/app/dhar", label: "Dhar", icon: HandCoins },
+  { href: "/app/challenges", label: "Challenges", icon: Flame },
+  { href: "/app/zakat", label: "Zakat", icon: HandHeart },
   { href: "/app/journal", label: "Journal", icon: NotebookPen },
   { href: "/app/todo", label: "To-do", icon: ListTodo },
   { href: "/app/shopping", label: "To buy", icon: ShoppingCart },

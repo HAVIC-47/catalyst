@@ -21,6 +21,7 @@ import type {
   BoardKind,
   Budget,
   Category,
+  Challenge,
   Debt,
   DebtPayment,
   Goal,
@@ -30,15 +31,18 @@ import type {
   NewBill,
   NewBudget,
   NewCategory,
+  NewChallenge,
   NewDebt,
   NewDebtPayment,
   NewGoal,
   NewJournalEntry,
   NewMoodLog,
+  NewRecurringRule,
   NewTicket,
   NewTransaction,
   NewTransfer,
   NewWallet,
+  RecurringRule,
   Ticket,
   Transaction,
   Transfer,
@@ -102,13 +106,17 @@ import {
   updateDebt,
 } from "@/lib/db/debts";
 import { loadPrefs, savePrefs } from "@/lib/db/prefs";
+import { addRecurring, advanceRecurring, deleteRecurring, listRecurring, logRecurring, updateRecurring } from "@/lib/db/recurring";
+import { addChallenge, deleteChallenge, listChallenges } from "@/lib/db/challenges";
+import { dueDates, firstNextOn, nextAfterLogged, sameSchedule, zonedIso, zonedNow, type Schedule } from "@/lib/recurring";
+import { challengeProgress, challengeTitle, loggedDays, moodSpendAlert, streakMilestone, streakOf } from "@/lib/habits";
 import { parseHiddenSections, type DashboardSectionId } from "@/lib/dashboard-sections";
 import { SORT_STEP, sortBetween } from "@/lib/boards";
 import { setCurrency } from "@/lib/currency";
 import { DEFAULT_REMINDERS, parseReminders, type ReminderPrefs } from "@/lib/reminders";
-import { billCategory, budgetUse, debtRemaining, defaultWallet, nextDue } from "@/lib/money";
+import { billCategory, budgetUse, debtRemaining, defaultWallet, nextDue, ruleCategory } from "@/lib/money";
 import { formatCurrency, nowTime, toDateKey, combineDateTime } from "@/lib/utils";
-import { asLang, rememberLang, setLang, storedLang, type Lang } from "@/lib/i18n";
+import { asLang, rememberLang, setLang, storedLang, tr, type Lang } from "@/lib/i18n";
 
 export type EntryTab = "money" | "mood" | "saving";
 
@@ -127,6 +135,34 @@ export interface Toast {
   tone?: "info" | "warn";
   action?: { label: string; run: () => void | Promise<void> };
 }
+
+/** A new recurring entry: where it's got to (nextOn), its timezone and pause come later. */
+export type RecurringInput = Omit<NewRecurringRule, "nextOn" | "tz" | "paused">;
+
+/** This browser's timezone (recurring times are kept in it). */
+const deviceTz = () => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Dhaka";
+  } catch {
+    return "Asia/Dhaka";
+  }
+};
+
+const readJson = <T,>(key: string, fallback: T): T => {
+  try {
+    const v = localStorage.getItem(key);
+    return v ? (JSON.parse(v) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+const writeJson = (key: string, value: unknown) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* ignore */
+  }
+};
 
 /** What paying a bill changed, so Undo can put it back. */
 export interface BillPayment {
@@ -155,6 +191,11 @@ interface AppDataValue {
   debtPayments: DebtPayment[];
   /** False until the database has the wallets update (db/supabase.sql). */
   walletsReady: boolean;
+  /** Incomes and expenses that log themselves, and challenges. */
+  recurring: RecurringRule[];
+  challenges: Challenge[];
+  /** False until the database has the 1.5 update (db/supabase.sql: recurring, challenges). */
+  recurringReady: boolean;
 
   // entry modal
   entryOpen: boolean;
@@ -254,6 +295,19 @@ interface AppDataValue {
   recordDebtPayment: (p: NewDebtPayment) => Promise<void>;
   removeDebtPayment: (id: string) => Promise<void>;
 
+  // recurring income and expenses: each due date is logged by itself
+  createRecurring: (r: RecurringInput) => Promise<RecurringRule>;
+  /** Saves changes; a new schedule starts again from today. */
+  editRecurring: (id: string, r: RecurringInput) => Promise<void>;
+  /** Paused rules log nothing; resuming carries on from today (missed dates stay missed). */
+  pauseRecurring: (id: string, paused: boolean) => Promise<void>;
+  /** The rule goes; entries it logged stay in the ledger. */
+  removeRecurring: (id: string) => Promise<void>;
+
+  // challenges
+  createChallenge: (c: NewChallenge) => Promise<Challenge>;
+  removeChallenge: (id: string) => Promise<void>;
+
   // journal
   createJournal: (j: NewJournalEntry) => Promise<void>;
   removeJournal: (id: string) => Promise<void>;
@@ -309,6 +363,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [debts, setDebts] = useState<Debt[]>([]);
   const [debtPayments, setDebtPayments] = useState<DebtPayment[]>([]);
   const [walletsReady, setWalletsReady] = useState(false);
+  const [recurring, setRecurring] = useState<RecurringRule[]>([]);
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [recurringReady, setRecurringReady] = useState(false);
 
   // ---- notices
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -501,7 +558,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           console.warn("[catalyst] wallets unavailable — run db/supabase.sql?", err);
           return { ready: false, list: [] as Wallet[] };
         });
-      const [cats, txs, mds, bgs, gls, bls, jnl, acts, alogs, brds, bcols, tks, wl, trs, dbs, dps] = await Promise.all([
+      // Recurring entries and challenges need the 1.5 database update; until then they're off.
+      const newer = Promise.all([listRecurring(), listChallenges()])
+        .then(([rules, list]) => ({ ready: true, rules, list }))
+        .catch((err) => {
+          console.warn("[catalyst] recurring entries and challenges unavailable — run db/supabase.sql?", err);
+          return { ready: false, rules: [] as RecurringRule[], list: [] as Challenge[] };
+        });
+      const [cats, txs, mds, bgs, gls, bls, jnl, acts, alogs, brds, bcols, tks, wl, trs, dbs, dps, nw] = await Promise.all([
         safe(listCategories, [] as Category[], "categories"),
         safe(listTransactions, [] as Transaction[], "transactions"),
         safe(listMoods, [] as MoodLog[], "moods"),
@@ -518,6 +582,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         safe(listTransfers, [] as Transfer[], "transfers"),
         safe(listDebts, [] as Debt[], "debts"),
         safe(listDebtPayments, [] as DebtPayment[], "debtPayments"),
+        newer,
       ]);
       let finalCats = cats;
       if (cats.length === 0) {
@@ -565,6 +630,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       setTransfers(trs);
       setDebts(dbs);
       setDebtPayments(dps);
+      setRecurring(nw.rules);
+      setChallenges(nw.list);
+      setRecurringReady(nw.ready);
       setLoading(false);
     })();
   }, []);
@@ -595,6 +663,29 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   budgetsRef.current = budgets;
   const remindersRef = useRef(reminders);
   remindersRef.current = reminders;
+  const moodsRef = useRef(moods);
+  moodsRef.current = moods;
+
+  // Mood-spend alert: a lot spent on a low day — once a day.
+  const checkMoodSpend = useCallback(
+    (txs: Transaction[], mds: MoodLog[]) => {
+      if (!remindersRef.current.moodSpend) return;
+      const today = toDateKey(new Date());
+      const key = `mood-spend:${today}`;
+      if (readJson(key, false)) return;
+      const alert = moodSpendAlert(txs, mds, today);
+      if (!alert) return;
+      writeJson(key, true);
+      pushToast({
+        tone: "warn",
+        message: tr("You've spent {amount} today on a low day — about {ratio}× your usual.", {
+          amount: formatCurrency(alert.spent),
+          ratio: alert.ratio,
+        }),
+      });
+    },
+    [pushToast],
+  );
   const checkBudgets = useCallback(
     (before: Transaction[], after: Transaction[]) => {
       if (!remindersRef.current.budgets) return;
@@ -636,10 +727,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       const after = [c, ...before].sort((a, b) => b.occurredOn.localeCompare(a.occurredOn));
       txRef.current = after;
       setTransactions(after);
-      if (c.kind === "expense") checkBudgets(before, after);
+      if (c.kind === "expense") {
+        checkBudgets(before, after);
+        checkMoodSpend(after, moodsRef.current);
+      }
       return c;
     },
-    [checkBudgets],
+    [checkBudgets, checkMoodSpend],
   );
   const editMoney = useCallback(
     async (id: string, t: NewTransaction) => {
@@ -659,10 +753,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     await deleteTransaction(id);
     setTransactions((p) => p.filter((t) => t.id !== id));
   }, []);
-  const saveMood = useCallback(async (m: NewMoodLog) => {
-    const s = await addMood(m);
-    setMoods((p) => [s, ...p].sort((a, b) => b.loggedAt.localeCompare(a.loggedAt)));
-  }, []);
+  const saveMood = useCallback(
+    async (m: NewMoodLog) => {
+      const s = await addMood(m);
+      const after = [s, ...moodsRef.current].sort((a, b) => b.loggedAt.localeCompare(a.loggedAt));
+      moodsRef.current = after;
+      setMoods(after);
+      if (s.mood <= 2) checkMoodSpend(txRef.current, after);
+    },
+    [checkMoodSpend],
+  );
   const moodsForDate = useCallback(
     (k: string) => moods.filter((m) => m.loggedOn === k).sort((a, b) => a.loggedAt.localeCompare(b.loggedAt)),
     [moods],
@@ -878,6 +978,213 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       setDebts((p) => p.map((d) => (d.id === debt.id ? { ...d, closed: false } : d)));
     }
   }, []);
+
+  // ---- recurring income and expenses
+  const recurringRef = useRef(recurring);
+  recurringRef.current = recurring;
+  const categoriesRef = useRef(categories);
+  categoriesRef.current = categories;
+  const walletsRef = useRef(wallets);
+  walletsRef.current = wallets;
+  const running = useRef(false);
+
+  /** Log every date that's come due (whoever logs a date first, it's in the
+   *  ledger once), move each rule on, and say what was added. */
+  const runRecurring = useCallback(async () => {
+    if (running.current) return;
+    running.current = true;
+    try {
+      const added: Transaction[] = [];
+      let elsewhere = false;
+      for (const rule of recurringRef.current) {
+        const { day, time } = zonedNow(rule.tz);
+        let last: string | null = null;
+        for (const date of dueDates(rule, day, time)) {
+          const cat = ruleCategory(rule, categoriesRef.current);
+          try {
+            const t = await logRecurring(rule.id, date, {
+              kind: rule.kind,
+              amount: rule.amount,
+              categoryId: cat?.id ?? null,
+              categoryName: cat?.name ?? "Other",
+              place: "",
+              note: rule.name,
+              occurredOn: date,
+              occurredAt: zonedIso(date, rule.time, rule.tz),
+              walletId: rule.walletId ?? defaultWallet(walletsRef.current)?.id ?? null,
+            });
+            if (t) added.push(t);
+            else elsewhere = true; // the app or the reminders job got there first
+            last = date;
+          } catch (err) {
+            console.warn("[catalyst] could not log a recurring entry", err);
+            break;
+          }
+        }
+        if (!last) continue;
+        const next = nextAfterLogged(rule, last);
+        try {
+          await advanceRecurring(rule.id, next);
+        } catch (err) {
+          console.warn("[catalyst] could not move a recurring entry on", err);
+        }
+        setRecurring((p) => p.map((r) => (r.id === rule.id && next > r.nextOn ? { ...r, nextOn: next } : r)));
+      }
+      if (added.length) {
+        const before = txRef.current;
+        const after = [...added, ...before].sort((a, b) => b.occurredOn.localeCompare(a.occurredOn) || b.createdAt.localeCompare(a.createdAt));
+        txRef.current = after;
+        setTransactions(after);
+        if (added.some((t) => t.kind === "expense")) checkBudgets(before, after);
+        if (remindersRef.current.recurring) {
+          const signed = (t: Transaction) => formatCurrency(t.kind === "income" ? t.amount : -t.amount, { sign: true });
+          pushToast({
+            message:
+              added.length === 1
+                ? tr("Added automatically: {name} {amount}", { name: added[0].note, amount: signed(added[0]) })
+                : tr("{n} recurring entries added: {names}", { n: added.length, names: [...new Set(added.map((t) => t.note))].join(", ") }),
+          });
+        }
+      }
+      if (elsewhere) {
+        // Pick up what another device logged meanwhile.
+        const fresh = await listTransactions().catch(() => null);
+        if (fresh) {
+          txRef.current = fresh;
+          setTransactions(fresh);
+        }
+      }
+    } finally {
+      running.current = false;
+    }
+  }, [checkBudgets, pushToast]);
+
+  // Run once everything has loaded, then every minute and whenever the tab comes back.
+  useEffect(() => {
+    if (loading || !recurringReady) return;
+    void runRecurring();
+    const tick = setInterval(() => void runRecurring(), 60_000);
+    const back = () => document.visibilityState === "visible" && void runRecurring();
+    document.addEventListener("visibilitychange", back);
+    return () => {
+      clearInterval(tick);
+      document.removeEventListener("visibilitychange", back);
+    };
+  }, [loading, recurringReady, runRecurring]);
+
+  const scheduleOf = (r: RecurringInput): Schedule => ({
+    frequency: r.frequency,
+    every: r.every,
+    day1: r.day1,
+    day2: r.day2,
+    time: r.time,
+    startOn: r.startOn,
+    endOn: r.endOn,
+  });
+  const createRecurring = useCallback(
+    async (input: RecurringInput) => {
+      // From its start date — a start in the past logs the dates since then too.
+      const x = await addRecurring({ ...input, nextOn: firstNextOn(scheduleOf(input), input.startOn), tz: deviceTz(), paused: false });
+      const list = [...recurringRef.current, x];
+      recurringRef.current = list;
+      setRecurring(list);
+      void runRecurring();
+      return x;
+    },
+    [runRecurring],
+  );
+  const editRecurring = useCallback(
+    async (id: string, input: RecurringInput) => {
+      const was = recurringRef.current.find((r) => r.id === id);
+      if (!was) return;
+      const patch: Partial<NewRecurringRule> = { ...input };
+      if (!sameSchedule(scheduleOf(input), was)) {
+        // A new schedule carries on from today, in this device's timezone.
+        const tz = deviceTz();
+        const today = zonedNow(tz).day;
+        Object.assign(patch, { tz, nextOn: firstNextOn(scheduleOf(input), today > input.startOn ? today : input.startOn) });
+      }
+      await updateRecurring(id, patch);
+      const list = recurringRef.current.map((r) => (r.id === id ? { ...r, ...patch } : r));
+      recurringRef.current = list;
+      setRecurring(list);
+      void runRecurring();
+    },
+    [runRecurring],
+  );
+  const pauseRecurring = useCallback(
+    async (id: string, paused: boolean) => {
+      const was = recurringRef.current.find((r) => r.id === id);
+      if (!was) return;
+      const patch: Partial<NewRecurringRule> = { paused };
+      if (!paused) {
+        const today = zonedNow(was.tz).day;
+        patch.nextOn = firstNextOn(was, today > was.startOn ? today : was.startOn);
+      }
+      await updateRecurring(id, patch);
+      const list = recurringRef.current.map((r) => (r.id === id ? { ...r, ...patch } : r));
+      recurringRef.current = list;
+      setRecurring(list);
+      if (!paused) void runRecurring();
+    },
+    [runRecurring],
+  );
+  const removeRecurring = useCallback(async (id: string) => {
+    await deleteRecurring(id); // its entries stay; the database forgets which rule logged them
+    setRecurring((p) => p.filter((r) => r.id !== id));
+    setTransactions((p) => p.map((t) => (t.recurringId === id ? { ...t, recurringId: null } : t)));
+  }, []);
+
+  // ---- challenges
+  const createChallenge = useCallback(async (c: NewChallenge) => {
+    const x = await addChallenge(c);
+    setChallenges((p) => [x, ...p]);
+    return x;
+  }, []);
+  const removeChallenge = useCallback(async (id: string) => {
+    await deleteChallenge(id);
+    setChallenges((p) => p.filter((c) => c.id !== id));
+  }, []);
+
+  // Streak milestones, and challenges won, lost or on their last day — each said
+  // once on this browser (Settings → Notifications can turn them off).
+  useEffect(() => {
+    if (loading) return;
+    const today = toDateKey(new Date());
+    if (reminders.streaks) {
+      const s = streakOf(loggedDays(transactions, moods), today);
+      const m = streakMilestone(s.current);
+      const seen = readJson<{ since: string | null; milestone: number }>("streak-celebrated", { since: null, milestone: 0 });
+      const before = seen.since === s.since ? seen.milestone : 0;
+      if (m > before) {
+        writeJson("streak-celebrated", { since: s.since, milestone: m });
+        // Only while it's fresh (reached today or yesterday) — not for an old streak on first look.
+        if (s.current - m <= 1) pushToast({ message: tr("{n}-day streak! You've logged something every day for {n} days.", { n: m }) });
+      }
+    }
+    if (reminders.challenges && challenges.length) {
+      const told = readJson<Record<string, string>>("challenge-notified", {});
+      let changed = false;
+      for (const c of challenges) {
+        const p = challengeProgress(c, transactions, moods, today);
+        const title = challengeTitle(c, tr, formatCurrency);
+        const say = p.status === "won" ? "won" : p.status === "lost" ? "lost" : p.status === "active" && p.daysLeft === 1 ? "last" : "";
+        if (!say || told[c.id] === say || (say === "last" && told[c.id])) continue;
+        told[c.id] = say;
+        changed = true;
+        pushToast({
+          tone: say === "lost" ? "warn" : "info",
+          message:
+            say === "won"
+              ? tr("Challenge done: {title}. Well done!", { title })
+              : say === "lost"
+                ? tr("Challenge missed: {title}. Try again?", { title })
+                : tr("Last day of your challenge: {title}.", { title }),
+        });
+      }
+      if (changed) writeJson("challenge-notified", told);
+    }
+  }, [loading, transactions, moods, challenges, reminders.streaks, reminders.challenges, pushToast]);
 
   const createJournal = useCallback(async (j: NewJournalEntry) => {
     const x = await addJournal(j);
@@ -1116,6 +1423,15 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       debts,
       debtPayments,
       walletsReady,
+      recurring,
+      challenges,
+      recurringReady,
+      createRecurring,
+      editRecurring,
+      pauseRecurring,
+      removeRecurring,
+      createChallenge,
+      removeChallenge,
       lang,
       setLanguage,
       currency,
@@ -1206,7 +1522,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       addTickets, removeTickets, wallets, transfers, debts, debtPayments, walletsReady, lang, setLanguage, currency, setCurrencyCode,
       reminders, setReminders, toasts, pushToast, dismissToast, payBill, undoBillPayment, unpayBill, createWallet,
       editWallet, removeWallet, createTransfer, removeTransfer, createDebt, editDebt, removeDebt, recordDebtPayment,
-      removeDebtPayment,
+      removeDebtPayment, recurring, challenges, recurringReady, createRecurring, editRecurring, pauseRecurring,
+      removeRecurring, createChallenge, removeChallenge,
     ],
   );
 

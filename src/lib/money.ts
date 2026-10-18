@@ -1,7 +1,7 @@
 // Money rules shared by the pages: wallet balances, what's left on a debt, when a
 // bill is due next and what paying it is logged as, and budget use.
 import { addDays, addMonths, addYears, format, parseISO } from "date-fns";
-import type { Bill, Budget, Category, Debt, DebtPayment, Transaction, Transfer, Wallet } from "@/types";
+import type { Bill, Budget, Category, Debt, DebtPayment, RecurringRule, Transaction, Transfer, Wallet } from "@/types";
 
 const cents = (n: number) => Math.round(n * 100) / 100;
 
@@ -84,6 +84,18 @@ export function billCategory(bill: Pick<Bill, "categoryId" | "name">, categories
     expense.find((c) => same(c.name, "Utilities")) ??
     expense.find((c) => same(c.name, "Other")) ??
     expense[0] ??
+    null
+  );
+}
+
+/** The category a recurring entry is logged under: its own, one named like it, or Other. */
+export function ruleCategory(rule: Pick<RecurringRule, "categoryId" | "name" | "kind">, categories: Category[]): Category | null {
+  const mine = categories.filter((c) => c.kind === rule.kind);
+  return (
+    mine.find((c) => c.id === rule.categoryId) ??
+    mine.find((c) => same(c.name, rule.name)) ??
+    mine.find((c) => same(c.name, "Other")) ??
+    mine[0] ??
     null
   );
 }

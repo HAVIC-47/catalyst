@@ -1,5 +1,9 @@
 // Catalyst v2 domain types — money (transactions) and mood are separate logs.
 import { tr } from "@/lib/i18n";
+import type { RecurringFrequency } from "@/lib/recurring";
+import type { ChallengeKind } from "@/lib/habits";
+
+export type { RecurringFrequency, ChallengeKind };
 
 export type Kind = "expense" | "income" | "saving";
 
@@ -28,6 +32,7 @@ export interface Transaction {
   occurredAt: string; // ISO timestamp (intraday)
   createdAt: string;
   walletId: string | null; // null = the default wallet
+  recurringId?: string | null; // logged automatically by this recurring rule
 }
 
 export type NewTransaction = Omit<Transaction, "id" | "createdAt" | "walletId"> & { walletId?: string | null };
@@ -120,6 +125,43 @@ export interface Bill {
 }
 export type NewBill = Omit<Bill, "id" | "categoryId" | "walletId" | "lastPaidTxn"> &
   Partial<Pick<Bill, "categoryId" | "walletId" | "lastPaidTxn">>;
+
+/** An income or expense that logs itself — a salary on the 1st, rent, a subscription.
+ *  Each due date becomes a transaction (see lib/recurring.ts for the dates). */
+export interface RecurringRule {
+  id: string;
+  name: string;
+  kind: "expense" | "income";
+  amount: number;
+  categoryId: string | null; // null = Other
+  walletId: string | null; // null = the default wallet
+  frequency: RecurringFrequency;
+  every: number; // weeks or months between
+  day1: number; // weekly: 1 (Mon) … 7 (Sun); otherwise the day of the month
+  day2: number | null; // twice a month: the other day
+  time: string; // HH:mm, in tz
+  startOn: string;
+  endOn: string | null;
+  nextOn: string; // the next date not logged yet
+  paused: boolean;
+  tz: string; // the timezone its time is in (where it was saved)
+  createdAt: string;
+}
+export type NewRecurringRule = Omit<RecurringRule, "id" | "createdAt">;
+
+/** A few days' challenge — no-spend days, spending under an amount, skipping a
+ *  category, saving an amount, logging every day. Progress comes from the entries. */
+export interface Challenge {
+  id: string;
+  kind: ChallengeKind;
+  target: number;
+  categoryId: string | null;
+  categoryName: string;
+  startOn: string;
+  days: number;
+  createdAt: string;
+}
+export type NewChallenge = Omit<Challenge, "id" | "createdAt">;
 
 /** Where money sits. A balance is the opening balance plus the entries, transfers and dhar in it. */
 export type WalletKind = "cash" | "mobile" | "bank" | "card" | "other";

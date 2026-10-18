@@ -5,6 +5,8 @@ export const DASHBOARD_SECTIONS = [
   { id: "trend", label: "Mood × money trend", hint: "Net flow vs mood over time" },
   { id: "recap", label: "Monthly recap", hint: "AI look back at the month, with what to change" },
   { id: "wallets", label: "Wallets", hint: "What's in cash, bKash, Nagad, the bank" },
+  { id: "netWorth", label: "Net worth", hint: "Wallets and dhar, month by month" },
+  { id: "habits", label: "Streaks & challenges", hint: "Your streak and the challenges going" },
   { id: "insights", label: "AI insights", hint: "Mood · money · savings, with suggestions" },
   { id: "spent", label: "Spent by category", hint: "Where the money went" },
   { id: "earned", label: "Earned by category", hint: "Where the money came from" },

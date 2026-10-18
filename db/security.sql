@@ -40,7 +40,8 @@ revoke all on
   public.categories, public.transactions, public.mood_logs, public.budgets, public.goals,
   public.bills, public.journal_entries, public.activities, public.activity_logs,
   public.boards, public.board_columns, public.tickets, public.ai_insights,
-  public.wallets, public.transfers, public.debts, public.debt_payments, public.push_subscriptions
+  public.wallets, public.transfers, public.debts, public.debt_payments, public.push_subscriptions,
+  public.recurring, public.challenges
 from anon;
 
 -- 4. Size and format limits. RLS stops users touching each other's rows, but
@@ -86,7 +87,12 @@ begin
       ('debt_payments',   'debt_payments_note_len',         'char_length(note) <= 1000'),
       ('push_subscriptions', 'push_endpoint_len',           'char_length(endpoint) <= 1000'),
       ('push_subscriptions', 'push_keys_len',               'char_length(p256dh) <= 200 and char_length(auth) <= 100'),
-      ('push_subscriptions', 'push_tz_len',                 'char_length(tz) <= 64')
+      ('push_subscriptions', 'push_tz_len',                 'char_length(tz) <= 64'),
+      ('recurring',       'recurring_name_len',             'char_length(name) <= 100'),
+      ('recurring',       'recurring_time_format',          $c$at_time ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'$c$),
+      ('recurring',       'recurring_tz_len',               'char_length(tz) <= 64'),
+      ('recurring',       'recurring_dates_order',          'end_on is null or end_on >= start_on'),
+      ('challenges',      'challenges_category_name_len',   'char_length(category_name) <= 100')
     ) as v(tbl, con, expr)
   loop
     if not exists (

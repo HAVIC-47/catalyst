@@ -13,8 +13,9 @@ interface Row {
   occurred_at: string;
   created_at: string;
   wallet_id?: string | null;
+  recurring_id?: string | null;
 }
-const toTx = (r: Row): Transaction => ({
+export const toTx = (r: Row): Transaction => ({
   id: r.id,
   kind: r.kind,
   amount: typeof r.amount === "string" ? parseFloat(r.amount) : r.amount,
@@ -26,6 +27,7 @@ const toTx = (r: Row): Transaction => ({
   occurredAt: r.occurred_at ?? r.created_at,
   createdAt: r.created_at,
   walletId: r.wallet_id ?? null,
+  recurringId: r.recurring_id ?? null,
 });
 
 export async function listTransactions(): Promise<Transaction[]> {
@@ -41,7 +43,7 @@ export async function listTransactions(): Promise<Transaction[]> {
 
 // wallet_id only goes out when there is one, so entries still save on a database
 // that hasn't had the wallets update yet.
-const toRow = (input: NewTransaction) => ({
+export const toRow = (input: NewTransaction) => ({
   kind: input.kind,
   amount: input.amount,
   category_id: input.categoryId,

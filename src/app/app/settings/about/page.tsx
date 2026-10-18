@@ -9,6 +9,10 @@ import {
   BellRing,
   CalendarCheck,
   CalendarDays,
+  Flame,
+  HandHeart,
+  LineChart,
+  Repeat,
   ClipboardPaste,
   Coins,
   HandCoins,
@@ -81,10 +85,17 @@ function groups(): Group[] {
           title: tr("Bills"),
           body: tr("Due dates, repeats and overdue warnings. Tick a bill when you pay it: the expense is logged and the bill moves to its next date."),
         },
+        {
+          icon: Repeat,
+          title: tr("Recurring income and expenses"),
+          body: tr("Salary on the 1st, rent, subscriptions: set the day (once or twice a month, weekly…) and the time, and each one is added by itself — with a notification."),
+        },
         { icon: PiggyBank, title: tr("Budgets"), body: tr("Monthly limits per category that fill up as you spend, with alerts at 80% and 100%.") },
         { icon: Target, title: tr("Goals"), body: tr("Savings targets with progress bars and quick additions.") },
         { icon: HandCoins, title: tr("Dhar / baki"), body: tr("Money you lent or borrowed, per person: part payments, settle in full or write off.") },
         { icon: Vault, title: tr("Vault Mode"), body: tr("Count every income and expense against your savings pool.") },
+        { icon: LineChart, title: tr("Net worth"), body: tr("Wallets plus what you're owed, minus what you owe — month by month on the dashboard.") },
+        { icon: HandHeart, title: tr("Zakat calculator"), body: tr("Wallets and dhar come in by themselves; add gold, silver and the rest to see the nisab and the 2.5% due.") },
       ],
     },
     {
@@ -98,6 +109,12 @@ function groups(): Group[] {
           body: tr("Week, month and year views. Every day is tinted by its mood and its money; click one to log."),
         },
         { icon: NotebookPen, title: tr("Journal"), body: tr("A daily log with a mood, plus habits to tick off each day.") },
+        {
+          icon: Flame,
+          title: tr("Streaks and challenges"),
+          body: tr("A streak for every day you log something, and challenges like no-spend days or spending under an amount — with notifications."),
+        },
+        { icon: Smile, title: tr("Mood-spend alerts"), body: tr("A heads-up when a low day comes with a lot more spending than usual.") },
         {
           icon: LayoutGrid,
           title: tr("Dashboard"),
@@ -140,7 +157,7 @@ function groups(): Group[] {
         {
           icon: BellRing,
           title: tr("Reminders"),
-          body: tr("The reminders bar shows what's due; turn on browser notifications in Settings for an evening reminder."),
+          body: tr("The reminders bar shows what's due; turn on browser notifications in Settings → Notifications, and turn off any kind you don't want."),
         },
         {
           icon: ClipboardPaste,
