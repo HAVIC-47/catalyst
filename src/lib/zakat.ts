@@ -15,9 +15,11 @@ export type WeightUnit = "g" | "bhori";
 export interface ZakatInputs {
   basis: ZakatBasis; // which metal sets the nisab
   unit: WeightUnit; // gold and silver weights and prices are in this unit
-  goldPrice: number; // per unit
+  autoPrices: boolean; // today's international prices (else goldPrice / silverPrice)
+  goldPrice: number; // per unit, 24K — used when autoPrices is off
   silverPrice: number;
   gold: number; // weight owned
+  karat: number; // the gold's purity: 24, 22, 21 or 18
   silver: number;
   cash: number; // cash and accounts not tracked in a wallet
   investments: number; // shares, business stock, other savings
@@ -30,9 +32,11 @@ export interface ZakatInputs {
 export const DEFAULT_ZAKAT: ZakatInputs = {
   basis: "silver",
   unit: "bhori",
+  autoPrices: true,
   goldPrice: 0,
   silverPrice: 0,
   gold: 0,
+  karat: 22,
   silver: 0,
   cash: 0,
   investments: 0,
@@ -53,9 +57,11 @@ export function parseZakat(raw: unknown): ZakatInputs {
   return {
     basis: r.basis === "gold" ? "gold" : "silver",
     unit: r.unit === "g" ? "g" : "bhori",
+    autoPrices: bool("autoPrices"),
     goldPrice: num("goldPrice"),
     silverPrice: num("silverPrice"),
     gold: num("gold"),
+    karat: KARATS.includes(r.karat as number) ? (r.karat as number) : DEFAULT_ZAKAT.karat,
     silver: num("silver"),
     cash: num("cash"),
     investments: num("investments"),
@@ -64,6 +70,27 @@ export function parseZakat(raw: unknown): ZakatInputs {
     useWallets: bool("useWallets"),
     useDhar: bool("useDhar"),
   };
+}
+
+/** Gold purities the calculator offers (karat / 24 = the share that's gold). */
+export const KARATS = [24, 22, 21, 18];
+
+/** Grams in one of a unit. */
+export const unitGrams = (unit: WeightUnit): number => (unit === "g" ? 1 : BHORI_G);
+
+/** Today's international prices per gram (24K gold, pure silver), from /api/metal-prices. */
+export interface LivePrices {
+  gold: number;
+  silver: number;
+}
+
+/** The prices the sums use, per unit: today's when auto and loaded, else the typed ones. */
+export function pricesOf(i: ZakatInputs, live: LivePrices | null): { gold: number; silver: number } {
+  if (i.autoPrices && live) {
+    const g = unitGrams(i.unit);
+    return { gold: Math.round(live.gold * g * 100) / 100, silver: Math.round(live.silver * g * 100) / 100 };
+  }
+  return { gold: i.goldPrice, silver: i.silverPrice };
 }
 
 /** The nisab's weight in a unit. */
@@ -85,15 +112,17 @@ export interface ZakatResult {
 
 const cents = (n: number) => Math.round(n * 100) / 100;
 
-export function zakatOf(i: ZakatInputs, tracked: { wallets: number; owedToYou: number; youOwe: number }): ZakatResult {
-  const goldValue = cents(i.gold * i.goldPrice);
-  const silverValue = cents(i.silver * i.silverPrice);
+export function zakatOf(i: ZakatInputs, tracked: { wallets: number; owedToYou: number; youOwe: number }, live: LivePrices | null = null): ZakatResult {
+  const price = pricesOf(i, live);
+  // Only the gold in the jewellery counts: a 22K piece is 22/24 gold.
+  const goldValue = cents(i.gold * price.gold * (i.karat / 24));
+  const silverValue = cents(i.silver * price.silver);
   const assets = cents(
     (i.useWallets ? tracked.wallets : 0) + i.cash + (i.useDhar ? tracked.owedToYou : 0) + goldValue + silverValue + i.investments + i.other,
   );
   const liabilities = cents((i.useDhar ? tracked.youOwe : 0) + i.debts);
   const net = Math.max(0, cents(assets - liabilities));
-  const nisab = cents(nisabWeight(i.basis, i.unit) * (i.basis === "gold" ? i.goldPrice : i.silverPrice));
+  const nisab = cents(nisabWeight(i.basis, i.unit) * (i.basis === "gold" ? price.gold : price.silver));
   const above = nisab > 0 && net >= nisab;
   return { goldValue, silverValue, assets, liabilities, net, nisab, above, due: above ? cents(net * ZAKAT_RATE) : 0 };
 }

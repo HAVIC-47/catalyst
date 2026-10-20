@@ -29,6 +29,8 @@ create table if not exists public.categories (
   sort       int  not null default 0,
   created_at timestamptz not null default now()
 );
+-- The icon shown for a category (a Lucide icon name); none = picked from its name.
+alter table public.categories add column if not exists icon text;
 
 -- WALLETS (where money sits: cash, bKash, Nagad, a bank account…) ------------
 -- A balance is the opening balance plus the entries and transfers in that wallet.

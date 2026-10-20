@@ -16,6 +16,7 @@ export interface Category {
   kind: Kind;
   color: string;
   sort: number;
+  icon?: string | null; // a Lucide icon name (lib/category-icons); none = picked from the name
 }
 
 export type NewCategory = Omit<Category, "id">;
@@ -69,18 +70,19 @@ export type NewMoodLog = Omit<MoodLog, "id" | "createdAt">;
 export interface MoodPreset {
   value: number;
   label: string;
-  color: string;
+  color: string; // a CSS color that follows the theme
+  rgb: string; // its channels, for rgb(… / alpha)
 }
 
-// Mood scale: earthy brick (low) -> forest green (high). Muted, printed-ink tones
-// that read on both white paper and black.
-export const MOOD_PRESETS: MoodPreset[] = [
-  { value: 1, label: "Awful", color: "#A8322A" }, // brick red
-  { value: 2, label: "Low", color: "#C06A33" }, // burnt orange
-  { value: 3, label: "Okay", color: "#B59A3C" }, // ochre
-  { value: 4, label: "Good", color: "#6E8C46" }, // olive
-  { value: 5, label: "Great", color: "#2E8159" }, // forest
-];
+// Mood scale, low -> high. The colors are CSS variables (globals.css): vivid rose,
+// orange, amber, lime and emerald on light paper; earthy brick, burnt orange,
+// ochre, olive and forest on black.
+export const MOOD_PRESETS: MoodPreset[] = [1, 2, 3, 4, 5].map((value) => ({
+  value,
+  label: ["Awful", "Low", "Okay", "Good", "Great"][value - 1],
+  color: `rgb(var(--mood-${value}))`,
+  rgb: `var(--mood-${value})`,
+}));
 
 /** A mood's name in the app's language (stored and sent in English). */
 export function moodName(m: MoodPreset): string {

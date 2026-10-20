@@ -110,7 +110,7 @@ import { addRecurring, advanceRecurring, deleteRecurring, listRecurring, logRecu
 import { addChallenge, deleteChallenge, listChallenges } from "@/lib/db/challenges";
 import { dueDates, firstNextOn, nextAfterLogged, sameSchedule, zonedIso, zonedNow, type Schedule } from "@/lib/recurring";
 import { challengeProgress, challengeTitle, loggedDays, moodSpendAlert, streakMilestone, streakOf } from "@/lib/habits";
-import { parseHiddenSections, type DashboardSectionId } from "@/lib/dashboard-sections";
+import { orderSections, parseHiddenSections, type DashboardSectionId } from "@/lib/dashboard-sections";
 import { SORT_STEP, sortBetween } from "@/lib/boards";
 import { setCurrency } from "@/lib/currency";
 import { DEFAULT_REMINDERS, parseReminders, type ReminderPrefs } from "@/lib/reminders";
@@ -123,8 +123,10 @@ export type EntryTab = "money" | "mood" | "saving";
 /** Ticket fields the editor can change (column moves go through placeTicket). */
 export type TicketFields = Pick<Ticket, "title" | "description" | "priority" | "dueOn" | "amount">;
 
-// Key for the hidden dashboard sections, both in localStorage and user metadata.
+// Keys for the hidden dashboard sections and their order, both in localStorage
+// and user metadata (shared with the Android app).
 const DASHBOARD_HIDDEN = "dashboardHidden";
+const DASHBOARD_ORDER = "dashboardOrder";
 
 export type { ReminderPrefs } from "@/lib/reminders";
 
@@ -228,6 +230,9 @@ interface AppDataValue {
   // only changes what the dashboard renders — the data behind it is untouched.
   dashboardHidden: DashboardSectionId[] | null;
   setDashboardHidden: (ids: DashboardSectionId[]) => void;
+  /** Every section, in the order the dashboard shows them (Settings → Dashboard). */
+  dashboardOrder: DashboardSectionId[];
+  setDashboardOrder: (ids: DashboardSectionId[]) => void;
 
   // The interface language (English or Bangla — shared with the Android app).
   lang: Lang;
@@ -257,6 +262,8 @@ interface AppDataValue {
   createCategory: (c: NewCategory) => Promise<Category>;
   editCategory: (id: string, p: Partial<NewCategory>) => Promise<void>;
   removeCategory: (id: string) => Promise<void>;
+  /** A kind's categories in a new order (Settings → Categories, dragged). */
+  reorderCategories: (ids: string[]) => Promise<void>;
 
   // budgets
   createBudget: (b: NewBudget) => Promise<void>;
@@ -492,7 +499,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const [dashboardHidden, setDashboardHiddenState] = useState<DashboardSectionId[] | null>(null);
+  const [dashboardOrder, setDashboardOrderState] = useState<DashboardSectionId[]>(() => orderSections(null));
   const dashboardTouched = useRef(false);
+  const orderTouched = useRef(false);
   const dashboardSave = useRef<Promise<void>>(Promise.resolve());
   useEffect(() => {
     // Local copy first so the dashboard renders right away, then the account copy
@@ -505,8 +514,22 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       /* ignore */
     }
     setDashboardHiddenState(local);
+    try {
+      setDashboardOrderState(orderSections(JSON.parse(localStorage.getItem(DASHBOARD_ORDER) ?? "[]")));
+    } catch {
+      /* ignore */
+    }
     loadPrefs()
       .then((meta) => {
+        if (!orderTouched.current && Array.isArray(meta[DASHBOARD_ORDER])) {
+          const order = orderSections(meta[DASHBOARD_ORDER] as string[]);
+          setDashboardOrderState(order);
+          try {
+            localStorage.setItem(DASHBOARD_ORDER, JSON.stringify(order));
+          } catch {
+            /* ignore */
+          }
+        }
         if (dashboardTouched.current) return;
         const remote = parseHiddenSections(meta[DASHBOARD_HIDDEN]) ?? [];
         setDashboardHiddenState(remote);
@@ -517,6 +540,19 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         }
       })
       .catch((err) => console.warn("[catalyst] could not load preferences", err));
+  }, []);
+  const setDashboardOrder = useCallback((ids: DashboardSectionId[]) => {
+    orderTouched.current = true;
+    const order = orderSections(ids);
+    setDashboardOrderState(order);
+    try {
+      localStorage.setItem(DASHBOARD_ORDER, JSON.stringify(order));
+    } catch {
+      /* ignore */
+    }
+    dashboardSave.current = dashboardSave.current
+      .then(() => savePrefs({ [DASHBOARD_ORDER]: order }))
+      .catch((err) => console.warn("[catalyst] could not save preferences", err));
   }, []);
   const setDashboardHidden = useCallback((ids: DashboardSectionId[]) => {
     dashboardTouched.current = true;
@@ -788,6 +824,21 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const removeCategory = useCallback(async (id: string) => {
     await deleteCategory(id);
     setCategories((p) => p.filter((c) => c.id !== id));
+  }, []);
+  const categoriesNow = useRef(categories);
+  categoriesNow.current = categories;
+  const reorderCategories = useCallback(async (ids: string[]) => {
+    const before = categoriesNow.current;
+    const sortOf = new Map(ids.map((id, i) => [id, i]));
+    const changed = before.filter((c) => sortOf.has(c.id) && c.sort !== sortOf.get(c.id));
+    // Shown in the new order at once; put back if the database refuses.
+    setCategories(orderCategories(before.map((c) => (sortOf.has(c.id) ? { ...c, sort: sortOf.get(c.id)! } : c))));
+    try {
+      await Promise.all(changed.map((c) => updateCategory(c.id, { sort: sortOf.get(c.id)! })));
+    } catch (err) {
+      setCategories(before);
+      throw err;
+    }
   }, []);
 
   const createBudget = useCallback(async (b: NewBudget) => {
@@ -1459,6 +1510,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       setVaultMode,
       dashboardHidden,
       setDashboardHidden,
+      dashboardOrder,
+      setDashboardOrder,
       addMoney,
       editMoney,
       removeMoney,
@@ -1468,6 +1521,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       createCategory,
       editCategory,
       removeCategory,
+      reorderCategories,
       createBudget,
       editBudget,
       removeBudget,
@@ -1514,8 +1568,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       loading, categories, transactions, moods, budgets, goals, bills, journal, activities,
       activityLogs, boards, boardColumns, tickets, entryOpen, entryTab, entryDate, openEntry, closeEntry, memoOpen,
       openMemo, closeMemo, listScan, openListScan, closeListScan, selectedBoards, selectBoard, vaultMode, setVaultMode,
-      dashboardHidden, setDashboardHidden, addMoney, editMoney, removeMoney,
-      saveMood, moodsForDate, avgMoodForDate, createCategory, editCategory, removeCategory, createBudget, editBudget,
+      dashboardHidden, setDashboardHidden, dashboardOrder, setDashboardOrder, addMoney, editMoney, removeMoney,
+      saveMood, moodsForDate, avgMoodForDate, createCategory, editCategory, removeCategory, reorderCategories, createBudget, editBudget,
       removeBudget, createGoal, editGoal, removeGoal, createBill, editBill, removeBill, createJournal,
       removeJournal, createActivity, removeActivity, toggleActivity, createBoard, renameBoard, removeBoard,
       createColumn, renameColumn, moveColumn, placeColumn, removeColumn, createTicket, editTicket, placeTicket, removeTicket,

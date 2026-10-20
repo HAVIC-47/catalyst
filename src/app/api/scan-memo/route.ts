@@ -12,7 +12,7 @@
 // (public.memo_scans, see db/supabase.sql), so the key can't be used freely.
 import { NextResponse, type NextRequest } from "next/server";
 import { LIMITS } from "@/lib/limits";
-import type { ScannedMemo, ScannedNotes } from "@/lib/memo";
+import type { PaidWith, ScannedMemo, ScannedNotes } from "@/lib/memo";
 import { geminiJson } from "@/lib/server/gemini";
 import { countScan, localToday, readImage } from "@/lib/server/scan";
 import { signedIn } from "@/lib/server/session";
@@ -31,12 +31,16 @@ const RECEIPT_RULES = `- items: every purchased line. name = short item name in 
 - merchant: shop name in English letters (transliterate Bengali), "" if unknown.
 - Ignore cash given, change returned, subtotals and running totals.`;
 
+const PAID_WITH_RULES = `- paidWith: how it was paid, from what the image shows — "bkash" (bKash's pink app, logo or "bKash" text, a bKash payment / send money / cash out confirmation), "nagad" (Nagad's orange app or logo), "rocket" (Rocket / DBBL mobile banking), "upay" (Upay), "bank" (a bank app, bank transfer, NPSB / BEFTN slip or internet banking), "card" (a card payment: Visa, Mastercard, Amex, a card number or POS slip), "cash" (a printed or handwritten cash memo, or "paid in cash"), or "" when you can't tell.`;
+
 function prompt(categories: string[], today: string) {
   return `You read photos of shop receipts and cash memos, mostly from Bangladesh. They may be printed or handwritten, in English or Bengali (Bengali digits ০-৯ are numbers). Extract the purchase so each item can be logged as a separate expense. Today is ${today}; memos are usually from the last few days, which helps tell similar digits apart in dates.
 
 Rules:
 ${RECEIPT_RULES}
 - category: ${categories.length ? `the single best match for the item from this list: ${categories.join(", ")}.` : "a one-word spending category such as Food or Groceries."}
+${PAID_WITH_RULES}
+- A mobile banking or bank app screenshot of one payment counts as a receipt: merchant = who was paid (a name or number), one item for what was paid (e.g. "Payment to Daraz"), the fee or charge (if any) as an extra, total = the amount.
 - If the photo is not a receipt or memo, set isReceipt to false and return no items.`;
 }
 
@@ -45,13 +49,18 @@ function readerPrompt(expense: string[], income: string[], today: string) {
   return `You read photos and screenshots for a personal money app used mostly in Bangladesh and turn them into entries. Text may be printed, typed or handwritten, in English or Bengali (Bengali digits ০-৯ are numbers). Today is ${today}.
 
 First decide what the image is (kind):
-- "receipt": a shop receipt, bill or cash memo for one purchase.
+- "receipt": a shop receipt, bill or cash memo for one purchase — or a screenshot of one payment in a mobile banking or bank app (bKash, Nagad, Rocket, Upay, a bank): payment, send money, cash out, mobile recharge, pay bill.
 - "notes": the person's own record of their money — a notes app or Notepad screenshot, a handwritten list, a chat message or a spreadsheet — listing expenses and/or income.
 - "other": anything else.
 
 For a receipt, fill merchant, date, time, currency, items, extras, discount and total, and leave entries empty. Receipts are usually from the last few days, which helps tell similar digits apart in dates.
 ${RECEIPT_RULES}
 - item category: the single best match for the item from the expense categories below.
+- For a mobile banking or bank app screenshot: merchant = who was paid (a name or number), one item for what was paid (e.g. "Send money to Rahim" or "Payment to Daraz"), the fee or charge (if any) as an extra, total = the amount.
+- Money received in such an app (received money, cash in, add money, salary or remittance in) is not a receipt: use kind "notes" with one income entry.
+
+For every kind:
+${PAID_WITH_RULES}
 
 For notes, fill entries (and date, if the whole note has one date) and leave items and extras empty.
 - One entry per money line, in order. Skip headings, totals, balances and running sums.
@@ -64,6 +73,10 @@ For notes, fill entries (and date, if the whole note has one date) and leave ite
 Expense categories: ${expense.join(", ") || "none yet"}.
 Income categories: ${income.join(", ") || "none yet"}.`;
 }
+
+const PAID = ["bkash", "nagad", "rocket", "upay", "bank", "card", "cash", ""] as const;
+const PAID_WITH = { type: "STRING", enum: [...PAID] };
+const paidWith = (v: unknown): PaidWith => (PAID.includes(v as PaidWith) ? (v as PaidWith) : "");
 
 const RECEIPT_PROPERTIES = {
   merchant: { type: "STRING" },
@@ -96,8 +109,8 @@ function schema(categories: string[]) {
   if (categories.length) category.enum = categories;
   return {
     type: "OBJECT",
-    properties: { isReceipt: { type: "BOOLEAN" }, ...RECEIPT_PROPERTIES, items: itemsOf(category) },
-    required: ["isReceipt", ...RECEIPT_REQUIRED],
+    properties: { isReceipt: { type: "BOOLEAN" }, paidWith: PAID_WITH, ...RECEIPT_PROPERTIES, items: itemsOf(category) },
+    required: ["isReceipt", "paidWith", ...RECEIPT_REQUIRED],
   };
 }
 
@@ -106,6 +119,7 @@ function readerSchema() {
     type: "OBJECT",
     properties: {
       kind: { type: "STRING", enum: ["receipt", "notes", "other"] },
+      paidWith: PAID_WITH,
       ...RECEIPT_PROPERTIES,
       items: itemsOf({ type: "STRING" }),
       entries: {
@@ -123,7 +137,7 @@ function readerSchema() {
         },
       },
     },
-    required: ["kind", ...RECEIPT_REQUIRED, "entries"],
+    required: ["kind", "paidWith", ...RECEIPT_REQUIRED, "entries"],
   };
 }
 
@@ -139,6 +153,7 @@ function clean(raw: Record<string, unknown>, categories: string[]): ScannedMemo 
   const time = text(raw.time, 5);
   const currency = text(raw.currency, 8);
   return {
+    paidWith: paidWith(raw.paidWith),
     merchant: text(raw.merchant, LIMITS.place),
     date: isDate(date) ? date : "",
     time: /^([01]\d|2[0-3]):[0-5]\d$/.test(time) ? time : "",
@@ -165,6 +180,7 @@ function cleanNotes(raw: Record<string, unknown>, expense: string[], income: str
     return isDate(d) && d <= today ? d : "";
   };
   return {
+    paidWith: paidWith(raw.paidWith),
     date: day(raw.date),
     entries: list(raw.entries, 100)
       .map((e) => {

@@ -25,3 +25,21 @@ export function parseHiddenSections(raw: unknown): DashboardSectionId[] | null {
   if (!Array.isArray(raw)) return null;
   return raw.filter((x): x is DashboardSectionId => typeof x === "string" && IDS.has(x));
 }
+
+/**
+ * Every section in the order the user put them in (Settings → Dashboard). A
+ * section the stored order doesn't mention yet — one added in a later version —
+ * takes its default place, right after the section it follows by default.
+ */
+export function orderSections(order: readonly string[] | null | undefined): DashboardSectionId[] {
+  const out = [...new Set((order ?? []).filter((x): x is DashboardSectionId => IDS.has(x)))];
+  DASHBOARD_SECTIONS.forEach((s, i) => {
+    if (out.includes(s.id)) return;
+    const before = DASHBOARD_SECTIONS.slice(0, i)
+      .map((x) => x.id)
+      .reverse()
+      .find((id) => out.includes(id));
+    out.splice(before ? out.indexOf(before) + 1 : 0, 0, s.id);
+  });
+  return out;
+}

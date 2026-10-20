@@ -13,7 +13,7 @@ import { BREAK_SAVING, type Category } from "@/types";
 import { currencySymbol, cn, combineDateTime, formatCurrency, nowTime, toDateKey } from "@/lib/utils";
 import { LIMITS } from "@/lib/limits";
 import { pastedImage, toBase64, toJpeg } from "@/lib/image";
-import { discountShares, type ScannedMemo, type ScannedNotes } from "@/lib/memo";
+import { discountShares, walletForPayment, type ScannedMemo, type ScannedNotes } from "@/lib/memo";
 import { WalletSelect, rememberWallet, useStartWallet } from "@/components/entry/wallet-select";
 import { currency } from "@/lib/currency";
 import { tr, trn } from "@/lib/i18n";
@@ -102,7 +102,7 @@ export function MemoScanner() {
 }
 
 function MemoFlow({ onClose }: { onClose: () => void }) {
-  const { categories, addMoney, createCategory, openEntry } = useAppData();
+  const { categories, addMoney, createCategory, openEntry, wallets } = useAppData();
   const expenseCats = categories.filter((c) => c.kind === "expense" && c.name !== BREAK_SAVING);
   const incomeCats = categories.filter((c) => c.kind === "income");
 
@@ -124,6 +124,8 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
   const startWallet = useStartWallet();
   const [walletId, setWalletId] = useState<string | null>(null);
   const wallet = walletId ?? startWallet;
+  // The wallet the image itself pointed to (a bKash or Nagad screenshot, a bank slip, a cash memo).
+  const [detected, setDetected] = useState<string | null>(null);
 
   const request = useRef<AbortController | null>(null);
   const cameraInput = useRef<HTMLInputElement>(null);
@@ -138,6 +140,9 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
     setStep("pick");
     setPhoto(null);
     setMemo(null);
+    // A wallet picked from the last image doesn't carry over to the next one.
+    if (detected && walletId === detected) setWalletId(null);
+    setDetected(null);
     setLines([]);
     setEntries([]);
     setNoted(null);
@@ -316,6 +321,9 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !(data.memo || data.notes)) throw new Error(data.error || "The memo reader couldn't process this photo.");
       if (ctrl.signal.aborted) return;
+      const found = walletForPayment(((data.memo ?? data.notes) as ScannedMemo | ScannedNotes).paidWith, wallets);
+      setDetected(found?.id ?? null);
+      if (found) setWalletId(found.id);
       if (data.notes) reviewNotes(data.notes as ScannedNotes);
       else review(data.memo as ScannedMemo);
     } catch (err) {
@@ -511,6 +519,7 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
             </p>
           )}
           <WalletSelect value={wallet} onChange={setWalletId} label={tr("Wallet")} className="mt-4" />
+          <DetectedWallet id={detected} chosen={wallet} />
           <ul className="mt-4 divide-y divide-line rounded-xl border border-line">
             {entries.map((e) => {
               const existing = findCat(e.type, e.category);
@@ -699,6 +708,7 @@ function MemoFlow({ onClose }: { onClose: () => void }) {
           )}
 
           <WalletSelect value={wallet} onChange={setWalletId} label={tr("Paid from")} className="mt-4" />
+          <DetectedWallet id={detected} chosen={wallet} />
 
           <div className="label mb-2 mt-6">{tr("Items · {n}", { n: lines.length })}</div>
           <ul className="divide-y divide-line rounded-xl border border-line">
@@ -925,4 +935,12 @@ function Webcam({
       </div>
     </div>
   );
+}
+
+/** Says which wallet the image pointed to, while it's still the one picked. */
+function DetectedWallet({ id, chosen }: { id: string | null; chosen: string | null }) {
+  const { wallets } = useAppData();
+  const w = id && id === chosen ? wallets.find((x) => x.id === id) : null;
+  if (!w) return null;
+  return <p className="mt-1.5 text-[11px] text-ink/50">{tr("Paid with {name} — picked from the image.", { name: tr(w.name) })}</p>;
 }

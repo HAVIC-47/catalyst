@@ -12,6 +12,7 @@ interface Row {
   kind: "expense" | "income";
   color: string;
   sort: number;
+  icon?: string | null;
 }
 const toCategory = (r: Row): Category => ({
   id: r.id,
@@ -19,6 +20,7 @@ const toCategory = (r: Row): Category => ({
   kind: r.kind,
   color: r.color,
   sort: r.sort,
+  icon: r.icon ?? null,
 });
 
 export async function listCategories(): Promise<Category[]> {
@@ -37,7 +39,8 @@ export async function addCategory(input: NewCategory): Promise<Category> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("categories")
-    .insert({ name: input.name, kind: input.kind, color: input.color, sort: input.sort })
+    // The icon only when chosen, so categories still save before the 1.6 database update.
+    .insert({ name: input.name, kind: input.kind, color: input.color, sort: input.sort, ...(input.icon ? { icon: input.icon } : {}) })
     .select("*")
     .single();
   if (error) throw error;

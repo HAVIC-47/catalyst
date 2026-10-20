@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { tr } from "@/lib/i18n";
 
 // Browser-chrome color per theme (paper color); keep in sync with the root layout.
-const THEME_COLOR = { light: "#F6F5F1", dark: "#000000" };
+const THEME_COLOR = { light: "#F8F7FC", dark: "#000000" };
 
 // Toggles the `dark` class on <html> and persists the choice. The no-flash script
 // in the root layout applies the saved/system theme before first paint.

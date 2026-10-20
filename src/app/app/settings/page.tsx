@@ -79,7 +79,7 @@ export default function SettingsPage() {
         <div className="mt-5">
           <SettingsCard>
             <SettingsRow href="/app/settings/about" icon={Info} title={tr("About the app")} hint={tr("Everything Catalyst does on the web, in one place.")} />
-            <SettingsRow href="/app/settings/account" icon={UserRound} title={tr("Account")} hint={email ?? tr("Your email and deleting the account")} />
+            <SettingsRow href="/app/settings/account" icon={UserRound} title={tr("Account")} hint={email ?? tr("Your email, erasing your data and deleting the account")} />
           </SettingsCard>
         </div>
       </div>

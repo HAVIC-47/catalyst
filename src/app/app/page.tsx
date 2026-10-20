@@ -34,12 +34,6 @@ interface CellData {
   mood?: number;
 }
 
-/** "#RRGGBB" -> "r g b" (space-separated, for rgb(r g b / a)). */
-function hexToRgb(hex: string): string {
-  const m = hex.replace("#", "");
-  return `${parseInt(m.slice(0, 2), 16)} ${parseInt(m.slice(2, 4), 16)} ${parseInt(m.slice(4, 6), 16)}`;
-}
-
 /**
  * Layered tint for a day:
  *  - Base = mood color (red → green scale).
@@ -54,7 +48,7 @@ function dayCellStyle(data: CellData | undefined, maxFlow: number): CSSPropertie
   const flow = data.expense + data.income;
   if (flow === 0 && !data.mood) return {};
 
-  const moodRgb = data.mood ? hexToRgb(moodPreset(data.mood).color) : "122 116 106";
+  const moodRgb = data.mood ? moodPreset(data.mood).rgb : "122 116 106";
   const moodA = data.mood ? 0.2 : 0.05;
 
   const spendRatio = maxFlow > 0 ? data.expense / maxFlow : 0;
@@ -91,7 +85,7 @@ function yearCellStyle(data: CellData | undefined, maxFlow: number): CSSProperti
     const c = `rgb(${rgb} / calc(var(--yr-floor) + var(--yr-span) * ${level.toFixed(3)}))`;
     layers.push(`linear-gradient(${c},${c})`);
   }
-  if (data.mood) layers.push(`rgb(${hexToRgb(moodPreset(data.mood).color)} / var(--yr-mood))`);
+  if (data.mood) layers.push(`rgb(${moodPreset(data.mood).rgb} / var(--yr-mood))`);
   return { background: layers.join(", ") };
 }
 
@@ -250,7 +244,7 @@ export default function CalendarPage() {
       <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[10px] uppercase tracking-widest text-ink/40 sm:gap-x-5 lg:mb-4">
         <div className="flex items-center gap-2">
           <span className="text-ink/55">{tr("Mood")}</span>
-          <div className="h-2.5 w-14 rounded-full bg-linear-to-r from-[#A8322A] via-[#B59A3C] to-[#2E8159] sm:w-28" />
+          <div className="h-2.5 w-14 rounded-full bg-linear-to-r from-[rgb(var(--mood-1))] via-[rgb(var(--mood-3))] to-[rgb(var(--mood-5))] sm:w-28" />
         </div>
         <div className="flex items-center gap-2">
           <span className="h-2.5 w-2.5 rounded-xs" style={{ backgroundColor: "rgb(var(--tint-spend))" }} />

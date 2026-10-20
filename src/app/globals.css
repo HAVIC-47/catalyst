@@ -19,8 +19,9 @@
   --color-income: rgb(var(--c-income));
   --color-expense: rgb(var(--c-expense));
   --color-saving: rgb(var(--c-saving));
+  --color-violet: rgb(var(--c-violet));
   --color-neon-cyan: rgb(var(--c-saving));
-  --color-neon-purple: #9268a0;
+  --color-neon-purple: rgb(var(--c-violet-text));
   --color-neon-rose: rgb(var(--c-expense));
 
   /* next/font exposes the families as --font-newsreader / -hanken / -plex-mono
@@ -29,8 +30,8 @@
   --font-sans: var(--font-hanken), var(--font-bengali-sans), system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), var(--font-bengali-sans), ui-monospace, monospace;
 
-  /* Light: white cards lifted off the paper (dark mode overrides both below). */
-  --shadow-card: 0 1px 2px rgb(24 21 18 / 0.05), 0 8px 24px -14px rgb(24 21 18 / 0.16);
+  /* Light: white cards lifted off the paper on a soft violet shadow (dark mode overrides both below). */
+  --shadow-card: 0 1px 2px rgb(17 16 31 / 0.06), 0 10px 26px -14px rgb(76 29 149 / 0.2);
   --shadow-entry: inset 0 1px 0 rgb(255 255 255 / 0.18), 0 6px 16px -8px rgb(var(--c-accent) / 0.6);
 
   --animate-fade-up: fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -67,26 +68,38 @@
 }
 
 /* Palette as RGB channels so Tailwind alpha modifiers work, flipped on .dark.
-   Light = fresh newsprint: soft warm-white paper, white cards and sidebar, warm
-   near-black ink, terracotta accent from the same hue family as the dark clay. */
+   Light = vivid and airy: lavender-white paper, white cards and sidebar, deep
+   indigo ink, a vivid coral accent from the logo's hue, and saturated data tones
+   that still clear WCAG — text 4.5:1, icons and chart marks 3:1. */
 :root {
-  --c-paper: 246 245 241; /* #F6F5F1 soft warm white */
+  --c-paper: 248 247 252; /* #F8F7FC airy lavender white */
   --c-panel: 255 255 255; /* sidebar: clean white column */
   --c-card: 255 255 255; /* white cards, lifted by hairline + soft shadow */
-  --c-ink: 24 21 18; /* #181512 warm near-black */
-  --c-accent: 178 70 44; /* #B2462C terracotta, 5.5:1 on white */
-  --c-line: rgba(24, 21, 18, 0.1);
-  /* Data tones, a shade deeper on white so amounts clear 5:1. */
-  --c-income: 31 112 73;
-  --c-expense: 185 58 48;
-  --c-saving: 44 108 166;
-  /* Calendar day tints: pastel washes on white. */
-  --tint-spend: 203 69 59;
-  --tint-income: 61 128 188;
-  --tint-k: 0.6;
-  --tint-mood-k: 0.75;
+  --c-ink: 17 16 31; /* #11101F deep indigo ink, 18.8:1 on white */
+  --c-accent: 212 56 28; /* #D4381C vivid coral, 4.8:1 with white text */
+  --c-line: rgba(17, 16, 31, 0.1);
+  /* Data tones: saturated, and still 4.8–5.5:1 as text on white. */
+  --c-income: 4 120 87; /* #047857 emerald */
+  --c-expense: 220 38 38; /* #DC2626 red */
+  --c-saving: 37 99 235; /* #2563EB blue */
+  --c-violet: 124 58 237; /* #7C3AED mood purple (lines, fills) */
+  --c-violet-text: 109 40 217; /* #6D28D9, 7:1 as text */
+  /* Moods, awful → great: rose, orange, amber, lime, emerald (each 3:1+ on white). */
+  --mood-1: 225 29 72;
+  --mood-2: 234 88 12;
+  --mood-3: 217 119 6;
+  --mood-4: 101 163 13;
+  --mood-5: 5 150 105;
+  /* Stored colors (categories, tags) get more chroma on white — see vivid() in lib/utils. */
+  --vivid-l: 0.97;
+  --vivid-c: 1.4;
+  /* Calendar day tints: bright washes on white. */
+  --tint-spend: 244 63 94;
+  --tint-income: 59 130 246;
+  --tint-k: 0.75;
+  --tint-mood-k: 0.9;
   /* Category / mood colors used as text are pulled toward ink by this much. */
-  --tint-text: 62%;
+  --tint-text: 74%;
   /* Year view: tiny cells where the tint is the only signal, so much stronger
      fills (mood base alpha; flow alpha = floor + span × √share-of-month-max). */
   --yr-mood: 0.55;
@@ -109,6 +122,16 @@
   --c-income: 46 129 89;
   --c-expense: 203 69 59;
   --c-saving: 61 128 188;
+  --c-violet: 122 78 134;
+  --c-violet-text: 146 104 160;
+  /* Earthy printed-ink moods: brick, burnt orange, ochre, olive, forest. */
+  --mood-1: 168 50 42;
+  --mood-2: 192 106 51;
+  --mood-3: 181 154 60;
+  --mood-4: 110 140 70;
+  --mood-5: 46 129 89;
+  --vivid-l: 1;
+  --vivid-c: 1;
   /* Deep printed-ink tints over black. */
   --tint-spend: 155 58 45;
   --tint-income: 52 97 138;
@@ -136,13 +159,13 @@ body {
   min-height: 100vh;
   /* dvh = the visible height with browser bars shown, so a page that fits never scrolls. */
   min-height: 100dvh;
-  /* Light atmosphere: a soft terracotta glow top-left, cool wash bottom-right and a
-     hint of lilac top-right over faint grain, so the paper never reads as a flat
-     fill. Fixed so it stays put while scrolling. */
+  /* Light atmosphere: a coral glow top-left, a blue wash bottom-right and violet
+     top-right over faint grain, so the paper never reads as a flat fill. Fixed so
+     it stays put while scrolling. */
   background-image:
-    radial-gradient(60% 46% at 8% -8%, rgb(178 70 44 / 0.09), transparent 62%),
-    radial-gradient(52% 46% at 104% 106%, rgb(61 128 188 / 0.08), transparent 60%),
-    radial-gradient(40% 30% at 82% -4%, rgb(146 104 160 / 0.06), transparent 60%),
+    radial-gradient(60% 46% at 8% -8%, rgb(212 56 28 / 0.13), transparent 62%),
+    radial-gradient(52% 46% at 104% 106%, rgb(37 99 235 / 0.11), transparent 60%),
+    radial-gradient(40% 30% at 82% -4%, rgb(124 58 237 / 0.1), transparent 60%),
     radial-gradient(rgb(var(--c-ink) / 0.025) 1px, transparent 1px);
   background-size: auto, auto, auto, 3px 3px;
   background-attachment: fixed, fixed, fixed, fixed;
@@ -197,8 +220,8 @@ body {
   :where(:root:not(.dark)) .seg-on {
     background-color: rgb(var(--c-card));
     box-shadow:
-      0 1px 2px rgb(24 21 18 / 0.1),
-      0 0 0 1px rgb(24 21 18 / 0.06);
+      0 1px 2px rgb(17 16 31 / 0.1),
+      0 0 0 1px rgb(17 16 31 / 0.06);
   }
   /* Solid oxblood block button — printed-stamp feel, no gradients. */
   .entry-btn {
@@ -207,6 +230,10 @@ body {
   }
   .entry-btn:hover {
     filter: brightness(0.92);
+  }
+  /* Pure white on the vivid coral (4.8:1). */
+  :where(:root:not(.dark)) .entry-btn {
+    color: #fff !important;
   }
   /* Former glass card — now a plain raised paper card. */
   .glass {

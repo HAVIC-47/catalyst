@@ -7,7 +7,8 @@ import { parseISO } from "date-fns";
 import { X, ArrowUpRight, ArrowDownLeft, MapPin } from "lucide-react";
 import { useAppData, type EntryTab } from "@/hooks/use-app-data";
 import { MOOD_PRESETS, MOOD_TAGS, type Category, type Kind, moodName } from "@/types";
-import { currencySymbol, cn, combineDateTime, formatCurrency, nowTime, tintText, fmt } from "@/lib/utils";
+import { currencySymbol, cn, combineDateTime, formatCurrency, nowTime, tintText, fmt, withAlpha } from "@/lib/utils";
+import { CategoryIcon } from "@/components/ui/category-icon";
 import { MoodIcon } from "@/components/ui/mood-icon";
 import { LIMITS } from "@/lib/limits";
 import { WalletSelect, rememberWallet, useStartWallet } from "@/components/entry/wallet-select";
@@ -350,12 +351,7 @@ export function CategoryTile({
         active ? "border-ink/30 bg-ink/[0.06]" : "border-line hover:bg-ink/[0.03]",
       )}
     >
-      <span
-        className="flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold"
-        style={{ backgroundColor: `${cat.color}22`, color: tintText(cat.color) }}
-      >
-        {tr(cat.name).slice(0, 1).toUpperCase()}
-      </span>
+      <CategoryIcon name={cat.name} icon={cat.icon} color={cat.color} />
       <span className="max-w-full truncate text-xs text-ink/70">{tr(cat.name)}</span>
     </button>
   );
@@ -423,8 +419,8 @@ function MoodForm({ dateKey }: { dateKey: string }) {
                 style={
                   on
                     ? {
-                        borderColor: `${m.color}80`,
-                        backgroundColor: `${m.color}1a`,
+                        borderColor: withAlpha(m.color, 0.5),
+                        backgroundColor: withAlpha(m.color, 0.1),
                         boxShadow: `0 0 26px -10px ${m.color}`,
                         color: tintText(m.color),
                       }
@@ -510,8 +506,8 @@ function MoodForm({ dateKey }: { dateKey: string }) {
         disabled={saving}
         className="min-h-[48px] w-full cursor-pointer rounded-xl border text-sm font-semibold transition-all duration-200 active:scale-[0.99] disabled:opacity-40"
         style={{
-          borderColor: `${active.color}66`,
-          backgroundColor: `${active.color}1f`,
+          borderColor: withAlpha(active.color, 0.4),
+          backgroundColor: withAlpha(active.color, 0.12),
           color: tintText(active.color),
         }}
       >

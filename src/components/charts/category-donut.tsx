@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 import type { Category, Kind, Transaction } from "@/types";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, vivid } from "@/lib/utils";
 import { rangeWindow, type Range } from "@/lib/range";
 import { tr } from "@/lib/i18n";
 
@@ -33,7 +33,7 @@ export function CategoryDonut({
       totals.set(t.categoryName, (totals.get(t.categoryName) ?? 0) + t.amount);
     }
     return [...totals.entries()]
-      .map(([name, value]) => ({ name, value, color: colorOf.get(name) ?? FALLBACK }))
+      .map(([name, value]) => ({ name, value, color: vivid(colorOf.get(name) ?? FALLBACK) }))
       .sort((a, b) => b.value - a.value);
   }, [transactions, categories, kind, startKey, endKey]);
 

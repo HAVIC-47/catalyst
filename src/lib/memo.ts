@@ -11,7 +11,11 @@ export interface MemoExtra {
   amount: number;
 }
 
+/** How a memo or screenshot was paid, read from the image — picks the wallet. */
+export type PaidWith = "bkash" | "nagad" | "rocket" | "upay" | "bank" | "card" | "cash" | "";
+
 export interface ScannedMemo {
+  paidWith?: PaidWith; // older servers don't send it
   merchant: string;
   date: string; // yyyy-mm-dd, "" when not printed
   time: string; // HH:mm, "" when not printed
@@ -33,8 +37,33 @@ export interface NoteEntry {
 }
 
 export interface ScannedNotes {
+  paidWith?: PaidWith;
   date: string; // a date for the whole note, "" if none
   entries: NoteEntry[];
+}
+
+/** The wallet a scan's payment method points to: bKash, Nagad, Rocket and Upay by
+ *  name; a bank or card by kind (or name); cash by kind. Null when unsure. */
+export function walletForPayment<W extends { id: string; name: string; kind: string; archived: boolean }>(paid: PaidWith | undefined, wallets: W[]): W | null {
+  if (!paid) return null;
+  const live = wallets.filter((w) => !w.archived);
+  const named = (re: RegExp) => live.find((w) => re.test(w.name));
+  switch (paid) {
+    case "bkash":
+      return named(/b\s*-?\s*kash|বিকাশ/i) ?? null;
+    case "nagad":
+      return named(/nagad|নগদ/i) ?? null;
+    case "rocket":
+      return named(/rocket|dbbl|dutch.?bangla|রকেট/i) ?? null;
+    case "upay":
+      return named(/upay|উপায়/i) ?? null;
+    case "card":
+      return live.find((w) => w.kind === "card") ?? named(/card|visa|master|amex|কার্ড/i) ?? live.find((w) => w.kind === "bank") ?? null;
+    case "bank":
+      return live.find((w) => w.kind === "bank") ?? named(/bank|ব্যাংক/i) ?? null;
+    case "cash":
+      return live.find((w) => w.kind === "cash") ?? named(/cash|নগদ টাকা|ক্যাশ/i) ?? null;
+  }
 }
 
 /** One item read from a screenshot of a to-do or shopping list (/api/scan-list). */

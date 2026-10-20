@@ -7,6 +7,7 @@ import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 
 import type { MoodLog } from "@/types";
 import { rangeWindow, type Range } from "@/lib/range";
 import { tr, trn, digits } from "@/lib/i18n";
+import { vivid } from "@/lib/utils";
 
 const TAG_COLORS = [
   "#3D80BC", "#7A4E86", "#C06A33", "#2E8159", "#CB453B",
@@ -24,7 +25,7 @@ export function MoodTagBars({ moods, range, offset }: { moods: MoodLog[]; range:
       for (const tag of m.tags) counts.set(tag, (counts.get(tag) ?? 0) + 1);
     }
     return [...counts.entries()]
-      .map(([name, count], i) => ({ name: tr(`${name}|tag`), count, color: TAG_COLORS[i % TAG_COLORS.length] }))
+      .map(([name, count], i) => ({ name: tr(`${name}|tag`), count, color: vivid(TAG_COLORS[i % TAG_COLORS.length]) }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
   }, [moods, startKey, endKey]);

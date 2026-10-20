@@ -9,16 +9,35 @@ import { Check, HandHeart, Info } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
 import { loadPrefs, savePrefs } from "@/lib/db/prefs";
 import { debtIsOpen, debtRemaining, walletBalances } from "@/lib/money";
-import { DEFAULT_ZAKAT, nisabWeight, parseZakat, zakatOf, type ZakatInputs } from "@/lib/zakat";
-import { cn, combineDateTime, currencySymbol, formatCurrency, nowTime, toDateKey } from "@/lib/utils";
+import { DEFAULT_ZAKAT, KARATS, nisabWeight, parseZakat, pricesOf, zakatOf, type LivePrices, type ZakatInputs } from "@/lib/zakat";
+import { cn, combineDateTime, currencySymbol, fmt, formatCurrency, nowTime, toDateKey } from "@/lib/utils";
 import { tr, digits } from "@/lib/i18n";
 
 const field =
   "min-h-[44px] w-full rounded-xl border border-line bg-ink/[0.02] px-3 font-mono text-sm text-ink outline-hidden focus:border-amber/50";
 
 export default function ZakatPage() {
-  const { wallets, transactions, transfers, debts, debtPayments, walletsReady, categories, addMoney, pushToast, removeMoney } = useAppData();
+  const { wallets, transactions, transfers, debts, debtPayments, walletsReady, categories, addMoney, pushToast, removeMoney, currency } = useAppData();
   const [z, setZ] = useState<ZakatInputs>(DEFAULT_ZAKAT);
+  // Today's international prices (per gram, in the account's currency).
+  const [live, setLive] = useState<(LivePrices & { updatedAt: string }) | null>(null);
+  const [liveState, setLiveState] = useState<"loading" | "ok" | "failed">("loading");
+  useEffect(() => {
+    let gone = false;
+    setLiveState("loading");
+    fetch(`/api/metal-prices?currency=${encodeURIComponent(currency)}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((d: { gold?: number; silver?: number; updatedAt?: string }) => {
+        if (gone) return;
+        if (!(Number(d.gold) > 0 && Number(d.silver) > 0)) throw new Error("no prices");
+        setLive({ gold: Number(d.gold), silver: Number(d.silver), updatedAt: d.updatedAt ?? "" });
+        setLiveState("ok");
+      })
+      .catch(() => !gone && setLiveState("failed"));
+    return () => {
+      gone = true;
+    };
+  }, [currency]);
   const touched = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -65,7 +84,9 @@ export default function ZakatPage() {
       youOwe: open.filter((d) => d.direction === "borrowed").reduce((s, d) => s + debtRemaining(d, debtPayments), 0),
     };
   }, [wallets, transactions, transfers, debts, debtPayments, walletsReady]);
-  const result = zakatOf(z, tracked);
+  const auto = z.autoPrices && liveState !== "failed";
+  const result = zakatOf(auto ? z : { ...z, autoPrices: false }, tracked, live);
+  const prices = pricesOf(auto ? z : { ...z, autoPrices: false }, live);
   const unit = z.unit === "g" ? tr("g") : tr("bhori");
   const weight = nisabWeight(z.basis, z.unit);
 
@@ -145,10 +166,40 @@ export default function ZakatPage() {
                 onChange={(v) => set({ unit: v as ZakatInputs["unit"] })}
               />
             </div>
+            <Toggle
+              on={z.autoPrices}
+              onChange={(v) => set({ autoPrices: v })}
+              label={tr("Today's international prices")}
+              hint={
+                !z.autoPrices
+                  ? tr("Off — you type the prices below.")
+                  : liveState === "loading"
+                    ? tr("Fetching today's prices…")
+                    : liveState === "failed"
+                      ? tr("Couldn't fetch them right now — type the prices below.")
+                      : tr("Gold (24K) and silver, updated {time}.", { time: live?.updatedAt ? fmt(new Date(live.updatedAt), "MMM d, h:mm a") : "—" })
+              }
+            />
             <div className="grid gap-4 sm:grid-cols-2">
               {(["gold", "silver"] as const).map((metal) => (
                 <div key={metal} className="space-y-2 rounded-xl border border-line p-3">
-                  <div className="text-sm font-semibold text-ink/80">{metal === "gold" ? tr("Gold") : tr("Silver")}</div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-semibold text-ink/80">{metal === "gold" ? tr("Gold") : tr("Silver")}</span>
+                    {metal === "gold" && (
+                      <select
+                        value={z.karat}
+                        onChange={(e) => set({ karat: Number(e.target.value) })}
+                        aria-label={tr("Purity")}
+                        className="min-h-[32px] cursor-pointer rounded-lg border border-line bg-card px-2 text-xs text-ink/80 outline-hidden"
+                      >
+                        {KARATS.map((k) => (
+                          <option key={k} value={k} className="bg-card">
+                            {tr("{k}K", { k })}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
                   <label className="block">
                     <span className="text-[11px] text-ink/45">{tr("You own ({unit})", { unit })}</span>
                     <NumberInput
@@ -159,24 +210,34 @@ export default function ZakatPage() {
                       className={field}
                     />
                   </label>
-                  <label className="block">
-                    <span className="text-[11px] text-ink/45">{tr("Today's price per {unit}", { unit })}</span>
-                    <div className="flex items-center gap-2 rounded-xl border border-line bg-ink/[0.02] px-3 focus-within:border-amber/50">
-                      <span className="font-mono text-ink/40">{currencySymbol()}</span>
-                      <NumberInput
-                        value={metal === "gold" ? z.goldPrice : z.silverPrice}
-                        onChange={(n) => set(metal === "gold" ? { goldPrice: n } : { silverPrice: n })}
-                        parse={num}
-                        label={metal === "gold" ? tr("Gold price") : tr("Silver price")}
-                      />
+                  {auto ? (
+                    <div>
+                      <span className="text-[11px] text-ink/45">{metal === "gold" ? tr("Price per {unit} (24K)", { unit }) : tr("Price per {unit}", { unit })}</span>
+                      <div className="mt-1 flex min-h-[44px] items-center gap-2 rounded-xl border border-dashed border-line px-3 font-mono text-sm text-ink/80">
+                        {liveState === "ok" ? formatCurrency(metal === "gold" ? prices.gold : prices.silver) : "…"}
+                        <span className="ml-auto rounded-md bg-income/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-income">{tr("Live")}</span>
+                      </div>
                     </div>
-                  </label>
+                  ) : (
+                    <label className="block">
+                      <span className="text-[11px] text-ink/45">{metal === "gold" ? tr("Price per {unit} (24K)", { unit }) : tr("Price per {unit}", { unit })}</span>
+                      <div className="mt-1 flex items-center gap-2 rounded-xl border border-line bg-ink/[0.02] px-3 focus-within:border-amber/50">
+                        <span className="font-mono text-ink/40">{currencySymbol()}</span>
+                        <NumberInput
+                          value={metal === "gold" ? z.goldPrice : z.silverPrice}
+                          onChange={(n) => set(metal === "gold" ? { goldPrice: n } : { silverPrice: n })}
+                          parse={num}
+                          label={metal === "gold" ? tr("Gold price") : tr("Silver price")}
+                        />
+                      </div>
+                    </label>
+                  )}
                 </div>
               ))}
             </div>
             <p className="flex items-start gap-1.5 text-[11px] text-ink/40">
               <Info className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
-              {tr("Use today's selling price — in Bangladesh, BAJUS publishes it. 1 bhori = 11.664 g.")}
+              {tr("International spot prices, without making charges or VAT. Jewellery counts only for its gold: a 22K piece is 22/24 gold. 1 bhori = 11.664 g.")}
             </p>
           </section>
         </div>
@@ -203,7 +264,11 @@ export default function ZakatPage() {
             </p>
             {result.nisab === 0 && (
               <p className="mt-1 text-[11px] text-amber/90">
-                {z.basis === "silver" ? tr("Add today's silver price to see it.") : tr("Add today's gold price to see it.")}
+                {auto
+                  ? tr("Fetching today's prices…")
+                  : z.basis === "silver"
+                    ? tr("Add today's silver price to see it.")
+                    : tr("Add today's gold price to see it.")}
               </p>
             )}
             <p className="mt-2 text-[11px] text-ink/40">{tr("Silver gives the lower nisab, so more people pay; many scholars advise it.")}</p>
@@ -220,7 +285,9 @@ export default function ZakatPage() {
               <div className="mt-1 font-display text-4xl font-semibold text-ink">{formatCurrency(result.due)}</div>
               <p className="mt-2 text-xs text-ink/55">
                 {result.nisab === 0
-                  ? tr("Add the price above to check it against the nisab.")
+                  ? auto
+                    ? tr("Fetching today's prices…")
+                    : tr("Add the price above to check it against the nisab.")
                   : result.above
                     ? tr("At or above the nisab — due once you've held it for a lunar year.")
                     : tr("Below the nisab — no zakat is due.")}

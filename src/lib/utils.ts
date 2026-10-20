@@ -47,7 +47,21 @@ export function fmt(date: Date | number, pattern: string): string {
  * --tint-text var in globals.css (100% in dark mode = unchanged).
  */
 export function tintText(color: string): string {
-  return `color-mix(in srgb, ${color} var(--tint-text), rgb(var(--c-ink)))`;
+  return `color-mix(in srgb, ${vivid(color)} var(--tint-text), rgb(var(--c-ink)))`;
+}
+
+/**
+ * A stored color (a category's, a wallet's, a tag's) the way the theme wants it:
+ * more chroma on light paper so it pops, unchanged on black (--vivid-l / --vivid-c
+ * in globals.css). Non-hex values (CSS variables) pass through.
+ */
+export function vivid(color: string): string {
+  return /^#[0-9a-f]{6}$/i.test(color) ? `oklch(from ${color} calc(l * var(--vivid-l, 1)) calc(c * var(--vivid-c, 1)) h)` : color;
+}
+
+/** Any color (hex, rgb(var(--x)), vivid()) at an alpha — for washes and borders. */
+export function withAlpha(color: string, alpha: number): string {
+  return `color-mix(in srgb, ${color} ${Math.round(alpha * 100)}%, transparent)`;
 }
 
 /** yyyy-mm-dd in local time (avoids UTC off-by-one from toISOString). */

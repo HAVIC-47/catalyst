@@ -5,14 +5,18 @@
 // (/dashboard), categories (/categories) and the account (/account).
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, Check, BellRing, Loader2, KeyRound } from "lucide-react";
+import { Plus, Trash2, Check, BellRing, Loader2, KeyRound, Eraser } from "lucide-react";
+import { PasswordInput } from "@/components/ui/password-input";
 import { useAppData } from "@/hooks/use-app-data";
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES, type Kind } from "@/types";
 import { DASHBOARD_SECTIONS } from "@/lib/dashboard-sections";
 import { CURRENCIES } from "@/lib/currency";
 import { disablePush, enablePush, pushEnabled, pushSupported } from "@/lib/push";
 import { createClient } from "@/lib/supabase/client";
-import { cn, formatCurrency, tintText } from "@/lib/utils";
+import { cn, formatCurrency, tintText, vivid } from "@/lib/utils";
+import { SortableList } from "@/components/ui/sortable-list";
+import { CategoryIcon } from "@/components/ui/category-icon";
+import { CATEGORY_ICONS, categoryIconName } from "@/lib/category-icons";
 import { LIMITS } from "@/lib/limits";
 import { tr } from "@/lib/i18n";
 
@@ -300,9 +304,15 @@ function PasswordChange() {
       </div>
       {open && (
         <form onSubmit={(e) => void save(e)} className="mt-4 grid max-w-sm gap-2">
-          <input type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} placeholder={tr("Current password")} aria-label={tr("Current password")} className={passwordInput} />
-          <input type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} placeholder={tr("New password (min 8)")} aria-label={tr("New password (min 8)")} className={passwordInput} />
-          <input type="password" autoComplete="new-password" value={again} onChange={(e) => setAgain(e.target.value)} placeholder={tr("Type it again")} aria-label={tr("Type it again")} className={passwordInput} />
+          <div className="relative">
+            <PasswordInput autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} placeholder={tr("Current password")} aria-label={tr("Current password")} className={passwordInput} />
+          </div>
+          <div className="relative">
+            <PasswordInput autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} placeholder={tr("New password (min 8)")} aria-label={tr("New password (min 8)")} className={passwordInput} />
+          </div>
+          <div className="relative">
+            <PasswordInput autoComplete="new-password" value={again} onChange={(e) => setAgain(e.target.value)} placeholder={tr("Type it again")} aria-label={tr("Type it again")} className={passwordInput} />
+          </div>
           {error && (
             <p className="text-xs text-expense" role="alert">
               {error}
@@ -369,6 +379,7 @@ export function AccountSection() {
       </h2>
       <p className="mt-1 text-sm text-ink/45">{tr("Signed in as {email}.", { email: email ?? "…" })}</p>
       <PasswordChange />
+      <EraseData />
       <div className="mt-5 rounded-xl border border-expense/30 bg-expense/[0.04] p-4">
         <div className="flex flex-wrap items-center gap-3">
           <span className="min-w-0 flex-1 text-sm text-ink/75">
@@ -427,11 +438,121 @@ export function AccountSection() {
   );
 }
 
+/** Erase my data: every entry goes, the account stays (login and settings) — for
+ *  starting over, or handing the account back clean after a try-out. */
+function EraseData() {
+  const [open, setOpen] = useState(false);
+  const [confirm, setConfirm] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const erase = async () => {
+    if (confirm !== "ERASE" || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/account/erase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirm }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || tr("Couldn't erase your data — try again."));
+      // The zakat figures live with the account's settings; this browser's notes about what it already said go too.
+      await createClient().auth.updateUser({ data: { zakat: null } }).catch(() => undefined);
+      try {
+        for (const key of Object.keys(localStorage)) {
+          if (/^(zakat|challenge-notified|streak-celebrated|mood-spend:|budget-alerts:|board:)/.test(key)) localStorage.removeItem(key);
+        }
+      } catch {
+        /* ignore */
+      }
+      // Start over with a fresh load (it sets up the default categories and wallets again).
+      window.location.assign("/app/settings/account?erased=1");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : tr("Couldn't erase your data — try again."));
+      setBusy(false);
+    }
+  };
+
+  const [done, setDone] = useState(false);
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("erased") === "1") {
+      setDone(true);
+      window.history.replaceState(null, "", "/app/settings/account");
+    }
+  }, []);
+
+  return (
+    <div className="mt-5 rounded-xl border border-amber/30 bg-amber/[0.04] p-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="min-w-0 flex-1 text-sm text-ink/75">
+          {tr("Erase my data")}
+          <span className="block text-[11px] text-ink/45">
+            {done
+              ? tr("Done — everything you recorded is gone. Your account and settings are still here.")
+              : tr("Deletes every entry, mood, wallet, bill, goal, board and journal note, but keeps your account, password and settings — for starting fresh. This can't be undone.")}
+          </span>
+        </span>
+        {!open && (
+          <button
+            type="button"
+            onClick={() => {
+              setDone(false);
+              setOpen(true);
+            }}
+            className="inline-flex min-h-[40px] cursor-pointer items-center gap-2 rounded-xl border border-amber/50 px-4 text-sm font-semibold text-amber transition-colors hover:bg-amber/10"
+          >
+            <Eraser className="h-4 w-4" aria-hidden />{" "}{tr("Erase…")}
+          </button>
+        )}
+      </div>
+      {open && (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <input
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            placeholder={tr("Type ERASE")}
+            aria-label={tr("Type ERASE to confirm")}
+            className="min-h-[40px] w-40 rounded-lg border border-line bg-card px-3 font-mono text-sm text-ink outline-hidden focus:border-amber/50"
+          />
+          <button
+            type="button"
+            onClick={() => void erase()}
+            disabled={confirm !== "ERASE" || busy}
+            className="entry-btn inline-flex min-h-[40px] cursor-pointer items-center gap-2 rounded-xl px-4 text-sm font-semibold text-paper disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {busy && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
+            {tr("Erase my data")}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              setConfirm("");
+            }}
+            className="min-h-[40px] cursor-pointer rounded-xl px-3 text-sm text-ink/60 hover:bg-ink/[0.04]"
+          >
+            {tr("Cancel")}
+          </button>
+        </div>
+      )}
+      {error && (
+        <p className="mt-2 text-xs text-expense" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
 // Show / hide each of the dashboard's sections. Hiding never touches data.
 export function DashboardSections() {
-  const { dashboardHidden, setDashboardHidden } = useAppData();
+  const { dashboardHidden, setDashboardHidden, dashboardOrder, setDashboardOrder } = useAppData();
   const hidden = dashboardHidden ?? [];
   const shownCount = DASHBOARD_SECTIONS.length - hidden.length;
+  const rows = dashboardOrder.map((id) => DASHBOARD_SECTIONS.find((s) => s.id === id)!).filter(Boolean);
+  const isDefaultOrder = dashboardOrder.every((id, i) => id === DASHBOARD_SECTIONS[i].id);
 
   return (
     <section id="dashboard" className="card scroll-mt-20 p-5 sm:p-6">
@@ -440,6 +561,14 @@ export function DashboardSections() {
           {tr("Dashboard")}{" "}<span className="serif-italic text-amber/90">{tr("sections")}</span>
         </h2>
         <div className="flex items-center gap-3">
+          {!isDefaultOrder && (
+            <button
+              onClick={() => setDashboardOrder(DASHBOARD_SECTIONS.map((s) => s.id))}
+              className="cursor-pointer font-mono text-[11px] uppercase tracking-widest text-amber/80 transition-colors hover:text-amber"
+            >
+              {tr("Default order")}
+            </button>
+          )}
           {hidden.length > 0 && (
             <button
               onClick={() => setDashboardHidden([])}
@@ -454,14 +583,20 @@ export function DashboardSections() {
         </div>
       </div>
       <p className="mb-4 max-w-lg text-sm text-ink/45">
-        {tr("Choose what the dashboard shows. Hidden sections keep all their data — it's still recorded and comes back the moment you turn the section on.")}
+        {tr("Choose what the dashboard shows, and drag the sections into the order you want — the ones you care about most at the top. Hidden sections keep all their data.")}
       </p>
 
-      <ul className="grid gap-2 sm:grid-cols-2">
-        {DASHBOARD_SECTIONS.map((s) => {
+      <SortableList
+        items={rows}
+        onReorder={(ids) => setDashboardOrder(ids as typeof dashboardOrder)}
+        label={tr("Dashboard sections")}
+        itemLabel={(s) => tr(s.label)}
+        className="space-y-2"
+        renderItem={(s, { handle, arrows, dragging }) => {
           const on = !hidden.includes(s.id);
           return (
-            <li key={s.id}>
+            <div className={cn("flex items-center gap-1 rounded-xl border bg-card pl-1 pr-1.5", on ? "border-line" : "border-dashed border-line", dragging && "border-amber/40")}>
+              {handle}
               <button
                 type="button"
                 role="switch"
@@ -470,10 +605,7 @@ export function DashboardSections() {
                 onClick={() =>
                   setDashboardHidden(on ? [...hidden, s.id] : hidden.filter((id) => id !== s.id))
                 }
-                className={cn(
-                  "flex min-h-[56px] w-full cursor-pointer items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors duration-200 disabled:cursor-default disabled:opacity-50",
-                  on ? "border-line bg-ink/[0.02] hover:bg-ink/[0.04]" : "border-dashed border-line hover:bg-ink/[0.02]",
-                )}
+                className="flex min-h-[56px] min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl px-2 py-2.5 text-left transition-colors duration-200 hover:bg-ink/[0.03] disabled:cursor-default disabled:opacity-50"
               >
                 <span className="min-w-0 flex-1">
                   <span className={cn("block text-sm", on ? "text-ink/85" : "text-ink/45")}>{tr(s.label)}</span>
@@ -494,20 +626,32 @@ export function DashboardSections() {
                   />
                 </span>
               </button>
-            </li>
+              {arrows}
+            </div>
           );
-        })}
-      </ul>
+        }}
+      />
     </section>
   );
 }
 
 export function CategorySection({ kind }: { kind: Kind }) {
-  const { categories, createCategory, editCategory, removeCategory } = useAppData();
+  const { categories, createCategory, editCategory, removeCategory, reorderCategories, pushToast } = useAppData();
   const list = categories.filter((c) => c.kind === kind);
   const [name, setName] = useState("");
   const [color, setColor] = useState(SWATCHES[0]);
+  const [icon, setIcon] = useState<string | null>(null); // null = picked from the name
+  const [picking, setPicking] = useState<string | null>(null); // a category's id, or "new"
   const [adding, setAdding] = useState(false);
+
+  // Icons need the 1.6 database update (categories.icon); say so instead of failing quietly.
+  const failed = (err: unknown) =>
+    pushToast({
+      tone: "warn",
+      message: /icon/i.test(String((err as { message?: unknown })?.message ?? ""))
+        ? tr("Category icons need the database update — run db/supabase.sql in Supabase.")
+        : tr("Couldn't save that — try again."),
+    });
 
   const add = async () => {
     const n = name.trim();
@@ -516,8 +660,12 @@ export function CategorySection({ kind }: { kind: Kind }) {
     try {
       // First in its list: below the lowest sort number of its kind.
       const first = list.length ? Math.min(...list.map((c) => c.sort)) - 1 : 0;
-      await createCategory({ name: n, kind, color, sort: first });
+      await createCategory({ name: n, kind, color, sort: first, icon });
       setName("");
+      setIcon(null);
+      setPicking(null);
+    } catch (err) {
+      failed(err);
     } finally {
       setAdding(false);
     }
@@ -542,7 +690,7 @@ export function CategorySection({ kind }: { kind: Kind }) {
   return (
     <div className="card min-w-0 p-5 sm:p-6">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="font-display text-xl font-semibold capitalize text-ink">{kind}</h2>
+        <h2 className="font-display text-xl font-semibold text-ink">{kind === "expense" ? tr("Expense") : tr("Income")}</h2>
         <div className="flex items-center gap-3">
           <button
             onClick={restoreDefaults}
@@ -558,13 +706,23 @@ export function CategorySection({ kind }: { kind: Kind }) {
       {/* add new — on top, so a new category lands where you can see it */}
       <div className="mb-4 rounded-xl border border-dashed border-line p-3">
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setPicking(picking === "new" ? null : "new")}
+            aria-expanded={picking === "new"}
+            aria-label={tr("Choose an icon")}
+            title={tr("Choose an icon")}
+            className="cursor-pointer rounded-lg ring-amber/50 hover:ring-2"
+          >
+            <CategoryIcon name={name || "—"} icon={icon} color={color} size="lg" />
+          </button>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && add()}
-            placeholder={tr("New {kind} category", { kind })}
+            placeholder={tr("New {kind} category", { kind: tr(kind) })}
             maxLength={LIMITS.name}
-            aria-label={tr("New {kind} category name", { kind })}
+            aria-label={tr("New {kind} category name", { kind: tr(kind) })}
             className="min-h-[40px] w-0 min-w-0 flex-1 rounded-lg border border-line bg-ink/[0.02] px-3 text-sm text-ink outline-hidden focus:border-amber/50"
           />
           <button
@@ -576,6 +734,7 @@ export function CategorySection({ kind }: { kind: Kind }) {
             <Plus className="h-4 w-4" aria-hidden strokeWidth={2.5} />
           </button>
         </div>
+        {picking === "new" && <IconPicker name={name || "—"} value={icon} color={color} onPick={(v) => { setIcon(v); setPicking(null); }} />}
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {SWATCHES.map((s) => (
             <button
@@ -585,54 +744,130 @@ export function CategorySection({ kind }: { kind: Kind }) {
               className={cn(
                 "flex h-6 w-6 cursor-pointer items-center justify-center rounded-full transition-transform hover:scale-110",
               )}
-              style={{ backgroundColor: s }}
+              style={{ backgroundColor: vivid(s) }}
             >
-              {color === s && <Check className="h-3.5 w-3.5 text-paper" aria-hidden strokeWidth={3} />}
+              {color === s && <Check className="h-3.5 w-3.5 text-white" aria-hidden strokeWidth={3} />}
             </button>
           ))}
         </div>
       </div>
 
-      <ul className="space-y-2">
-        {list.map((c) => (
-          <li key={c.id} className="flex items-center gap-3 rounded-xl border border-line bg-ink/[0.02] p-2.5">
-            <span
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold"
-              style={{ backgroundColor: `${c.color}22`, color: tintText(c.color) }}
-            >
-              {c.name.slice(0, 1).toUpperCase()}
-            </span>
-            <input
-              defaultValue={c.name}
-              maxLength={LIMITS.name}
-              onBlur={(e) => {
-                const v = e.target.value.trim();
-                if (v && v !== c.name) editCategory(c.id, { name: v });
-              }}
-              aria-label={tr("Rename {name}", { name: c.name })}
-              className="w-0 min-w-0 flex-1 bg-transparent text-sm text-ink/85 outline-hidden focus:text-ink"
-            />
-            <div className="flex items-center gap-1">
-              {SWATCHES.slice(0, 6).map((s) => (
-                <button
-                  key={s}
-                  onClick={() => editCategory(c.id, { color: s })}
-                  aria-label={tr("Set color {s}", { s })}
-                  className="h-4 w-4 cursor-pointer rounded-full ring-offset-1 ring-offset-card transition-transform hover:scale-125"
-                  style={{ backgroundColor: s, boxShadow: c.color === s ? `0 0 0 2px ${s}` : undefined }}
-                />
-              ))}
+      <p className="mb-2 text-[11px] text-ink/45">{tr("Drag to put them in the order you want — the entry screen lists them the same way.")}</p>
+      <SortableList
+        items={list}
+        onReorder={(ids) => reorderCategories(ids).catch(failed)}
+        label={tr("{kind} categories", { kind: tr(kind) })}
+        itemLabel={(c) => tr(c.name)}
+        className="space-y-2"
+        renderItem={(c, { handle, arrows, dragging }) => (
+          <div className={cn("rounded-xl border border-line bg-card", dragging && "border-amber/40")}>
+            <div className="flex items-center gap-1.5 p-1.5 pr-1">
+              {handle}
+              <button
+                type="button"
+                onClick={() => setPicking(picking === c.id ? null : c.id)}
+                aria-expanded={picking === c.id}
+                aria-label={tr("Change the icon of {name}", { name: tr(c.name) })}
+                title={tr("Change the icon")}
+                className="cursor-pointer rounded-lg ring-amber/50 hover:ring-2"
+              >
+                <CategoryIcon name={c.name} icon={c.icon} color={c.color} />
+              </button>
+              <input
+                defaultValue={c.name}
+                maxLength={LIMITS.name}
+                onBlur={(e) => {
+                  const v = e.target.value.trim();
+                  if (v && v !== c.name) editCategory(c.id, { name: v }).catch(failed);
+                }}
+                aria-label={tr("Rename {name}", { name: c.name })}
+                className="w-0 min-w-0 flex-1 bg-transparent text-sm text-ink/85 outline-hidden focus:text-ink"
+              />
+              <div className="hidden items-center gap-1 sm:flex">
+                {SWATCHES.slice(0, 6).map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => editCategory(c.id, { color: s }).catch(failed)}
+                    aria-label={tr("Set color {s}", { s })}
+                    className="h-4 w-4 cursor-pointer rounded-full ring-offset-1 ring-offset-card transition-transform hover:scale-125"
+                    style={{ backgroundColor: vivid(s), boxShadow: c.color === s ? `0 0 0 2px ${vivid(s)}` : undefined }}
+                  />
+                ))}
+              </div>
+              <button
+                onClick={() => removeCategory(c.id).catch(failed)}
+                aria-label={tr("Delete {name}", { name: c.name })}
+                className="cursor-pointer rounded-lg p-1.5 text-ink/30 transition-colors hover:bg-ink/5 hover:text-expense"
+              >
+                <Trash2 className="h-4 w-4" aria-hidden />
+              </button>
+              {arrows}
             </div>
-            <button
-              onClick={() => removeCategory(c.id)}
-              aria-label={tr("Delete {name}", { name: c.name })}
-              className="cursor-pointer rounded-lg p-1.5 text-ink/30 transition-colors hover:bg-ink/5 hover:text-expense"
-            >
-              <Trash2 className="h-4 w-4" aria-hidden />
-            </button>
-          </li>
-        ))}
-      </ul>
+            {picking === c.id && (
+              <div className="border-t border-line px-2 pb-2">
+                <IconPicker
+                  name={c.name}
+                  value={c.icon ?? null}
+                  color={c.color}
+                  onPick={(v) => {
+                    setPicking(null);
+                    editCategory(c.id, { icon: v }).catch(failed);
+                  }}
+                />
+                <div className="mt-2 flex flex-wrap items-center gap-2 sm:hidden">
+                  {SWATCHES.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => editCategory(c.id, { color: s }).catch(failed)}
+                      aria-label={tr("Set color {s}", { s })}
+                      className="h-6 w-6 cursor-pointer rounded-full"
+                      style={{ backgroundColor: vivid(s), boxShadow: c.color === s ? `0 0 0 2px rgb(var(--c-card)), 0 0 0 4px ${vivid(s)}` : undefined }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      />
+    </div>
+  );
+}
+
+/** Every icon a category can have, plus Auto (picked from its name). */
+function IconPicker({ name, value, color, onPick }: { name: string; value: string | null; color: string; onPick: (icon: string | null) => void }) {
+  const auto = categoryIconName(name, null);
+  return (
+    <div className="mt-3 grid grid-cols-7 gap-1.5 sm:grid-cols-9" role="radiogroup" aria-label={tr("Icon")}>
+      <button
+        type="button"
+        role="radio"
+        aria-checked={!value}
+        onClick={() => onPick(null)}
+        title={tr("Auto — from the name")}
+        aria-label={tr("Auto — from the name")}
+        className={cn("flex h-10 cursor-pointer flex-col items-center justify-center rounded-lg border text-[9px] font-semibold uppercase tracking-wide", !value ? "border-amber/60 bg-amber/10 text-ink" : "border-line text-ink/50 hover:bg-ink/[0.04]")}
+      >
+        {tr("Auto")}
+      </button>
+      {Object.entries(CATEGORY_ICONS).map(([key, Icon]) => {
+        const on = value === key;
+        return (
+          <button
+            key={key}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            onClick={() => onPick(key)}
+            title={key}
+            aria-label={key.replace(/-/g, " ")}
+            className={cn("flex h-10 cursor-pointer items-center justify-center rounded-lg border", on ? "border-amber/60 bg-amber/10" : key === auto && !value ? "border-dashed border-amber/40" : "border-line hover:bg-ink/[0.04]")}
+            style={{ color: tintText(color) }}
+          >
+            <Icon className="h-[18px] w-[18px]" strokeWidth={2.25} aria-hidden />
+          </button>
+        );
+      })}
     </div>
   );
 }

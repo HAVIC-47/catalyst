@@ -10,8 +10,8 @@ import { rangeWindow, type Range } from "@/lib/range";
 import { useAppData } from "@/hooks/use-app-data";
 import { tr } from "@/lib/i18n";
 
-const ADDED_COLOR = "#3D80BC"; // blue
-const BROKEN_COLOR = "#CB453B"; // rose
+const ADDED_COLOR = "rgb(var(--c-saving))";
+const BROKEN_COLOR = "rgb(var(--c-expense))";
 
 export function SavingsDonut({
   transactions,

@@ -5,7 +5,7 @@ import { parseISO } from "date-fns";
 import { Plus, Trash2, Check, X } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
 import { MOOD_PRESETS, moodPreset, moodName } from "@/types";
-import { cn, toDateKey, fmt } from "@/lib/utils";
+import { cn, toDateKey, fmt, vivid, withAlpha } from "@/lib/utils";
 import { MoodIcon } from "@/components/ui/mood-icon";
 import { LIMITS } from "@/lib/limits";
 import { AiInsights } from "@/components/ai/ai-insights";
@@ -104,7 +104,7 @@ export default function JournalPage() {
                       )}
                       style={
                         on
-                          ? { borderColor: `${m.color}80`, backgroundColor: `${m.color}1a`, boxShadow: `0 0 18px -8px ${m.color}` }
+                          ? { borderColor: withAlpha(m.color, 0.5), backgroundColor: withAlpha(m.color, 0.1), boxShadow: `0 0 18px -8px ${m.color}` }
                           : undefined
                       }
                     >
@@ -188,7 +188,7 @@ export default function JournalPage() {
                       className="flex h-5 w-5 items-center justify-center rounded-md border"
                       style={{
                         borderColor: on ? a.color : "rgb(var(--c-ink) / 0.2)",
-                        backgroundColor: on ? `${a.color}33` : "transparent",
+                        backgroundColor: on ? withAlpha(vivid(a.color), 0.2) : "transparent",
                         color: a.color,
                       }}
                     >

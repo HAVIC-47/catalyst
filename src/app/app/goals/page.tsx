@@ -102,7 +102,7 @@ export default function GoalsPage() {
               <div className="h-2.5 overflow-hidden rounded-full bg-ink/[0.06]">
                 <div
                   className="h-full rounded-full transition-all duration-500"
-                  style={{ width: `${pct}%`, backgroundColor: done ? "#2E8159" : "#3D80BC" }}
+                  style={{ width: `${pct}%`, backgroundColor: done ? "rgb(var(--c-income))" : "rgb(var(--c-saving))" }}
                 />
               </div>
               <div className="mt-2 flex items-center justify-between font-mono text-sm">

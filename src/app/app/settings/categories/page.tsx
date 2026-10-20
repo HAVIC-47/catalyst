@@ -12,7 +12,7 @@ export default function CategoriesSettingsPage() {
   return (
     <SettingsPage title={tr("Categories")}>
       <p className="mb-5 max-w-lg text-sm text-ink/45">
-        {tr("Add, rename, recolor, or remove categories for expenses and income. Deleting one keeps past transactions labeled.")}
+        {tr("Add, rename, recolor, or remove categories for expenses and income — give each an icon and drag them into the order you want. Deleting one keeps past transactions labeled.")}
       </p>
       <SettingsCard>
         <SettingsRow

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { KeyRound, Loader2, Lock, Mail } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { PasswordInput } from "@/components/ui/password-input";
 import { tr } from "@/lib/i18n";
 import { useStoredLang } from "@/components/features/lang-toggle";
 import { Logo } from "@/components/ui/logo";
@@ -175,8 +176,7 @@ export function ResetForm() {
               ) : (
                 <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/35" aria-hidden />
               )}
-              <input
-                type="password"
+              <PasswordInput
                 autoComplete="new-password"
                 required
                 minLength={8}

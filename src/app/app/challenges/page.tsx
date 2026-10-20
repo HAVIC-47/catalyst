@@ -187,7 +187,14 @@ function progressText(c: Challenge, p: ChallengeProgress): string {
 
 function ChallengeCard({ c, p, onAgain, onDelete }: { c: Challenge; p: ChallengeProgress; onAgain?: () => void; onDelete: () => void }) {
   const title = challengeTitle(c, tr, formatCurrency);
-  const color = p.status === "won" ? "#2E8159" : p.status === "lost" ? "#CB453B" : c.kind === "spend_under" && p.ratio > 0.8 ? "#C06A33" : "#3D80BC";
+  const color =
+    p.status === "won"
+      ? "rgb(var(--c-income))"
+      : p.status === "lost"
+        ? "rgb(var(--c-expense))"
+        : c.kind === "spend_under" && p.ratio > 0.8
+          ? "rgb(var(--mood-2))"
+          : "rgb(var(--c-saving))";
   const when =
     p.status === "upcoming"
       ? tr("Starts {date}", { date: fmt(parseISO(c.startOn), "MMM d") })

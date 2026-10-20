@@ -58,6 +58,7 @@ begin
     select * from (values
       ('categories',      'categories_name_len',            'char_length(name) <= 100'),
       ('categories',      'categories_color_hex',           $c$color ~ '^#[0-9A-Fa-f]{6}$'$c$),
+      ('categories',      'categories_icon_name',           $c$icon is null or icon ~ '^[a-z0-9-]{1,40}$'$c$),
       ('transactions',    'transactions_category_name_len', 'char_length(category_name) <= 100'),
       ('transactions',    'transactions_place_len',         'char_length(place) <= 200'),
       ('transactions',    'transactions_note_len',          'char_length(note) <= 1000'),

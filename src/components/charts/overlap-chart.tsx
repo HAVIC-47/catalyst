@@ -125,7 +125,7 @@ export function OverlapChart({
               domain={[0, 5]}
               ticks={[1, 2, 3, 4, 5]}
               tickFormatter={(v) => digits(String(v))}
-              tick={{ fill: "#9268A0", fontSize: 11 }}
+              tick={{ fill: "rgb(var(--c-violet-text))", fontSize: 11 }}
               axisLine={false}
               tickLine={false}
               width={22}
@@ -134,14 +134,14 @@ export function OverlapChart({
             <Tooltip content={<OverlapTooltip />} cursor={{ fill: "rgb(var(--c-ink) / 0.06)" }} />
             <Bar yAxisId="money" dataKey="net" name="Net" radius={[3, 3, 0, 0]} maxBarSize={byMonth ? 24 : 14}>
               {points.map((p) => (
-                <Cell key={p.key} fill={p.net >= 0 ? "#2E8159" : "#CB453B"} />
+                <Cell key={p.key} fill={p.net >= 0 ? "rgb(var(--c-income))" : "rgb(var(--c-expense))"} />
               ))}
             </Bar>
             <Bar
               yAxisId="money"
               dataKey="saving"
               name="Saving"
-              fill="#3D80BC"
+              fill="rgb(var(--c-saving))"
               radius={[3, 3, 0, 0]}
               maxBarSize={byMonth ? 24 : 14}
             />
@@ -150,11 +150,11 @@ export function OverlapChart({
               type="monotone"
               dataKey="mood"
               name="Mood"
-              stroke="#7A4E86"
+              stroke="rgb(var(--c-violet))"
               strokeWidth={2}
-              dot={range === "day" || range === "week" ? { r: 3, fill: "#7A4E86" } : false}
+              dot={range === "day" || range === "week" ? { r: 3, fill: "rgb(var(--c-violet))" } : false}
               connectNulls
-              activeDot={{ r: 4, fill: "#7A4E86" }}
+              activeDot={{ r: 4, fill: "rgb(var(--c-violet))" }}
             />
           </ComposedChart>
         </ResponsiveContainer>
@@ -280,7 +280,7 @@ function OverlapTooltip({ active, payload }: any) {
       <div className="mb-1 font-mono text-ink/50">{p.label}</div>
       <div className={p.net >= 0 ? "text-income" : "text-expense"}>{tr("Net {amount}", { amount: formatCurrency(p.net, { sign: true }) })}</div>
       {p.saving > 0 && (
-        <div style={{ color: "#3D80BC" }}>{tr("Saving +{amount}", { amount: formatCurrency(p.saving) })}</div>
+        <div style={{ color: "rgb(var(--c-saving))" }}>{tr("Saving +{amount}", { amount: formatCurrency(p.saving) })}</div>
       )}
       <div className="text-neon-purple">
         {tr("Mood")}{" "}{p.mood ?? "—"}

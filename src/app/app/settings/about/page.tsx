@@ -15,6 +15,7 @@ import {
   Repeat,
   ClipboardPaste,
   Coins,
+  Eraser,
   HandCoins,
   KeyRound,
   Languages,
@@ -28,6 +29,7 @@ import {
   RefreshCw,
   ScanLine,
   ScanText,
+  Shapes,
   ShieldCheck,
   SlidersHorizontal,
   Smile,
@@ -73,7 +75,7 @@ function groups(): Group[] {
         {
           icon: ScanLine,
           title: tr("Memo scanner"),
-          body: tr("Upload a photo of a memo or receipt, or a screenshot of your notes: its lines become entries for you to check. Reads Bengali and English, printed or handwritten."),
+          body: tr("Upload a photo of a memo or receipt, or a screenshot of your notes: its lines become entries for you to check, in the wallet it was paid from (bKash, Nagad, card, cash…). Reads Bengali and English, printed or handwritten."),
         },
         {
           icon: Wallet,
@@ -95,7 +97,11 @@ function groups(): Group[] {
         { icon: HandCoins, title: tr("Dhar / baki"), body: tr("Money you lent or borrowed, per person: part payments, settle in full or write off.") },
         { icon: Vault, title: tr("Vault Mode"), body: tr("Count every income and expense against your savings pool.") },
         { icon: LineChart, title: tr("Net worth"), body: tr("Wallets plus what you're owed, minus what you owe — month by month on the dashboard.") },
-        { icon: HandHeart, title: tr("Zakat calculator"), body: tr("Wallets and dhar come in by themselves; add gold, silver and the rest to see the nisab and the 2.5% due.") },
+        {
+          icon: HandHeart,
+          title: tr("Zakat calculator"),
+          body: tr("Wallets and dhar come in by themselves; gold and silver go at today's international prices (or yours) — then the nisab and the 2.5% due."),
+        },
       ],
     },
     {
@@ -181,7 +187,12 @@ function groups(): Group[] {
         {
           icon: SlidersHorizontal,
           title: tr("Your dashboard"),
-          body: tr("Choose which sections the dashboard shows — the Android app follows the same choice."),
+          body: tr("Choose which sections the dashboard shows, and in what order — the Android app follows the same choice."),
+        },
+        {
+          icon: Shapes,
+          title: tr("Categories your way"),
+          body: tr("An icon and a color for each, in the order you want — the entry screen lists them the same way."),
         },
       ],
     },
@@ -198,10 +209,11 @@ function groups(): Group[] {
           icon: KeyRound,
           title: tr("Sign-in"),
           body: GOOGLE
-            ? tr("Email and password or Google — and Forgot password if you lose it.")
-            : tr("Email and password — and Forgot password if you lose it."),
+            ? tr("Email and password or Google, with Remember me — and Forgot password if you lose it.")
+            : tr("Email and password, with Remember me — and Forgot password if you lose it."),
         },
         { icon: ShieldCheck, title: tr("Private"), body: tr("Your entries are locked to your account — no one else can read them.") },
+        { icon: Eraser, title: tr("Erase my data"), body: tr("Deletes every entry but keeps the account — to start fresh.") },
         { icon: UserX, title: tr("Delete account"), body: tr("Removes the account and everything in it, from Settings.") },
       ],
     },

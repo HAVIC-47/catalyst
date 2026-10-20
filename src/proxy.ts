@@ -5,6 +5,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE_OPTIONS } from "@/lib/supabase/cookie-options";
+import { REMEMBER_COOKIE, remembered, withLifetime } from "@/lib/supabase/remember";
 
 const AUTH_PATHS = ["/login", "/signup"];
 
@@ -25,8 +26,10 @@ export async function proxy(request: NextRequest) {
       setAll(cookiesToSet) {
         cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
         response = NextResponse.next({ request });
+        // "Remember me" off: refreshed session cookies stay session cookies.
+        const remember = remembered(request.cookies.get(REMEMBER_COOKIE)?.value);
         cookiesToSet.forEach(({ name, value, options }) =>
-          response.cookies.set(name, value, options),
+          response.cookies.set(name, value, withLifetime(options, remember)),
         );
       },
     },

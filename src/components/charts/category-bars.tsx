@@ -7,6 +7,7 @@ import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 
 import type { Category, Transaction } from "@/types";
 import { rangeWindow, type Range } from "@/lib/range";
 import { tr, trn, digits } from "@/lib/i18n";
+import { vivid } from "@/lib/utils";
 
 const FALLBACK = "#7A746A";
 
@@ -41,7 +42,7 @@ export function CategoryBars({
         return {
           name: tr(name),
           count,
-          color: colorOf.get(name) ?? FALLBACK,
+          color: vivid(colorOf.get(name) ?? FALLBACK),
           kind,
         };
       })

@@ -56,8 +56,8 @@ export function NetWorthCard({ className }: { className?: string }) {
             <AreaChart data={data} margin={{ top: 6, right: 6, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="nw-fill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#3D80BC" stopOpacity={0.35} />
-                  <stop offset="100%" stopColor="#3D80BC" stopOpacity={0.02} />
+                  <stop offset="0%" stopColor="rgb(var(--c-saving))" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="rgb(var(--c-saving))" stopOpacity={0.02} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--c-ink) / 0.08)" vertical={false} />
@@ -78,7 +78,7 @@ export function NetWorthCard({ className }: { className?: string }) {
                 }}
                 formatter={(v: number) => [formatCurrency(v), tr("Net worth")]}
               />
-              <Area type="monotone" dataKey="total" stroke="#3D80BC" strokeWidth={2} fill="url(#nw-fill)" />
+              <Area type="monotone" dataKey="total" stroke="rgb(var(--c-saving))" strokeWidth={2} fill="url(#nw-fill)" />
             </AreaChart>
           </ResponsiveContainer>
         </div>

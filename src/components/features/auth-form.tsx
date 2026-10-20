@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Loader2, Mail, Lock } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { setRemember } from "@/lib/supabase/remember";
+import { PasswordInput } from "@/components/ui/password-input";
 import { tr } from "@/lib/i18n";
 
 import { LangToggle, useStoredLang } from "@/components/features/lang-toggle";
@@ -32,6 +34,23 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // Remember me: on unless this browser was last told not to.
+  const [remember, setRememberState] = useState(true);
+  useEffect(() => {
+    try {
+      setRememberState(localStorage.getItem("remember") !== "0");
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  const chooseRemember = (on: boolean) => {
+    setRememberState(on);
+    try {
+      localStorage.setItem("remember", on ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  };
 
   const isSignup = mode === "signup";
 
@@ -51,6 +70,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const google = async () => {
     setError(null);
     setLoading(true);
+    setRemember(remember);
     const { error } = await createClient().auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${window.location.origin}/auth/callback?next=/app` },
@@ -67,6 +87,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     setNotice(null);
     setLoading(true);
     try {
+      setRemember(remember);
       const supabase = createClient();
       if (isSignup) {
         const { data, error } = await supabase.auth.signUp({ email, password });
@@ -150,26 +171,34 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           <span className="sr-only">{tr("Password")}</span>
           <div className="relative">
             <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/35" aria-hidden />
-            <input
-              type="password"
+            <PasswordInput
               autoComplete={isSignup ? "new-password" : "current-password"}
               required
               minLength={isSignup ? 8 : undefined}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder={isSignup ? tr("Create a password (min 8)") : tr("Password")}
-              className="min-h-[44px] w-full rounded-xl border border-ink/10 bg-ink/[0.03] pl-10 pr-3 text-sm text-ink outline-hidden focus:border-neon-cyan/50"
+              className="min-h-[44px] w-full rounded-xl border border-ink/10 bg-ink/[0.03] pl-10 text-sm text-ink outline-hidden focus:border-neon-cyan/50"
             />
           </div>
         </label>
 
-        {!isSignup && (
-          <div className="-mt-1 text-right">
+        <div className="-mt-1 flex items-center justify-between gap-3">
+          <label className="flex min-h-[32px] cursor-pointer items-center gap-2 text-xs text-ink/60">
+            <input
+              type="checkbox"
+              checked={remember}
+              onChange={(e) => chooseRemember(e.target.checked)}
+              className="h-4 w-4 cursor-pointer accent-[rgb(var(--c-accent))]"
+            />
+            {tr("Remember me")}
+          </label>
+          {!isSignup && (
             <Link href="/forgot" className="text-xs text-ink/45 transition-colors hover:text-amber">
               {tr("Forgot password?")}
             </Link>
-          </div>
-        )}
+          )}
+        </div>
 
         {error && (
           <p className="rounded-lg border border-neon-rose/30 bg-neon-rose/10 px-3 py-2 text-xs text-neon-rose" role="alert">

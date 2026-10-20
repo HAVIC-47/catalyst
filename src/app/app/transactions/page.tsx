@@ -6,7 +6,8 @@ import { ArrowUpRight, ArrowDownLeft, Pencil, Trash2, MapPin, Search, SlidersHor
 import { useAppData } from "@/hooks/use-app-data";
 import { useDebounce } from "@/hooks/use-debounce";
 import type { Kind, Transaction } from "@/types";
-import { cn, currencySymbol, formatCurrency, tintText, fmt } from "@/lib/utils";
+import { cn, currencySymbol, formatCurrency, fmt } from "@/lib/utils";
+import { CategoryIcon } from "@/components/ui/category-icon";
 import { currency } from "@/lib/currency";
 import { defaultWallet } from "@/lib/money";
 import { inRange, rangeWindow, type Range } from "@/lib/range";
@@ -51,6 +52,7 @@ export default function TransactionsPage() {
     () => new Map(categories.map((c) => [c.name, c.color])),
     [categories],
   );
+  const iconOf = useMemo(() => new Map(categories.map((c) => [c.name, c.icon ?? null])), [categories]);
 
   // The transaction open in the editor (its pen button).
   const [editing, setEditing] = useState<Transaction | null>(null);
@@ -400,12 +402,7 @@ export default function TransactionsPage() {
                   const color = colorOf.get(t.categoryName) ?? "#7A746A";
                   return (
                     <li key={t.id} className="group flex items-center gap-3 px-5 py-3">
-                      <span
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-bold"
-                        style={{ backgroundColor: `${color}22`, color: tintText(color) }}
-                      >
-                        {tr(t.categoryName).slice(0, 1).toUpperCase()}
-                      </span>
+                      <CategoryIcon name={t.categoryName} icon={iconOf.get(t.categoryName)} color={color} size="lg" />
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-sm text-ink/85">
                           {t.note || tr(t.categoryName)}

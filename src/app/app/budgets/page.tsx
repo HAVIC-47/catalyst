@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import { isSameMonth } from "date-fns";
 import { Plus, Trash2 } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
-import { currencySymbol, cn, formatCurrency, tintText } from "@/lib/utils";
+import { currencySymbol, cn, formatCurrency, vivid } from "@/lib/utils";
+import { CategoryIcon } from "@/components/ui/category-icon";
 import { tr } from "@/lib/i18n";
 
 export default function BudgetsPage() {
@@ -107,17 +108,12 @@ export default function BudgetsPage() {
           const spent = spentByCat.get(b.categoryName) ?? 0;
           const pct = b.amount > 0 ? Math.min(100, (spent / b.amount) * 100) : 0;
           const over = spent > b.amount;
-          const color = over ? "#CB453B" : cat?.color ?? "#3D80BC";
+          const color = over ? "rgb(var(--c-expense))" : vivid(cat?.color ?? "#3D80BC");
           return (
             <div key={b.id} className="card p-5">
               <div className="mb-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span
-                    className="flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold"
-                    style={{ backgroundColor: `${cat?.color ?? "#7A746A"}22`, color: tintText(cat?.color ?? "#7A746A") }}
-                  >
-                    {tr(b.categoryName).slice(0, 1).toUpperCase()}
-                  </span>
+                  <CategoryIcon name={b.categoryName} icon={cat?.icon} color={cat?.color ?? "#7A746A"} size="sm" />
                   <span className="text-sm font-medium text-ink/85">{tr(b.categoryName)}</span>
                 </div>
                 <button
