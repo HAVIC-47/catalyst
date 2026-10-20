@@ -31,7 +31,7 @@ const RECEIPT_RULES = `- items: every purchased line. name = short item name in 
 - merchant: shop name in English letters (transliterate Bengali), "" if unknown.
 - Ignore cash given, change returned, subtotals and running totals.`;
 
-const PAID_WITH_RULES = `- paidWith: how it was paid, from what the image shows — "bkash" (bKash's pink app, logo or "bKash" text, a bKash payment / send money / cash out confirmation), "nagad" (Nagad's orange app or logo), "rocket" (Rocket / DBBL mobile banking), "upay" (Upay), "bank" (a bank app, bank transfer, NPSB / BEFTN slip or internet banking), "card" (a card payment: Visa, Mastercard, Amex, a card number or POS slip), "cash" (a printed or handwritten cash memo, or "paid in cash"), or "" when you can't tell.`;
+const PAID_WITH_RULES = `- paidWith: how it was paid, from what the image shows — "bkash" (bKash's pink app, logo or "bKash" text, a bKash payment / send money / cash out confirmation), "nagad" (Nagad's orange app or logo), "rocket" (Rocket / DBBL mobile banking), "upay" (Upay), "bank" (a bank app, bank transfer, NPSB / BEFTN slip or internet banking), "card" (a card payment: Visa, Mastercard, Amex, a card number or POS slip), "cash" (a printed or handwritten cash memo, or "paid in cash"), or "unknown" when you can't tell.`;
 
 function prompt(categories: string[], today: string) {
   return `You read photos of shop receipts and cash memos, mostly from Bangladesh. They may be printed or handwritten, in English or Bengali (Bengali digits ০-৯ are numbers). Extract the purchase so each item can be logged as a separate expense. Today is ${today}; memos are usually from the last few days, which helps tell similar digits apart in dates.
@@ -74,9 +74,11 @@ Expense categories: ${expense.join(", ") || "none yet"}.
 Income categories: ${income.join(", ") || "none yet"}.`;
 }
 
-const PAID = ["bkash", "nagad", "rocket", "upay", "bank", "card", "cash", ""] as const;
-const PAID_WITH = { type: "STRING", enum: [...PAID] };
-const paidWith = (v: unknown): PaidWith => (PAID.includes(v as PaidWith) ? (v as PaidWith) : "");
+// How it was paid. "Can't tell" is "unknown", never "": Gemini refuses a schema
+// whose allowed values include an empty string (every scan failed with 1.6.0's "").
+const PAID = ["bkash", "nagad", "rocket", "upay", "bank", "card", "cash"] as const;
+const PAID_WITH = { type: "STRING", enum: [...PAID, "unknown"] };
+const paidWith = (v: unknown): PaidWith => ((PAID as readonly unknown[]).includes(v) ? (v as PaidWith) : "");
 
 const RECEIPT_PROPERTIES = {
   merchant: { type: "STRING" },

@@ -14,6 +14,27 @@ const MODELS = (process.env.GEMINI_MODELS ?? "gemini-3.5-flash:low,gemini-3.1-fl
 
 export type GeminiPart = { text: string } | { inlineData: { mimeType: string; data: string } };
 
+/**
+ * The schema as Gemini accepts it. Gemini refuses a whole request when a list of
+ * allowed values (enum) holds an empty string ("enum[7]: cannot be empty"), and
+ * some lists come from the user's data (category names), so empty and repeated
+ * values are dropped — and a list left empty, so the field is free text.
+ */
+export function cleanSchema<T>(schema: T): T {
+  if (Array.isArray(schema)) return schema.map(cleanSchema) as T;
+  if (!schema || typeof schema !== "object") return schema;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(schema)) {
+    if (k === "enum" && Array.isArray(v)) {
+      const values = [...new Set(v.filter((x): x is string => typeof x === "string" && x.trim() !== ""))];
+      if (values.length) out.enum = values;
+    } else {
+      out[k] = cleanSchema(v);
+    }
+  }
+  return out as T;
+}
+
 export type GeminiResult =
   | { ok: true; json: Record<string, unknown> }
   // busy: every model was rate-limited, overloaded or timed out — worth retrying soon.
@@ -42,7 +63,7 @@ export async function geminiJson({
       generationConfig: {
         temperature,
         responseMimeType: "application/json",
-        responseSchema: schema,
+        responseSchema: cleanSchema(schema),
         ...(thinking ? { thinkingConfig: { thinkingLevel: thinking } } : {}),
       },
     });
