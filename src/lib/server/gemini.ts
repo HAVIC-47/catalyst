@@ -1,9 +1,13 @@
-// Asks Gemini for JSON that follows a schema. Shared by the memo scanner and the
-// AI summaries. GEMINI_API_KEY is read only here, on the server.
+// Asks Gemini for JSON that follows a schema. Shared by the memo and list
+// scanners and the AI summaries. GEMINI_API_KEY is read only here, on the server.
 
-// Tried in order: when Google answers "busy" (429/5xx) or a model is retired, the
-// next one gets the request. Override with GEMINI_MODELS="model[:thinkingLevel],…".
-const MODELS = (process.env.GEMINI_MODELS ?? "gemini-3.5-flash:low,gemini-3.1-flash-lite,gemini-3.5-flash-lite")
+// In order of preference. When Google answers "busy" (429/5xx), a model is retired
+// or turns the request down, the next one gets it — and a model that's slow to
+// answer gets company: after `hedgeAfterMs` the next one is asked too, and the
+// first usable answer wins. Override with GEMINI_MODELS="model[:thinkingLevel],…".
+// (gemini-3.5-flash, first here until 1.6.1, is deprecated: Google routes it to
+// 3.6 Flash, and scans got slow.)
+const MODELS = (process.env.GEMINI_MODELS ?? "gemini-3.8-flash:low,gemini-3.5-flash-lite,gemini-3.6-flash:low,gemini-3.1-flash-lite")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean)
@@ -11,6 +15,10 @@ const MODELS = (process.env.GEMINI_MODELS ?? "gemini-3.5-flash:low,gemini-3.1-fl
     const [model, thinking] = s.split(":");
     return { model, thinking };
   });
+
+// Gemini 3 and later are tuned for their default temperature: Google advises
+// leaving it alone, as a lower one can make the model loop (slow, worse answers).
+const TUNED_TEMPERATURE = /^gemini-(?:[3-9]|\d{2,})\b/;
 
 export type GeminiPart = { text: string } | { inlineData: { mimeType: string; data: string } };
 
@@ -38,75 +46,122 @@ export function cleanSchema<T>(schema: T): T {
 export type GeminiResult =
   | { ok: true; json: Record<string, unknown> }
   // busy: every model was rate-limited, overloaded or timed out — worth retrying soon.
-  // unavailable: no model could be reached. failed: a model answered, but not usably.
+  // unavailable: no model could be reached. failed: models answered, but not usably.
   | { ok: false; reason: "busy" | "unavailable" | "failed" };
+
+type Attempt = { ok: true; json: Record<string, unknown> } | { ok: false; busy: boolean; refused: boolean };
+
+/** One model's answer: its JSON, or why not. */
+async function attempt(model: string, body: string, key: string, signal: AbortSignal, tag: string): Promise<Attempt> {
+  let res: Response;
+  try {
+    res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+      body,
+      signal,
+    });
+  } catch {
+    return { ok: false, busy: true, refused: false }; // timed out, or the network
+  }
+  if (!res.ok) {
+    // 429/5xx: busy. 404: retired or not open to this key. 400/401/403: this model
+    // turned the request down (a setting it doesn't take, or the key).
+    const busy = [429, 500, 502, 503, 504].includes(res.status);
+    if (!busy && res.status !== 404) console.error(`[${tag}] gemini`, model, res.status, (await res.text().catch(() => "")).slice(0, 300));
+    return { ok: false, busy, refused: [400, 401, 403].includes(res.status) };
+  }
+  const data = await res.json().catch(() => null);
+  const out: string | undefined = data?.candidates?.[0]?.content?.parts?.find(
+    (p: { text?: string; thought?: boolean }) => typeof p.text === "string" && !p.thought,
+  )?.text;
+  try {
+    const json = out ? JSON.parse(out) : null;
+    if (json && typeof json === "object" && !Array.isArray(json)) return { ok: true, json };
+  } catch {
+    /* fall through */
+  }
+  console.error(`[${tag}] gemini`, model, "answered without usable JSON", data?.candidates?.[0]?.finishReason ?? "");
+  return { ok: false, busy: false, refused: true };
+}
 
 export async function geminiJson({
   key,
   system,
   parts,
   schema,
-  temperature = 0,
+  temperature,
+  hedgeAfterMs = Number(process.env.GEMINI_HEDGE_MS) || 12_000,
   tag,
 }: {
   key: string;
   system: string;
   parts: GeminiPart[];
   schema: Record<string, unknown>;
-  temperature?: number;
+  temperature?: number; // only for models before Gemini 3
+  hedgeAfterMs?: number; // a model this slow to answer gets the next one asked too
   tag: string; // log prefix, e.g. "scan-memo"
 }): Promise<GeminiResult> {
-  const body = (thinking?: string) =>
+  const responseSchema = cleanSchema(schema);
+  const body = (model: string, thinking?: string) =>
     JSON.stringify({
       systemInstruction: { parts: [{ text: system }] },
       contents: [{ role: "user", parts }],
       generationConfig: {
-        temperature,
+        ...(temperature !== undefined && !TUNED_TEMPERATURE.test(model) ? { temperature } : {}),
         responseMimeType: "application/json",
-        responseSchema: cleanSchema(schema),
+        responseSchema,
         ...(thinking ? { thinkingConfig: { thinkingLevel: thinking } } : {}),
       },
     });
 
-  // Stay inside the routes' 60 s maxDuration.
-  const deadline = Date.now() + 52_000;
-  let busy = false;
-  for (const { model, thinking } of MODELS) {
-    const left = deadline - Date.now();
-    if (left < 4_000) break;
-    let res: Response;
-    try {
-      res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-        body: body(thinking),
-        signal: AbortSignal.timeout(Math.min(30_000, left)),
-      });
-    } catch {
-      busy = true; // timed out or network error: try the next model
-      continue;
-    }
-    if (!res.ok) {
-      // Busy, rate-limited, retired or not available to this key: next model.
-      if ([404, 429, 500, 502, 503, 504].includes(res.status)) {
-        busy ||= res.status !== 404;
-        continue;
-      }
-      console.error(`[${tag}] gemini`, model, res.status, (await res.text()).slice(0, 300));
-      return { ok: false, reason: "failed" };
-    }
+  const started = Date.now();
+  const deadline = started + 52_000; // inside the routes' 60 s maxDuration
+  return new Promise<GeminiResult>((resolve) => {
+    const running = new Set<AbortController>();
+    let next = 0;
+    let busy = false;
+    let refused = false;
+    let done = false;
+    let hedge: ReturnType<typeof setTimeout> | undefined;
 
-    const data = await res.json().catch(() => null);
-    const out: string | undefined = data?.candidates?.[0]?.content?.parts?.find(
-      (p: { text?: string; thought?: boolean }) => typeof p.text === "string" && !p.thought,
-    )?.text;
-    try {
-      const json = out ? JSON.parse(out) : null;
-      if (json && typeof json === "object" && !Array.isArray(json)) return { ok: true, json };
-    } catch {
-      /* fall through */
-    }
-    return { ok: false, reason: "failed" };
-  }
-  return { ok: false, reason: busy ? "busy" : "unavailable" };
+    const finish = (result: GeminiResult) => {
+      if (done) return;
+      done = true;
+      clearTimeout(hedge);
+      for (const c of running) c.abort(); // the others' answers aren't needed
+      resolve(result);
+    };
+
+    // Ask the next model: now when the last one is out, or alongside a slow one.
+    const launch = () => {
+      if (done) return;
+      clearTimeout(hedge);
+      const left = deadline - Date.now();
+      if (next >= MODELS.length || left < 4_000) {
+        if (!running.size) finish({ ok: false, reason: refused ? "failed" : busy ? "busy" : "unavailable" });
+        return;
+      }
+      const { model, thinking } = MODELS[next++];
+      const ctrl = new AbortController();
+      running.add(ctrl);
+      const timeout = setTimeout(() => ctrl.abort(), Math.min(30_000, left));
+      hedge = setTimeout(launch, hedgeAfterMs);
+      const asked = Date.now();
+      void attempt(model, body(model, thinking), key, ctrl.signal, tag).then((r) => {
+        clearTimeout(timeout);
+        running.delete(ctrl);
+        if (done) return;
+        if (r.ok) {
+          console.info(`[${tag}] ${model} answered in ${Date.now() - asked} ms (${Date.now() - started} ms in all)`);
+          finish({ ok: true, json: r.json });
+          return;
+        }
+        busy ||= r.busy;
+        refused ||= r.refused;
+        launch();
+      });
+    };
+    launch();
+  });
 }

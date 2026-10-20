@@ -120,7 +120,8 @@ export async function POST(request: NextRequest) {
     system: systemPrompt(topic, { currency, lang }),
     parts: [{ text: userPrompt(digest.facts) }],
     schema: INSIGHT_SCHEMA,
-    temperature: 0.4,
+    temperature: 0.4, // older models only: Gemini 3 keeps its own
+    hedgeAfterMs: 25_000, // a summary takes longer to write than a memo to read
     tag: "ai-insights",
   });
   const insight = result.ok ? cleanInsight(result.json) : null;
