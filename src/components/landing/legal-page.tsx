@@ -1,7 +1,15 @@
-// Layout for the public Privacy Policy and Terms pages (linked from the landing
-// footer and from the Google sign-in consent screen).
+// Layout for the public Privacy Policy, Terms and Delete account pages (linked
+// from the landing footer, the Google sign-in consent screen, the Android app and
+// the Google Play listing).
 import Link from "next/link";
 import { Logo } from "@/components/ui/logo";
+
+/** The app's name on Google Play — the Play policies want these pages to use it. */
+export const PLAY_NAME = "Catalyst: Money & Mood";
+
+/** The public support address (also on the Google Play listing). Until it's set,
+ *  the pages point to GitHub issues instead. */
+export const SUPPORT_EMAIL: string = "";
 
 export function LegalPage({ title, updated, children }: { title: string; updated: string; children: React.ReactNode }) {
   return (
@@ -17,6 +25,7 @@ export function LegalPage({ title, updated, children }: { title: string; updated
         <footer className="mt-14 flex flex-wrap gap-x-5 gap-y-2 border-t border-line pt-6 text-sm text-ink/50">
           <Link href="/privacy" className="transition-colors hover:text-ink">Privacy Policy</Link>
           <Link href="/terms" className="transition-colors hover:text-ink">Terms of Service</Link>
+          <Link href="/delete-account" className="transition-colors hover:text-ink">Delete your account</Link>
           <Link href="/" className="transition-colors hover:text-ink">Catalyst home</Link>
         </footer>
       </div>
@@ -39,14 +48,25 @@ export function List({ children }: { children: React.ReactNode }) {
 
 export const CONTACT_URL = "https://github.com/HAVIC-47/catalyst/issues";
 
+export const linkClass = "text-amber underline underline-offset-2 hover:text-amber/80";
+
+/** The support address as a mail link, or GitHub issues until there is one. */
+export function SupportLink() {
+  return SUPPORT_EMAIL ? (
+    <a href={`mailto:${SUPPORT_EMAIL}`} className={linkClass}>
+      {SUPPORT_EMAIL}
+    </a>
+  ) : (
+    <a href={CONTACT_URL} className={linkClass}>
+      github.com/HAVIC-47/catalyst/issues
+    </a>
+  );
+}
+
 export function Contact() {
   return (
     <p>
-      Questions or requests: open an issue at{" "}
-      <a href={CONTACT_URL} className="text-amber underline underline-offset-2 hover:text-amber/80">
-        github.com/HAVIC-47/catalyst/issues
-      </a>
-      .
+      Questions or requests: {SUPPORT_EMAIL ? "email" : "open an issue at"} <SupportLink />.
     </p>
   );
 }

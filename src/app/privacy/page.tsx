@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Contact, LegalPage, List, Section } from "@/components/landing/legal-page";
+import Link from "next/link";
+import { Contact, LegalPage, List, PLAY_NAME, Section, linkClass } from "@/components/landing/legal-page";
 
 export const metadata: Metadata = {
   title: "Privacy Policy — Catalyst",
@@ -8,10 +9,10 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy Policy" updated="October 18, 2026">
+    <LegalPage title="Privacy Policy" updated="November 4, 2026">
       <p>
-        Catalyst is a money and mood tracker: this website and an Android app that share one account. This page explains
-        what we keep, why, and the choices you have.
+        Catalyst is a money and mood tracker: this website and an Android app ({PLAY_NAME} on Google Play) that share
+        one account. This page explains what we keep, why, and the choices you have.
       </p>
 
       <Section title="What we keep">
@@ -77,7 +78,13 @@ export default function PrivacyPage() {
             paste one in Settings), it&apos;s read on the phone to suggest an entry. The app has no permission to read
             your SMS; messages are never uploaded, and only the entries you choose to add are saved.
           </li>
-          <li>To tell you about updates, the app asks GitHub for the latest version, so GitHub sees that request.</li>
+          <li>
+            Your login is kept in storage that Android encrypts with the phone&apos;s keystore.
+          </li>
+          <li>
+            The app from Google Play is updated by Google Play. The app from GitHub asks GitHub for the latest version to
+            tell you about updates, so GitHub sees that request.
+          </li>
         </List>
       </Section>
 
@@ -93,16 +100,41 @@ export default function PrivacyPage() {
           <li><strong className="text-ink">Supabase</strong> — the database, sign-in, and account emails.</li>
           <li><strong className="text-ink">Vercel</strong> — hosts the website and keeps short-lived request logs, such as IP addresses.</li>
           <li><strong className="text-ink">Google</strong> — Gemini AI for photos and summaries, and Google sign-in if you use it.</li>
-          <li><strong className="text-ink">GitHub</strong> — Android app downloads and update checks.</li>
+          <li><strong className="text-ink">Google Play</strong> — installs and updates the Android app.</li>
+          <li><strong className="text-ink">GitHub</strong> — Android app downloads outside Google Play, and their update checks.</li>
         </List>
+        <p>
+          They handle data only to provide their part of Catalyst. We don&apos;t share your data with anyone else, unless
+          the law requires it.
+        </p>
+      </Section>
+
+      <Section title="Keeping it safe">
+        <p>
+          Everything between the apps and our servers travels encrypted (HTTPS), and the database is encrypted where it&apos;s
+          stored. Each record is locked to its account in the database, so no other user can read it.
+        </p>
+      </Section>
+
+      <Section title="How long we keep it">
+        <p>
+          As long as you have an account. An entry you delete is gone at once; deleting your account removes it and
+          everything in it. Copies can stay in our providers&apos; routine backups and short-lived server logs until those
+          expire.
+        </p>
       </Section>
 
       <Section title="Your choices">
         <List>
           <li>Change or delete any entry at any time.</li>
+          <li>Erase all your data but keep the account: Settings → Account → Erase my data.</li>
           <li>
-            Delete your account in Settings → Delete account (on the website or in the app). It removes your account and
-            everything in it, permanently.
+            Delete your account in Settings → Account → Delete account, on the website or in the app. It removes your account
+            and everything in it, permanently — the{" "}
+            <Link href="/delete-account" className={linkClass}>
+              Delete your account
+            </Link>{" "}
+            page shows how, even without the app.
           </li>
           <li>Turn reminders and browser notifications on or off in Settings.</li>
         </List>

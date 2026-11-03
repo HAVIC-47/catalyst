@@ -33,7 +33,11 @@ export default function TermsPage() {
           <Link href="/privacy" className="text-amber underline underline-offset-2 hover:text-amber/80">
             Privacy Policy
           </Link>{" "}
-          explains, and you can delete it at any time in Settings → Delete account.
+          explains, and you can delete it at any time in Settings → Account (see{" "}
+          <Link href="/delete-account" className="text-amber underline underline-offset-2 hover:text-amber/80">
+            Delete your account
+          </Link>
+          ).
         </p>
       </Section>
 
