@@ -7,9 +7,9 @@ import { Logo } from "@/components/ui/logo";
 /** The app's name on Google Play — the Play policies want these pages to use it. */
 export const PLAY_NAME = "Catalyst: Money & Mood";
 
-/** The public support address (also on the Google Play listing). Until it's set,
- *  the pages point to GitHub issues instead. */
-export const SUPPORT_EMAIL: string = "";
+/** The public support address (also on the Google Play listing). If it's ever
+ *  emptied, the pages point to GitHub issues instead. */
+export const SUPPORT_EMAIL: string = "catalyst.hishab@gmail.com";
 
 export function LegalPage({ title, updated, children }: { title: string; updated: string; children: React.ReactNode }) {
   return (
