@@ -56,7 +56,7 @@ import {
   seedDefaultCategories,
   updateCategory,
 } from "@/lib/db/categories";
-import { addTransaction, deleteTransaction, listTransactions, updateTransaction } from "@/lib/db/transactions";
+import { addTransaction, deleteTransaction, listTransactions, logBought as insertBought, unlinkTicket, updateTransaction } from "@/lib/db/transactions";
 import { addMood, listMoods } from "@/lib/db/moods";
 import { addBudget, deleteBudget, listBudgets, updateBudget } from "@/lib/db/budgets";
 import { addGoal, deleteGoal, listGoals, updateGoal } from "@/lib/db/goals";
@@ -111,10 +111,10 @@ import { addChallenge, deleteChallenge, listChallenges } from "@/lib/db/challeng
 import { dueDates, firstNextOn, nextAfterLogged, sameSchedule, zonedIso, zonedNow, type Schedule } from "@/lib/recurring";
 import { challengeProgress, challengeTitle, loggedDays, moodSpendAlert, streakMilestone, streakOf } from "@/lib/habits";
 import { orderSections, parseHiddenSections, type DashboardSectionId } from "@/lib/dashboard-sections";
-import { SORT_STEP, sortBetween } from "@/lib/boards";
+import { SORT_STEP, boughtColumn, sortBetween } from "@/lib/boards";
 import { setCurrency } from "@/lib/currency";
 import { DEFAULT_REMINDERS, parseReminders, type ReminderPrefs } from "@/lib/reminders";
-import { billCategory, budgetUse, debtRemaining, defaultWallet, nextDue, ruleCategory } from "@/lib/money";
+import { billCategory, boughtCategory, budgetUse, debtRemaining, defaultWallet, nextDue, ruleCategory } from "@/lib/money";
 import { formatCurrency, nowTime, toDateKey, combineDateTime } from "@/lib/utils";
 import { asLang, rememberLang, setLang, storedLang, tr, type Lang } from "@/lib/i18n";
 
@@ -136,6 +136,17 @@ export interface Toast {
   message: string;
   tone?: "info" | "warn";
   action?: { label: string; run: () => void | Promise<void> };
+}
+
+/** What to do with a bought item's expense when the item moves back off Bought. */
+export type UnbuyChoice = "remove" | "keep" | "cancel";
+
+/** A bought item on its way back, waiting for that answer (components/boards/bought-dialogs). */
+export interface UnbuyAsk {
+  ticket: Ticket;
+  expense: Transaction;
+  columnName: string;
+  answer: (choice: UnbuyChoice) => void;
 }
 
 /** A new recurring entry: where it's got to (nextOn), its timezone and pause come later. */
@@ -335,8 +346,17 @@ interface AppDataValue {
   removeColumn: (id: string) => Promise<void>;
   createTicket: (columnId: string, fields: Partial<TicketFields> & { title: string }) => Promise<Ticket>;
   editTicket: (id: string, patch: Partial<TicketFields>) => Promise<void>;
-  /** Put a ticket in `columnId` where it sits in `order` (that column's ids, top to bottom). */
+  /** Put a ticket in `columnId` where it sits in `order` (that column's ids, top to bottom).
+   *  On a to-buy list, into Bought logs today's expense; back out of it asks about that
+   *  expense first (unbuyAsk), and "cancel" leaves the item where it was. */
   placeTicket: (id: string, columnId: string, order: string[]) => Promise<void>;
+  unbuyAsk: UnbuyAsk | null;
+  /** The dialog listing the expenses that still need a price. */
+  pricesOpen: boolean;
+  openPrices: () => void;
+  closePrices: () => void;
+  /** Prices for expenses logged without one; each bought item's price follows. */
+  setPrices: (prices: { id: string; amount: number }[]) => Promise<void>;
   removeTicket: (id: string) => Promise<void>;
   /** Several tickets at once (a scanned list), each to the bottom of its column, numbered in order. */
   addTickets: (boardId: string, items: { columnId: string; fields: Partial<TicketFields> & { title: string } }[]) => Promise<Ticket[]>;
@@ -695,6 +715,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // each level once per budget per month.
   const txRef = useRef(transactions);
   txRef.current = transactions;
+  const ticketsRef = useRef(tickets);
+  ticketsRef.current = tickets;
   const budgetsRef = useRef(budgets);
   budgetsRef.current = budgets;
   const remindersRef = useRef(reminders);
@@ -782,11 +804,25 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       txRef.current = after;
       setTransactions(after);
       if (c.kind === "expense") checkBudgets(before, after);
+      // A bought item's price follows its expense.
+      const ticket = c.ticketId && c.kind === "expense" ? ticketsRef.current.find((x) => x.id === c.ticketId) : undefined;
+      if (ticket && (ticket.amount ?? 0) !== c.amount) {
+        const amount = c.amount > 0 ? c.amount : null;
+        try {
+          await updateTicket(ticket.id, { amount });
+          const list = ticketsRef.current.map((x) => (x.id === ticket.id ? { ...x, amount } : x));
+          ticketsRef.current = list;
+          setTickets(list);
+        } catch (err) {
+          console.warn("[catalyst] could not update the bought item's price", err);
+        }
+      }
     },
     [checkBudgets],
   );
   const removeMoney = useCallback(async (id: string) => {
     await deleteTransaction(id);
+    txRef.current = txRef.current.filter((t) => t.id !== id);
     setTransactions((p) => p.filter((t) => t.id !== id));
   }, []);
   const saveMood = useCallback(
@@ -1357,6 +1393,80 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setTickets((p) => p.filter((t) => t.columnId !== id));
   }, []);
 
+  // ---- to-buy items and their expenses
+  const [unbuyAsk, setUnbuyAsk] = useState<UnbuyAsk | null>(null);
+  const [pricesOpen, setPricesOpen] = useState(false);
+  const openPrices = useCallback(() => setPricesOpen(true), []);
+  const closePrices = useCallback(() => setPricesOpen(false), []);
+
+  /** A to-buy item went to Bought: it joins today's expenses — at its price, or with
+   *  none yet and a nudge to add it. Once per item, whichever device gets there first. */
+  const logBought = useCallback(
+    async (ticket: Ticket) => {
+      if (txRef.current.some((t) => t.ticketId === ticket.id)) return;
+      const list = boards.find((b) => b.id === ticket.boardId);
+      const cat = boughtCategory(list?.name ?? "", categoriesRef.current);
+      const today = toDateKey(new Date());
+      const price = ticket.amount ?? 0;
+      let entry: Transaction | null;
+      try {
+        entry = await insertBought(ticket.id, {
+          kind: "expense",
+          amount: price,
+          categoryId: cat?.id ?? null,
+          categoryName: cat?.name ?? "Other",
+          place: "",
+          note: ticket.title,
+          occurredOn: today,
+          occurredAt: combineDateTime(today, nowTime()),
+          walletId: defaultWallet(walletsRef.current)?.id ?? null,
+        });
+      } catch (err) {
+        console.warn("[catalyst] could not log the bought item", err);
+        // Before the database update (db/supabase.sql) Bought is still just a column.
+        const message = typeof err === "object" && err && "message" in err ? String((err as { message: unknown }).message) : "";
+        if (!/ticket_id/.test(message)) {
+          pushToast({ tone: "warn", message: tr("{name} is marked as bought, but couldn't be added to your expenses.", { name: ticket.title }) });
+        }
+        return;
+      }
+      if (!entry) {
+        // Another device logged it first: pick that up.
+        const fresh = await listTransactions().catch(() => null);
+        if (fresh) {
+          txRef.current = fresh;
+          setTransactions(fresh);
+        }
+        return;
+      }
+      const before = txRef.current;
+      const after = [entry, ...before].sort((a, b) => b.occurredOn.localeCompare(a.occurredOn) || b.createdAt.localeCompare(a.createdAt));
+      txRef.current = after;
+      setTransactions(after);
+      checkBudgets(before, after);
+      checkMoodSpend(after, moodsRef.current);
+      pushToast(
+        price > 0
+          ? { message: tr("{name} added to today's expenses — {amount}.", { name: ticket.title, amount: formatCurrency(price) }) }
+          : {
+              tone: "warn",
+              message: tr("{name} added to today's expenses with no price yet.", { name: ticket.title }),
+              action: { label: tr("Add price"), run: openPrices },
+            },
+      );
+    },
+    [boards, checkBudgets, checkMoodSpend, openPrices, pushToast],
+  );
+  const setPrices = useCallback(
+    async (prices: { id: string; amount: number }[]) => {
+      for (const { id, amount } of prices) {
+        const t = txRef.current.find((x) => x.id === id);
+        if (t) await editMoney(id, { ...t, amount });
+      }
+    },
+    [editMoney],
+  );
+
   const createTicket = useCallback(
     async (columnId: string, fields: Partial<TicketFields> & { title: string }) => {
       const col = boardColumns.find((c) => c.id === columnId);
@@ -1374,19 +1484,48 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         amount: fields.amount ?? null,
         sort: lastSort + SORT_STEP, // new tickets join the bottom of the column
       });
-      setTickets((p) => [...p, t]);
+      const list = [...ticketsRef.current, t];
+      ticketsRef.current = list;
+      setTickets(list);
+      // Added straight to Bought: it's bought.
+      if (columnId === boughtColumn(boards.find((b) => b.id === col.boardId), boardColumns)) await logBought(t);
       return t;
     },
-    [boardColumns, tickets],
+    [boardColumns, boards, logBought, tickets],
   );
-  const editTicket = useCallback(async (id: string, patch: Partial<TicketFields>) => {
-    await updateTicket(id, patch);
-    setTickets((p) => p.map((t) => (t.id === id ? { ...t, ...patch } : t)));
-  }, []);
+  const editTicket = useCallback(
+    async (id: string, patch: Partial<TicketFields>) => {
+      await updateTicket(id, patch);
+      const was = ticketsRef.current.find((t) => t.id === id);
+      const list = ticketsRef.current.map((t) => (t.id === id ? { ...t, ...patch } : t));
+      ticketsRef.current = list; // read straight away when the editor also moves it to Bought
+      setTickets(list);
+      // Its expense follows: a new price, and a new title while the note still says the old one.
+      const expense = txRef.current.find((t) => t.ticketId === id);
+      if (!expense || !was) return;
+      const amount = patch.amount === undefined ? expense.amount : (patch.amount ?? 0);
+      const note = patch.title !== undefined && expense.note === was.title ? patch.title : expense.note;
+      if (amount !== expense.amount || note !== expense.note) await editMoney(expense.id, { ...expense, amount, note });
+    },
+    [editMoney],
+  );
   const placeTicket = useCallback(
     async (id: string, columnId: string, order: string[]) => {
       const i = order.indexOf(id);
       if (i < 0) return;
+      const was = ticketsRef.current.find((t) => t.id === id);
+      const moving = !!was && was.columnId !== columnId;
+      const bought = was ? boughtColumn(boards.find((b) => b.id === was.boardId), boardColumns) : null;
+      // On its way back off Bought with an expense: ask what to do with it first.
+      const expense = moving && columnId !== bought ? txRef.current.find((t) => t.ticketId === id) : undefined;
+      let choice: UnbuyChoice | null = null;
+      if (expense && was) {
+        const columnName = boardColumns.find((c) => c.id === columnId)?.name ?? "";
+        choice = await new Promise<UnbuyChoice>((answer) => setUnbuyAsk({ ticket: was, expense, columnName, answer }));
+        setUnbuyAsk(null);
+        if (choice === "cancel") return;
+      }
+      const tickets = ticketsRef.current;
       const sortOf = new Map(tickets.map((t) => [t.id, t.sort]));
       const between = sortBetween(
         i > 0 ? sortOf.get(order[i - 1]) : undefined,
@@ -1395,12 +1534,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       // Usually one row changes; when neighbours are too close, renumber the column.
       const moves = between === null ? order.map((tid, k) => ({ id: tid, sort: (k + 1) * SORT_STEP })) : [{ id, sort: between }];
       // Optimistic: the card stays where it was dropped while the write goes out.
-      setTickets((p) =>
-        p.map((t) => {
-          const m = moves.find((x) => x.id === t.id);
-          return m ? { ...t, sort: m.sort, columnId: t.id === id ? columnId : t.columnId } : t;
-        }),
-      );
+      const placed = tickets.map((t) => {
+        const m = moves.find((x) => x.id === t.id);
+        return m ? { ...t, sort: m.sort, columnId: t.id === id ? columnId : t.columnId } : t;
+      });
+      ticketsRef.current = placed;
+      setTickets(placed);
       try {
         await Promise.all(
           moves.map((m) => updateTicket(m.id, m.id === id ? { sort: m.sort, columnId } : { sort: m.sort })),
@@ -1408,10 +1547,31 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         console.warn("[catalyst] could not move the ticket", err);
         // Put the board back the way the database has it.
-        setTickets(await listTickets().catch(() => tickets));
+        const fresh = await listTickets().catch(() => tickets);
+        ticketsRef.current = fresh;
+        setTickets(fresh);
+        return;
+      }
+      try {
+        if (expense && choice === "remove") {
+          await removeMoney(expense.id);
+          pushToast({ message: tr("{name} is off your expenses.", { name: expense.note || was?.title || "" }) });
+        } else if (expense && choice === "keep") {
+          await unlinkTicket(expense.id);
+          const after = txRef.current.map((t) => (t.id === expense.id ? { ...t, ticketId: null } : t));
+          txRef.current = after;
+          setTransactions(after);
+        }
+      } catch (err) {
+        console.warn("[catalyst] could not change the bought item's expense", err);
+        pushToast({ tone: "warn", message: tr("{name} moved, but its expense couldn't be changed — check it in the ledger.", { name: expense?.note ?? "" }) });
+      }
+      if (moving && columnId === bought) {
+        const now = ticketsRef.current.find((t) => t.id === id);
+        if (now) await logBought(now);
       }
     },
-    [tickets],
+    [boardColumns, boards, logBought, pushToast, removeMoney],
   );
   const removeTicket = useCallback(async (id: string) => {
     await deleteTicket(id);
@@ -1560,6 +1720,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       createTicket,
       editTicket,
       placeTicket,
+      unbuyAsk,
+      pricesOpen,
+      openPrices,
+      closePrices,
+      setPrices,
       removeTicket,
       addTickets,
       removeTickets,
@@ -1577,7 +1742,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       reminders, setReminders, toasts, pushToast, dismissToast, payBill, undoBillPayment, unpayBill, createWallet,
       editWallet, removeWallet, createTransfer, removeTransfer, createDebt, editDebt, removeDebt, recordDebtPayment,
       removeDebtPayment, recurring, challenges, recurringReady, createRecurring, editRecurring, pauseRecurring,
-      removeRecurring, createChallenge, removeChallenge,
+      removeRecurring, createChallenge, removeChallenge, unbuyAsk, pricesOpen, openPrices, closePrices, setPrices,
     ],
   );
 

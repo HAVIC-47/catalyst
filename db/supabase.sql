@@ -8,7 +8,8 @@
 -- ai_insights, ai_requests (saved AI summaries and their daily limit) +
 -- wallets, transfers (where money sits and moves between) +
 -- debts, debt_payments (dhar / baki) + push_subscriptions (web reminders) +
--- recurring (incomes and expenses that log themselves) + challenges.
+-- recurring (incomes and expenses that log themselves) + challenges +
+-- devices (the names of the logins shown in Settings → Account).
 -- Every table is Row-Level-Security scoped to auth.uid() so users see only their own data.
 
 create extension if not exists "pgcrypto";
@@ -291,6 +292,16 @@ create table if not exists public.tickets (
   sort        double precision not null default 0,
   created_at  timestamptz not null default now()
 );
+-- A to-buy item marked as bought logs an expense: this is the item it came from.
+-- One expense per item, so two devices can never log it twice. Deleting the item
+-- keeps the expense (the money was still spent).
+alter table public.transactions add column if not exists ticket_id uuid references public.tickets(id) on delete set null;
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'transactions_ticket_once') then
+    alter table public.transactions add constraint transactions_ticket_once unique (ticket_id);
+  end if;
+end $$;
 
 -- AI INSIGHTS (Gemini summaries + suggestions, /api/ai-insights) ---------------
 -- The latest summary per topic and period, so it shows straight away on the web
@@ -335,6 +346,21 @@ create table if not exists public.push_subscriptions (
   unique (user_id, endpoint)
 );
 
+-- DEVICES (Settings → Account → Signed-in devices) ----------------------------
+-- Every login is a row in auth.sessions: removing that row signs the device out.
+-- This table only adds the name each app gives its own login ("Chrome · Windows",
+-- "Samsung SM-S918B") and when it was last open, because the session's own user
+-- agent is overwritten whenever the web's server refreshes the login. Nothing
+-- reaches it except the functions below, which only touch the caller's own logins.
+create table if not exists public.devices (
+  session_id uuid primary key,
+  user_id    uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  name       text not null default '',
+  platform   text not null default 'web' check (platform in ('web','android')),
+  last_seen  timestamptz not null default now(),
+  created_at timestamptz not null default now()
+);
+
 -- Indexes ---------------------------------------------------------------------
 create index if not exists idx_tx_user_date  on public.transactions (user_id, occurred_on desc);
 create index if not exists idx_mood_user_date on public.mood_logs (user_id, logged_on desc);
@@ -355,6 +381,7 @@ create index if not exists idx_push_user on public.push_subscriptions (user_id);
 create index if not exists idx_recurring_user on public.recurring (user_id);
 create index if not exists idx_recurring_due on public.recurring (next_on) where not paused;
 create index if not exists idx_challenges_user on public.challenges (user_id, start_on desc);
+create index if not exists idx_devices_user on public.devices (user_id);
 
 -- Row-Level Security: enable + owner-only policies on every table -------------
 do $$
@@ -395,3 +422,74 @@ drop policy if exists ai_requests_select_own on public.ai_requests;
 create policy ai_requests_select_own on public.ai_requests for select using (auth.uid() = user_id);
 revoke all on public.ai_requests from anon;
 revoke update, delete, truncate on public.ai_requests from authenticated;
+
+-- devices: no direct API access at all (RLS on, no policy, no grants) — only these
+-- functions, each limited to the caller's own logins.
+alter table public.devices enable row level security;
+revoke all on public.devices from anon, authenticated;
+
+-- An app says "this is me" (the login comes from the caller's token, not from them).
+create or replace function public.touch_device(device_name text, device_platform text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  uid uuid := auth.uid();
+  sid uuid := nullif(auth.jwt() ->> 'session_id', '')::uuid;
+begin
+  if uid is null or sid is null then return; end if;
+  -- A login that was removed can still hold a token for a while: it stays removed.
+  if not exists (select 1 from auth.sessions s where s.id = sid and s.user_id = uid) then return; end if;
+  insert into public.devices (session_id, user_id, name, platform, last_seen)
+  values (sid, uid, left(coalesce(device_name, ''), 100), case when device_platform = 'android' then 'android' else 'web' end, now())
+  on conflict (session_id) do update
+    set name = excluded.name, platform = excluded.platform, last_seen = now()
+    where public.devices.user_id = excluded.user_id;
+end $$;
+
+-- The caller's logins: this one first, then the most recently active.
+create or replace function public.my_devices()
+returns table (session_id uuid, name text, platform text, user_agent text, signed_in_at timestamptz, last_seen timestamptz, is_current boolean)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  uid uuid := auth.uid();
+  sid uuid := nullif(auth.jwt() ->> 'session_id', '')::uuid;
+begin
+  if uid is null then return; end if;
+  -- Names of logins that have ended (signed out, expired) are no use to anyone.
+  delete from public.devices d where d.user_id = uid and not exists (select 1 from auth.sessions s where s.id = d.session_id);
+  return query
+    select s.id, coalesce(d.name, ''), coalesce(d.platform, ''), coalesce(s.user_agent, ''), s.created_at,
+           greatest(d.last_seen, s.refreshed_at::timestamptz, s.updated_at, s.created_at), s.id is not distinct from sid
+    from auth.sessions s
+    left join public.devices d on d.session_id = s.id
+    where s.user_id = uid and (s.not_after is null or s.not_after > now())
+    order by (s.id is not distinct from sid) desc, 6 desc;
+end $$;
+
+-- Sign one of the caller's logins out: its refresh tokens go with the session, and
+-- from then on Supabase refuses its access token. False when it wasn't theirs or is gone.
+create or replace function public.remove_device(target uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  uid uuid := auth.uid();
+  removed boolean;
+begin
+  if uid is null then return false; end if;
+  delete from auth.sessions where id = target and user_id = uid;
+  removed := found;
+  delete from public.devices where session_id = target and user_id = uid;
+  return removed;
+end $$;
+
+revoke all on function public.touch_device(text, text), public.my_devices(), public.remove_device(uuid) from public, anon;
+grant execute on function public.touch_device(text, text), public.my_devices(), public.remove_device(uuid) to authenticated;

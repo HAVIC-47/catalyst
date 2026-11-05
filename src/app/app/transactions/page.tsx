@@ -9,7 +9,7 @@ import type { Kind, Transaction } from "@/types";
 import { cn, currencySymbol, formatCurrency, fmt } from "@/lib/utils";
 import { CategoryIcon } from "@/components/ui/category-icon";
 import { currency } from "@/lib/currency";
-import { defaultWallet } from "@/lib/money";
+import { defaultWallet, needsPrice } from "@/lib/money";
 import { inRange, rangeWindow, type Range } from "@/lib/range";
 import { AiInsights } from "@/components/ai/ai-insights";
 import { TransactionEditor } from "@/components/entry/transaction-editor";
@@ -40,7 +40,7 @@ const amountOrNull = (s: string) => {
 };
 
 export default function TransactionsPage() {
-  const { transactions, categories, wallets, walletsReady, removeMoney, openEntry, loading } = useAppData();
+  const { transactions, categories, wallets, walletsReady, removeMoney, openEntry, openPrices, loading } = useAppData();
   // Each entry's wallet (no wallet = the default one); shown once there's a choice of wallets.
   const walletOf = useMemo(() => {
     const byId = new Map(wallets.map((w) => [w.id, w]));
@@ -418,13 +418,25 @@ export default function TransactionsPage() {
                           )}
                         </div>
                       </div>
-                      <Icon
-                        className={cn("h-3.5 w-3.5 shrink-0", t.kind === "income" ? "text-income" : "text-expense")}
-                        aria-hidden
-                      />
-                      <span className={cn("font-mono text-sm tabular", t.kind === "income" ? "text-income" : "text-ink/80")}>
-                        {formatCurrency(t.kind === "income" ? t.amount : -t.amount, { sign: true })}
-                      </span>
+                      {needsPrice(t) ? (
+                        <button
+                          type="button"
+                          onClick={openPrices}
+                          className="shrink-0 cursor-pointer rounded-lg border border-amber/40 bg-amber/[0.08] px-2 py-1 font-mono text-[11px] uppercase tracking-widest text-amber transition-colors hover:bg-amber/15"
+                        >
+                          {tr("Add price")}
+                        </button>
+                      ) : (
+                        <>
+                          <Icon
+                            className={cn("h-3.5 w-3.5 shrink-0", t.kind === "income" ? "text-income" : "text-expense")}
+                            aria-hidden
+                          />
+                          <span className={cn("font-mono text-sm tabular", t.kind === "income" ? "text-income" : "text-ink/80")}>
+                            {formatCurrency(t.kind === "income" ? t.amount : -t.amount, { sign: true })}
+                          </span>
+                        </>
+                      )}
                       <button
                         onClick={() => setEditing(t)}
                         aria-label={tr("Edit {x}", { x: t.note || t.categoryName })}

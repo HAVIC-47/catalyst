@@ -19,7 +19,7 @@ export function UserMenu() {
   const signOut = async () => {
     setSigningOut(true);
     const supabase = createClient();
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: "local" }); // this device; Settings → Account can sign out the others
     router.push("/login");
     router.refresh();
   };

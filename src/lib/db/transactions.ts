@@ -14,6 +14,7 @@ interface Row {
   created_at: string;
   wallet_id?: string | null;
   recurring_id?: string | null;
+  ticket_id?: string | null;
 }
 export const toTx = (r: Row): Transaction => ({
   id: r.id,
@@ -28,6 +29,7 @@ export const toTx = (r: Row): Transaction => ({
   createdAt: r.created_at,
   walletId: r.wallet_id ?? null,
   recurringId: r.recurring_id ?? null,
+  ticketId: r.ticket_id ?? null,
 });
 
 export async function listTransactions(): Promise<Transaction[]> {
@@ -73,5 +75,24 @@ export async function updateTransaction(id: string, input: NewTransaction): Prom
 export async function deleteTransaction(id: string): Promise<void> {
   const supabase = createClient();
   const { error } = await supabase.from("transactions").delete().eq("id", id);
+  if (error) throw error;
+}
+
+/** Logs a to-buy item that was marked as bought. Null when it's already in the
+ *  ledger — the database keeps one expense per item, whoever logs it first. */
+export async function logBought(ticketId: string, entry: NewTransaction): Promise<Transaction | null> {
+  const { data, error } = await createClient()
+    .from("transactions")
+    .insert({ ...toRow(entry), ticket_id: ticketId })
+    .select("*")
+    .single();
+  if (error?.code === "23505") return null;
+  if (error) throw error;
+  return toTx(data as Row);
+}
+
+/** The expense stays, but no longer belongs to the item it was logged for. */
+export async function unlinkTicket(id: string): Promise<void> {
+  const { error } = await createClient().from("transactions").update({ ticket_id: null }).eq("id", id);
   if (error) throw error;
 }

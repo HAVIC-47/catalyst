@@ -12,6 +12,7 @@ export interface ReminderPrefs {
   moodSpend: boolean; // a lot spent on a low-mood day
   streaks: boolean; // streak milestones, and a streak about to end
   challenges: boolean; // a challenge won, lost, or on its last day
+  prices: boolean; // something marked as bought still has no price
   updates: boolean; // a new version of the Android app (set there; kept here)
 }
 
@@ -25,14 +26,15 @@ export const DEFAULT_REMINDERS: ReminderPrefs = {
   moodSpend: true,
   streaks: true,
   challenges: true,
+  prices: true,
   updates: true,
 };
 
 type Flag = Exclude<keyof ReminderPrefs, "checkinTime">;
-const FLAGS: Flag[] = ["checkin", "bills", "budgets", "dhar", "recurring", "moodSpend", "streaks", "challenges", "updates"];
+const FLAGS: Flag[] = ["checkin", "bills", "budgets", "dhar", "recurring", "moodSpend", "streaks", "challenges", "prices", "updates"];
 
 /** The kinds Settings → Notifications lists on the web (app updates are set in the app). */
-export const WEB_NOTICE_KINDS: Flag[] = ["checkin", "bills", "dhar", "budgets", "recurring", "moodSpend", "streaks", "challenges"];
+export const WEB_NOTICE_KINDS: Flag[] = ["checkin", "bills", "dhar", "budgets", "recurring", "moodSpend", "streaks", "challenges", "prices"];
 
 /** Stored settings, with defaults for anything missing or malformed. */
 export function parseReminders(raw: unknown): ReminderPrefs {

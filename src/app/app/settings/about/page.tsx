@@ -13,6 +13,7 @@ import {
   HandHeart,
   LineChart,
   Repeat,
+  ShoppingCart,
   ClipboardPaste,
   Coins,
   Eraser,
@@ -138,6 +139,11 @@ function groups(): Group[] {
           body: tr("Boards with columns and numbered tickets — priority, due dates, notes and prices. Drag with the mouse, by touch or from the keyboard."),
         },
         {
+          icon: ShoppingCart,
+          title: tr("Bought goes to expenses"),
+          body: tr("Mark something on a to-buy list as bought and it joins that day's expenses, at its price — or with no price yet and a reminder to add it. Moving it back asks before taking the expense off."),
+        },
+        {
           icon: ScanText,
           title: tr("Lists from a screenshot"),
           body: tr("On a board, Scan a list adds every item from a screenshot or photo of a list — ticked items land as done, with Undo."),
@@ -213,6 +219,11 @@ function groups(): Group[] {
             : tr("Email and password, with Remember me — and Forgot password if you lose it."),
         },
         { icon: ShieldCheck, title: tr("Private"), body: tr("Your entries are locked to your account — no one else can read them.") },
+        {
+          icon: MonitorSmartphone,
+          title: tr("Signed-in devices"),
+          body: tr("See everywhere your account is signed in, in Settings → Account. Remove any one device, or sign out of all of them."),
+        },
         { icon: Eraser, title: tr("Erase my data"), body: tr("Deletes every entry but keeps the account — to start fresh.") },
         { icon: UserX, title: tr("Delete account"), body: tr("Removes the account and everything in it, from Settings.") },
       ],

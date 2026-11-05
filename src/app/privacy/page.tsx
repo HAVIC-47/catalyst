@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy Policy" updated="November 4, 2026">
+    <LegalPage title="Privacy Policy" updated="November 5, 2026">
       <p>
         Catalyst is a money and mood tracker: this website and an Android app ({PLAY_NAME} on Google Play) that share
         one account. This page explains what we keep, why, and the choices you have.
@@ -36,6 +36,11 @@ export default function PrivacyPage() {
           <li>
             <strong className="text-ink">AI summaries</strong> — summaries you ask for are saved to your account, so they
             show again without being rewritten.
+          </li>
+          <li>
+            <strong className="text-ink">Signed-in devices</strong> — for each device you&apos;re signed in on: a name for
+            it (the browser and system, or the phone&apos;s make and model), when it signed in and when it was last open, so
+            you can see them and sign any of them out in Settings → Account.
           </li>
           <li>
             <strong className="text-ink">Browser reminders</strong> — if you turn on notifications in a browser, we keep
@@ -128,6 +133,7 @@ export default function PrivacyPage() {
         <List>
           <li>Change or delete any entry at any time.</li>
           <li>Erase all your data but keep the account: Settings → Account → Erase my data.</li>
+          <li>See where you&apos;re signed in, and sign any device out, or all of them: Settings → Account.</li>
           <li>
             Delete your account in Settings → Account → Delete account, on the website or in the app. It removes your account
             and everything in it, permanently — the{" "}

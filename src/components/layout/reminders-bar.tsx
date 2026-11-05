@@ -1,14 +1,15 @@
 "use client";
 
 // In-app reminders at the top of every page: bills due by tomorrow or overdue,
-// dhar due back, and — after the evening check-in time — "how was today?" when no
-// mood is logged yet. Each can be dismissed for the day. (Settings → Reminders.)
+// dhar due back, bought items still without a price, and — after the evening
+// check-in time — "how was today?" when no mood is logged yet. Each can be
+// dismissed for the day. (Settings → Reminders.)
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { differenceInCalendarDays, parseISO } from "date-fns";
-import { Bell, HandCoins, Smile, X } from "lucide-react";
+import { Bell, HandCoins, ShoppingCart, Smile, X } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
-import { debtIsOpen, debtRemaining, nextDue } from "@/lib/money";
+import { debtIsOpen, debtRemaining, needsPrice, nextDue } from "@/lib/money";
 import { formatCurrency, nowTime, toDateKey, fmt } from "@/lib/utils";
 import { tr, trn } from "@/lib/i18n";
 
@@ -17,13 +18,13 @@ interface Item {
   icon: typeof Bell;
   text: string;
   tone: "due" | "late" | "calm";
-  action?: { label: string; run?: () => void; href?: string };
+  action?: { label: string; run?: () => void; href?: string; stays?: boolean }; // stays: acting on it doesn't dismiss it
 }
 
 const when = (days: number) => (days < 0 ? trn(-days, "{n} day late", "{n} days late") : days === 0 ? tr("due today") : tr("due tomorrow"));
 
 export function RemindersBar() {
-  const { bills, debts, debtPayments, moods, reminders, loading, payBill, undoBillPayment, pushToast, openEntry } = useAppData();
+  const { bills, debts, debtPayments, moods, transactions, reminders, loading, payBill, undoBillPayment, pushToast, openEntry, openPrices } = useAppData();
   const today = toDateKey(new Date());
   const [dismissed, setDismissed] = useState<string[]>([]);
   const [clock, setClock] = useState(nowTime());
@@ -94,6 +95,18 @@ export function RemindersBar() {
         });
       }
     }
+    if (reminders.prices) {
+      const n = transactions.filter(needsPrice).length;
+      if (n) {
+        out.push({
+          key: `prices:${n}`, // a new one brings it back after a dismiss
+          icon: ShoppingCart,
+          tone: "due",
+          text: trn(n, "{n} bought item needs a price", "{n} bought items need a price"),
+          action: { label: tr("Add price"), run: openPrices, stays: true },
+        });
+      }
+    }
     if (reminders.checkin && clock >= reminders.checkinTime && !moods.some((m) => m.loggedOn === today)) {
       out.push({
         key: "checkin",
@@ -104,7 +117,7 @@ export function RemindersBar() {
       });
     }
     return out;
-  }, [loading, reminders, bills, debts, debtPayments, moods, today, clock, payBill, undoBillPayment, pushToast, openEntry]);
+  }, [loading, reminders, bills, debts, debtPayments, moods, transactions, today, clock, payBill, undoBillPayment, pushToast, openEntry, openPrices]);
 
   const visible = items.filter((i) => !dismissed.includes(i.key));
   if (!visible.length) return null;
@@ -143,7 +156,7 @@ export function RemindersBar() {
               type="button"
               onClick={() => {
                 i.action!.run!();
-                dismiss(i.key);
+                if (!i.action!.stays) dismiss(i.key);
               }}
               className="shrink-0 cursor-pointer rounded-lg px-2 py-1 font-mono text-[11px] uppercase tracking-widest text-amber transition-colors hover:bg-amber/10"
             >

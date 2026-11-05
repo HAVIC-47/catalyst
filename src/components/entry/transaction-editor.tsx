@@ -96,7 +96,9 @@ function EditForm({ tx, onClose }: { tx: Transaction; onClose: () => void }) {
   const { categories, wallets, editMoney, removeMoney } = useAppData();
   const [walletId, setWalletId] = useState<string | null>(tx.walletId); // null = the default wallet
   const [kind, setKind] = useState<Kind>(tx.kind);
-  const [amount, setAmount] = useState(String(tx.amount));
+  // No price yet (a bought item): the field stays empty, and it can be saved like that.
+  const priceless = tx.amount === 0;
+  const [amount, setAmount] = useState(priceless ? "" : String(tx.amount));
   const [pick, setPick] = useState<string | null>(null); // category id chosen here; null = the entry's own
   const [date, setDate] = useState(tx.occurredOn);
   const [time, setTime] = useState(() => localTime(tx.occurredAt));
@@ -125,10 +127,10 @@ function EditForm({ tx, onClose }: { tx: Transaction; onClose: () => void }) {
           ? { id: near.id, name: near.name }
           : null;
 
-  const value = parseFloat(amount);
+  const value = priceless && amount.trim() === "" ? 0 : parseFloat(amount);
   const touchedWhen = date !== tx.occurredOn || time !== localTime(tx.occurredAt);
   const next: NewTransaction | null =
-    value > 0 && cat && /^\d{4}-\d{2}-\d{2}$/.test(date)
+    (value > 0 || (priceless && value === 0)) && cat && /^\d{4}-\d{2}-\d{2}$/.test(date)
       ? {
           kind,
           amount: Math.round(value * 100) / 100,

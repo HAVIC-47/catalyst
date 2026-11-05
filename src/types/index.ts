@@ -34,6 +34,7 @@ export interface Transaction {
   createdAt: string;
   walletId: string | null; // null = the default wallet
   recurringId?: string | null; // logged automatically by this recurring rule
+  ticketId?: string | null; // logged when this to-buy item was marked as bought
 }
 
 export type NewTransaction = Omit<Transaction, "id" | "createdAt" | "walletId"> & { walletId?: string | null };

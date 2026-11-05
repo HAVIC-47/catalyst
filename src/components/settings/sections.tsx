@@ -19,6 +19,7 @@ import { CategoryIcon } from "@/components/ui/category-icon";
 import { CATEGORY_ICONS, categoryIconName } from "@/lib/category-icons";
 import { LIMITS } from "@/lib/limits";
 import { tr } from "@/lib/i18n";
+import { Devices } from "@/components/settings/devices";
 
 const SWATCHES = [
   "#C06A33", "#2E8159", "#3D80BC", "#7A4E86", "#B59A3C", "#CB453B",
@@ -169,6 +170,7 @@ export function NotificationsSection() {
         <Toggle on={reminders.moodSpend} onChange={(v) => set({ moodSpend: v })} label={tr("Mood & money")} hint={tr("When a low day comes with a lot of spending")} />
         <Toggle on={reminders.streaks} onChange={(v) => set({ streaks: v })} label={tr("Streaks")} hint={tr("Milestones, and when a streak is about to end")} />
         <Toggle on={reminders.challenges} onChange={(v) => set({ challenges: v })} label={tr("Challenges")} hint={tr("Won, missed, or on its last day")} />
+        <Toggle on={reminders.prices} onChange={(v) => set({ prices: v })} label={tr("Prices to add")} hint={tr("When something you marked as bought has no price yet")} />
       </div>
       <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-line pt-4">
         <span className="min-w-0 flex-1 text-sm text-ink/70">
@@ -379,6 +381,7 @@ export function AccountSection() {
       </h2>
       <p className="mt-1 text-sm text-ink/45">{tr("Signed in as {email}.", { email: email ?? "…" })}</p>
       <PasswordChange />
+      <Devices />
       <EraseData />
       <div className="mt-5 rounded-xl border border-expense/30 bg-expense/[0.04] p-4">
         <div className="flex flex-wrap items-center gap-3">

@@ -4,9 +4,9 @@
 // and tells each person's browsers what it added. Then, for every browser that
 // turned reminders on, at the user's own evening check-in hour (their timezone,
 // their setting), it sends one push: bills and dhar due tomorrow, overdue bills, a
-// streak about to end, a challenge's last day, and "how was today?" when no mood
-// is logged yet. Nothing to say means nothing is sent. Each kind follows the
-// person's Settings → Notifications.
+// streak about to end, a challenge's last day, bought items still without a price,
+// and "how was today?" when no mood is logged yet. Nothing to say means nothing is
+// sent. Each kind follows the person's Settings → Notifications.
 //
 // Reads across accounts, so it uses the service-role key — server-only, never
 // shipped to a browser — and scopes every query to one user explicitly.
@@ -319,6 +319,12 @@ async function run(request: NextRequest) {
         }
       }
     }
+    const before = lines.length;
+    if (prefs.prices) {
+      const { count } = await admin.from("transactions").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("kind", "expense").eq("amount", 0);
+      if (count) lines.push(say(lang, count === 1 ? "{n} bought item needs a price" : "{n} bought items need a price", { n: count }));
+    }
+    const onlyPrices = before === 0 && lines.length > 0;
     let askMood = false;
     if (prefs.checkin) {
       const { count } = await admin.from("mood_logs").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("logged_on", today);
@@ -329,7 +335,7 @@ async function run(request: NextRequest) {
     const payload = JSON.stringify({
       title: askMood ? say(lang, "How was today?") : "Catalyst",
       body: [askMood ? say(lang, "Log your mood.") : null, ...lines].filter(Boolean).join(" · "),
-      url: askMood ? "/app?log=mood" : "/app/bills",
+      url: askMood ? "/app?log=mood" : onlyPrices ? "/app/transactions" : "/app/bills",
       tag: `reminder-${today}`,
     });
     const r = await pushTo(admin, list, payload);

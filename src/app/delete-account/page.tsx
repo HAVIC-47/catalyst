@@ -66,8 +66,8 @@ export default function DeleteAccountPage() {
             bills, recurring entries, wallets and transfers, dhar records, challenges and your to-do and to-buy boards.
           </li>
           <li>
-            Your settings (language, currency, notifications, dashboard, zakat figures), saved AI summaries, browser
-            reminder subscriptions and the daily counts of AI use.
+            Your settings (language, currency, notifications, dashboard, zakat figures), saved AI summaries, the list of
+            signed-in devices, browser reminder subscriptions and the daily counts of AI use.
           </li>
         </List>
         <p>It&apos;s all removed from our database at once and can&apos;t be undone.</p>

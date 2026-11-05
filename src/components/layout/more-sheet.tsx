@@ -68,7 +68,7 @@ export function MoreSheet({ open, onClose }: { open: boolean; onClose: () => voi
   }, [open, onClose]);
 
   const signOut = async () => {
-    await createClient().auth.signOut();
+    await createClient().auth.signOut({ scope: "local" }); // this device; Settings → Account can sign out the others
     onClose();
     router.push("/login");
     router.refresh();

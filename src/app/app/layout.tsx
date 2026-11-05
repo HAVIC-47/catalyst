@@ -5,6 +5,8 @@ import { BottomNav } from "@/components/layout/bottom-nav";
 import { EntryModal } from "@/components/entry/entry-modal";
 import { MemoScanner } from "@/components/memo/memo-scanner";
 import { ListScanner } from "@/components/boards/list-scanner";
+import { BoughtDialogs } from "@/components/boards/bought-dialogs";
+import { SessionWatch } from "@/components/system/session-watch";
 import { Toasts } from "@/components/layout/toasts";
 import { RemindersBar } from "@/components/layout/reminders-bar";
 
@@ -27,6 +29,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <EntryModal />
       <MemoScanner />
       <ListScanner />
+      <BoughtDialogs />
+      <SessionWatch />
       <Toasts />
     </AppDataProvider>
   );

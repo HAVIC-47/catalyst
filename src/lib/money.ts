@@ -2,6 +2,7 @@
 // bill is due next and what paying it is logged as, and budget use.
 import { addDays, addMonths, addYears, format, parseISO } from "date-fns";
 import type { Bill, Budget, Category, Debt, DebtPayment, RecurringRule, Transaction, Transfer, Wallet } from "@/types";
+import { tr } from "@/lib/i18n";
 
 const cents = (n: number) => Math.round(n * 100) / 100;
 
@@ -99,6 +100,22 @@ export function ruleCategory(rule: Pick<RecurringRule, "categoryId" | "name" | "
     null
   );
 }
+
+/** The category a bought to-buy item is logged under: one named like its list
+ *  (the "Groceries" list, Groceries), else Shopping, else Other. */
+export function boughtCategory(listName: string, categories: Category[]): Category | null {
+  const expense = categories.filter((c) => c.kind === "expense");
+  return (
+    expense.find((c) => same(c.name, listName) || same(tr(c.name), listName)) ??
+    expense.find((c) => same(c.name, "Shopping")) ??
+    expense.find((c) => same(c.name, "Other")) ??
+    expense[0] ??
+    null
+  );
+}
+
+/** An expense with no amount yet: something marked as bought before its price was known. */
+export const needsPrice = (t: Pick<Transaction, "kind" | "amount">): boolean => t.kind === "expense" && t.amount === 0;
 
 /** How much of a monthly budget this month's expenses have used. */
 export function budgetUse(budget: Budget, transactions: Transaction[], now = new Date()): { spent: number; ratio: number } {

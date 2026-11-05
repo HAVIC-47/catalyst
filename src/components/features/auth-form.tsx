@@ -59,8 +59,11 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   // sends them back to the landing page. A failed Google sign-in arrives with ?error=.
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const failed = new URLSearchParams(window.location.search).get("error");
+    const query = new URLSearchParams(window.location.search);
+    const failed = query.get("error");
     if (failed) setError(failed);
+    // Sent here by components/system/session-watch: the login ended while the app was open.
+    if (query.get("removed") === "1") setNotice(tr("You were signed out of this device."));
     if (window.location.search.includes("from=landing")) {
       window.history.replaceState(null, "", isSignup ? "/signup" : "/login");
     }
