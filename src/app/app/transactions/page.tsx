@@ -9,7 +9,8 @@ import type { Kind, Transaction } from "@/types";
 import { cn, currencySymbol, formatCurrency, fmt } from "@/lib/utils";
 import { CategoryIcon } from "@/components/ui/category-icon";
 import { currency } from "@/lib/currency";
-import { defaultWallet, needsPrice } from "@/lib/money";
+import { defaultWallet, dharMoves, needsPrice, type DharMove } from "@/lib/money";
+import { DharLine, dharLabel } from "@/components/dhar/dhar-line";
 import { inRange, rangeWindow, type Range } from "@/lib/range";
 import { AiInsights } from "@/components/ai/ai-insights";
 import { TransactionEditor } from "@/components/entry/transaction-editor";
@@ -40,7 +41,7 @@ const amountOrNull = (s: string) => {
 };
 
 export default function TransactionsPage() {
-  const { transactions, categories, wallets, walletsReady, removeMoney, openEntry, openPrices, loading } = useAppData();
+  const { transactions, categories, wallets, walletsReady, removeMoney, openEntry, openPrices, loading, debts, debtPayments } = useAppData();
   // Each entry's wallet (no wallet = the default one); shown once there's a choice of wallets.
   const walletOf = useMemo(() => {
     const byId = new Map(wallets.map((w) => [w.id, w]));
@@ -157,6 +158,36 @@ export default function TransactionsPage() {
     });
   }, [transactions, haystacks, q, kind, category, walletFilter, walletOf, period, from, to, minAmt, maxAmt]);
 
+  // Dhar shown next to the day's entries (borrowing +, paying back −; lending −, getting it back +).
+  // Only when no kind, category or amount filter is on: dhar is none of those.
+  const dhar = useMemo(() => {
+    if (kind !== "all" || category || amountOrNull(minAmt) !== null || amountOrNull(maxAmt) !== null) return [] as DharMove[];
+    const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+    let win: { startKey: string; endKey: string } | null = null;
+    if (period === "custom") {
+      if (from || to) {
+        const [a, b] = from && to && from > to ? [to, from] : [from, to];
+        win = { startKey: a || "0000-01-01", endKey: b || "9999-12-31" };
+      }
+    } else if (period !== "all") win = rangeWindow(period, 0);
+    const fallback = defaultWallet(wallets)?.id ?? null;
+    return dharMoves(debts, debtPayments).filter((m) => {
+      if (walletFilter && (m.walletId ?? fallback) !== walletFilter) return false;
+      if (win && !inRange(m.date, win.startKey, win.endKey)) return false;
+      if (words.length) {
+        const hay = [dharLabel(m), tr("Dhar"), "dhar", String(Math.abs(m.amount)), fmt(parseISO(m.date), "EEEE MMMM d yyyy")].join(" ").toLowerCase();
+        if (!words.every((w) => hay.includes(w))) return false;
+      }
+      return true;
+    });
+  }, [debts, debtPayments, wallets, kind, category, minAmt, maxAmt, q, period, from, to, walletFilter]);
+  const dharByDay = useMemo(() => {
+    const m = new Map<string, DharMove[]>();
+    for (const d of dhar) (m.get(d.date) ?? m.set(d.date, []).get(d.date)!).push(d);
+    return m;
+  }, [dhar]);
+  const walletNameOf = (id: string | null) => tr((wallets.find((w) => w.id === id) ?? defaultWallet(wallets))?.name ?? "");
+
   const totals = useMemo(() => {
     let income = 0,
       expense = 0,
@@ -174,8 +205,9 @@ export default function TransactionsPage() {
     for (const t of filtered) {
       (m.get(t.occurredOn) ?? m.set(t.occurredOn, []).get(t.occurredOn)!).push(t);
     }
+    for (const d of dharByDay.keys()) if (!m.has(d)) m.set(d, []);
     return [...m.entries()].sort((a, b) => b[0].localeCompare(a[0]));
-  }, [filtered]);
+  }, [filtered, dharByDay]);
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -355,13 +387,13 @@ export default function TransactionsPage() {
         </div>
       )}
 
-      {!loading && transactions.length === 0 && (
+      {!loading && transactions.length === 0 && dhar.length === 0 && (
         <div className="card px-6 py-16 text-center text-sm text-ink/40">
           {tr("No transactions yet. Hit")}{" "}<span className="text-ink/70">{tr("+ Add")}</span>{" "}{tr("or click a calendar day.")}
         </div>
       )}
 
-      {!loading && transactions.length > 0 && filtered.length === 0 && (
+      {!loading && transactions.length > 0 && filtered.length === 0 && dhar.length === 0 && (
         <div className="card px-6 py-16 text-center text-sm text-ink/40">
           {tr("Nothing matches.")}{" "}
           <button onClick={clearAll} className="cursor-pointer text-amber hover:underline">
@@ -455,6 +487,9 @@ export default function TransactionsPage() {
                     </li>
                   );
                 })}
+                {(dharByDay.get(date) ?? []).map((m) => (
+                  <DharLine key={m.id} move={m} wallet={showWallets ? walletNameOf(m.walletId) : undefined} />
+                ))}
               </ul>
             </div>
           );

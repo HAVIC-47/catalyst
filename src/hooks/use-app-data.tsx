@@ -118,7 +118,7 @@ import { billCategory, boughtCategory, budgetUse, debtRemaining, defaultWallet, 
 import { formatCurrency, nowTime, toDateKey, combineDateTime } from "@/lib/utils";
 import { asLang, rememberLang, setLang, storedLang, tr, type Lang } from "@/lib/i18n";
 
-export type EntryTab = "money" | "mood" | "saving";
+export type EntryTab = "money" | "mood" | "saving" | "dhar" | "day";
 
 /** Ticket fields the editor can change (column moves go through placeTicket). */
 export type TicketFields = Pick<Ticket, "title" | "description" | "priority" | "dueOn" | "amount">;

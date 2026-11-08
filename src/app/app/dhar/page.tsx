@@ -5,13 +5,14 @@
 // of a wallet but never counts as spending or income.
 import { useMemo, useState } from "react";
 import { differenceInCalendarDays, parseISO } from "date-fns";
-import { Check, ChevronDown, HandCoins, Plus, Trash2, Undo2 } from "lucide-react";
+import { Check, ChevronDown, HandCoins, Pencil, Trash2, Undo2 } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
-import type { Debt, DebtDirection } from "@/types";
+import type { Debt } from "@/types";
 import { cn, currencySymbol, formatCurrency, toDateKey, fmt } from "@/lib/utils";
 import { debtIsOpen, debtRemaining, defaultWallet } from "@/lib/money";
 import { LIMITS } from "@/lib/limits";
-import { WalletSelect, rememberWallet, useStartWallet } from "@/components/entry/wallet-select";
+import { WalletSelect } from "@/components/entry/wallet-select";
+import { DebtForm } from "@/components/dhar/debt-form";
 import { tr, trn } from "@/lib/i18n";
 
 const field =
@@ -67,7 +68,7 @@ export default function DharPage() {
         </div>
       ) : (
         <>
-          <NewDebt />
+          <DebtForm />
 
           {!loading && open.length === 0 && (
             <div className="card mb-6 px-6 py-12 text-center text-sm text-ink/40">
@@ -120,125 +121,6 @@ export default function DharPage() {
   );
 }
 
-function NewDebt() {
-  const { createDebt } = useAppData();
-  const start = useStartWallet();
-  const [direction, setDirection] = useState<DebtDirection>("lent");
-  const [person, setPerson] = useState("");
-  const [amount, setAmount] = useState("");
-  const [walletId, setWalletId] = useState<string | null>(null);
-  const [date, setDate] = useState(toDateKey(new Date()));
-  const [due, setDue] = useState("");
-  const [note, setNote] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const value = parseFloat(amount);
-  const valid = person.trim() && value > 0 && /^\d{4}-\d{2}-\d{2}$/.test(date);
-
-  const add = async () => {
-    if (!valid || saving) return;
-    setSaving(true);
-    setError("");
-    try {
-      const wallet = walletId ?? start;
-      await createDebt({
-        person: person.trim(),
-        direction,
-        amount: Math.round(value * 100) / 100,
-        note: note.trim(),
-        walletId: wallet,
-        occurredOn: date,
-        dueOn: due || null,
-        closed: false,
-      });
-      rememberWallet(wallet);
-      setPerson("");
-      setAmount("");
-      setDue("");
-      setNote("");
-    } catch (err) {
-      setError(message(err));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <section className="card mb-6 space-y-4 p-5" aria-label={tr("New dhar")}>
-      <div className="grid grid-cols-2 gap-2 rounded-xl border border-line bg-ink/[0.02] p-1" role="radiogroup" aria-label={tr("Direction")}>
-        {(
-          [
-            { v: "lent", label: tr("I lent"), hint: tr("they owe me"), on: "text-income" },
-            { v: "borrowed", label: tr("I borrowed"), hint: tr("I owe them"), on: "text-expense" },
-          ] as const
-        ).map((o) => (
-          <button
-            key={o.v}
-            type="button"
-            role="radio"
-            aria-checked={direction === o.v}
-            onClick={() => setDirection(o.v)}
-            className={cn(
-              "flex min-h-[44px] cursor-pointer flex-col items-center justify-center rounded-lg text-sm font-medium transition-colors duration-200",
-              direction === o.v ? cn("bg-ink/[0.06]", o.on) : "text-ink/45 hover:text-ink/70",
-            )}
-          >
-            {o.label}
-            <span className="text-[10px] font-normal text-ink/40">{o.hint}</span>
-          </button>
-        ))}
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block">
-          <span className="label mb-1.5 block">{direction === "lent" ? tr("Lent to") : tr("Borrowed from")}</span>
-          <input value={person} onChange={(e) => setPerson(e.target.value)} maxLength={LIMITS.name} placeholder={tr("Name or shop")} aria-label={tr("Person")} className={field} />
-        </label>
-        <label className="block">
-          <span className="label mb-1.5 block">{tr("Amount")}</span>
-          <div className="flex items-center gap-2 rounded-xl border border-line bg-ink/[0.02] px-3 focus-within:border-amber/50">
-            <span className="font-mono text-ink/40">{currencySymbol()}</span>
-            <input
-              inputMode="decimal"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
-              placeholder="0"
-              aria-label={tr("Amount")}
-              className="min-h-[44px] w-full bg-transparent font-mono text-sm text-ink outline-hidden"
-            />
-          </div>
-        </label>
-        <label className="block">
-          <span className="label mb-1.5 block">{tr("Date")}</span>
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label={tr("Date")} className={field} />
-        </label>
-        <label className="block">
-          <span className="label mb-1.5 block">{tr("Due back · optional")}</span>
-          <input type="date" value={due} onChange={(e) => setDue(e.target.value)} aria-label={tr("Due back")} className={field} />
-        </label>
-      </div>
-      <WalletSelect value={walletId ?? start} onChange={setWalletId} label={direction === "lent" ? tr("Paid out of") : tr("Received into")} />
-      <label className="block">
-        <span className="label mb-1.5 block">{tr("Note · optional")}</span>
-        <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={LIMITS.note} placeholder={tr("What it was for")} aria-label={tr("Note")} className={field} />
-      </label>
-      {error && (
-        <p className="text-xs text-expense" role="alert">
-          {error}
-        </p>
-      )}
-      <div className="flex justify-end">
-        <button
-          onClick={() => void add()}
-          disabled={!valid || saving}
-          className="entry-btn inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl px-5 text-sm font-semibold text-paper disabled:opacity-40"
-        >
-          <Plus className="h-4 w-4" aria-hidden strokeWidth={2.5} />{" "}{tr("Add")}
-        </button>
-      </div>
-    </section>
-  );
-}
-
 function DebtRow({ debt: d, settled = false }: { debt: Debt; settled?: boolean }) {
   const { debtPayments, wallets, recordDebtPayment, removeDebtPayment, editDebt, removeDebt } = useAppData();
   const left = debtRemaining(d, debtPayments);
@@ -248,6 +130,7 @@ function DebtRow({ debt: d, settled = false }: { debt: Debt; settled?: boolean }
   const [walletId, setWalletId] = useState<string | null>(null);
   const [date, setDate] = useState(toDateKey(new Date()));
   const [showHistory, setShowHistory] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const lent = d.direction === "lent";
@@ -340,6 +223,14 @@ function DebtRow({ debt: d, settled = false }: { debt: Debt; settled?: boolean }
             </button>
           )}
           <button
+            onClick={() => setEditing((e) => !e)}
+            aria-label={tr("Edit")}
+            title={tr("Edit")}
+            className="cursor-pointer rounded-lg p-1.5 text-ink/30 transition-colors hover:bg-ink/5 hover:text-amber"
+          >
+            <Pencil className="h-4 w-4" aria-hidden />
+          </button>
+          <button
             onClick={() => {
               const ask = lent
                 ? tr("Delete this loan to {person} and its payments?", { person: d.person })
@@ -353,6 +244,12 @@ function DebtRow({ debt: d, settled = false }: { debt: Debt; settled?: boolean }
           </button>
         </div>
       </div>
+
+      {editing && (
+        <div className="mt-3 rounded-xl border border-line bg-ink/[0.02] p-3">
+          <DebtForm debt={d} onDone={() => setEditing(false)} />
+        </div>
+      )}
 
       {paying && !settled && (
         <div className="mt-3 space-y-3 rounded-xl border border-line bg-ink/[0.02] p-3">

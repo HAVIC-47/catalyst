@@ -13,6 +13,10 @@ import { MoodIcon } from "@/components/ui/mood-icon";
 import { LIMITS } from "@/lib/limits";
 import { WalletSelect, rememberWallet, useStartWallet } from "@/components/entry/wallet-select";
 import { tr } from "@/lib/i18n";
+import { DebtForm } from "@/components/dhar/debt-form";
+import { DayList } from "@/components/entry/day-list";
+
+const TAB_LABELS: Record<EntryTab, string> = { money: "Money", mood: "Mood", saving: "Saving", dhar: "Dhar", day: "Transactions" };
 
 export function TimeField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
@@ -83,23 +87,22 @@ export function EntryModal() {
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-1 border-b border-line px-6 pt-4">
-              {(["money", "mood", "saving"] as EntryTab[]).map((t) => (
+            <div className="flex border-b border-line px-1 pt-4 sm:px-6" role="tablist">
+              {(["money", "mood", "saving", "dhar", "day"] as EntryTab[]).map((t) => (
                 <button
                   key={t}
+                  role="tab"
+                  aria-selected={entryTab === t}
                   onClick={() => setEntryTab(t)}
                   className={cn(
-                    "relative cursor-pointer rounded-t-lg px-4 py-2.5 text-sm font-medium capitalize transition-colors duration-200",
+                    "relative min-w-0 flex-auto cursor-pointer truncate whitespace-nowrap rounded-t-lg px-1.5 py-2.5 text-[13px] font-medium transition-colors duration-200 sm:px-3 sm:text-sm",
                     entryTab === t ? "text-ink" : "text-ink/40 hover:text-ink/70",
                   )}
                 >
-                  {tr(t === "money" ? "Money" : t === "mood" ? "Mood" : "Saving")}
-                  {entryTab === t && (
-                    <motion.span
-                      layoutId="entry-tab"
-                      className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-amber"
-                    />
-                  )}
+                  {tr(TAB_LABELS[t])}
+                  {/* A plain underline: a shared-layout (layoutId) one kept the window from
+                      leaving the page after a save once the tab had been switched. */}
+                  {entryTab === t && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-amber" aria-hidden />}
                 </button>
               ))}
             </div>
@@ -108,6 +111,8 @@ export function EntryModal() {
               {entryTab === "money" && <MoneyForm dateKey={entryDate} />}
               {entryTab === "mood" && <MoodForm dateKey={entryDate} />}
               {entryTab === "saving" && <SavingForm dateKey={entryDate} />}
+              {entryTab === "dhar" && <DebtForm key={entryDate} date={entryDate} onDone={closeEntry} />}
+              {entryTab === "day" && <DayList dateKey={entryDate} />}
             </div>
           </motion.div>
         </motion.div>

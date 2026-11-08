@@ -126,3 +126,35 @@ export function budgetUse(budget: Budget, transactions: Transaction[], now = new
     .reduce((s, t) => s + t.amount, 0);
   return { spent: cents(spent), ratio: budget.amount > 0 ? spent / budget.amount : 0 };
 }
+
+/** One movement of money from dhar: the loan itself or a payment on it. */
+export interface DharMove {
+  id: string;
+  debtId: string;
+  date: string;
+  person: string;
+  walletId: string | null;
+  /** + came into a wallet (borrowed, or a lent amount paid back), − went out. */
+  amount: number;
+  kind: "borrowed" | "lent" | "repaid" | "paidBack";
+}
+
+/**
+ * Dhar as ledger lines: borrowing adds to the wallet, paying it back takes it
+ * off; lending takes it off, getting it back adds it. Not income or spending.
+ */
+export function dharMoves(debts: Debt[], payments: DebtPayment[]): DharMove[] {
+  const out: DharMove[] = [];
+  const byId = new Map(debts.map((d) => [d.id, d]));
+  for (const d of debts) {
+    const lent = d.direction === "lent";
+    out.push({ id: `debt:${d.id}`, debtId: d.id, date: d.occurredOn, person: d.person, walletId: d.walletId, amount: lent ? -d.amount : d.amount, kind: lent ? "lent" : "borrowed" });
+  }
+  for (const p of payments) {
+    const d = byId.get(p.debtId);
+    if (!d) continue;
+    const lent = d.direction === "lent";
+    out.push({ id: `pay:${p.id}`, debtId: d.id, date: p.paidOn, person: d.person, walletId: p.walletId ?? d.walletId, amount: lent ? p.amount : -p.amount, kind: lent ? "paidBack" : "repaid" });
+  }
+  return out;
+}
